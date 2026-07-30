@@ -1,9 +1,11 @@
 # HR & Project Management Suite — Complete Requirements Document
 
-**Version:** 1.2  
+**Version:** 1.3  
 **Date:** 2026-07-30  
 **Status:** Requirements Gathered — Ready for PRD  
 
+> **v1.3 changes (post-validation hardening):** Resolved reviewer findings — external data-scoping now has a server-side predicate + FK columns (§4.5); WebSocket auth lifecycle + backplane defined (§9.1); BS4 hire-push failure path, status states, and idempotency key added (§5.4.6, §8.4); refresh-token reuse detection (§4.4); signed-URL TTL + download-audit reconciliation (§10.4); raised anonymity thresholds + timing-side-channel mitigation (§10.3); scoring weights sum=100 + empty-class redistribution (§6.4.3); Directus reversal preconditions + idempotency semantics (§7.5.4); scheduled-job ownership table (§8.6); Phase-1 seed data (§8.5, §13). Added §3.6 Observability (deferred), §3.7 Testing Strategy, §3.8 Non-Functional & Scale (deferred to architecture), §15 Non-Goals, §16 Assumptions, §17 Glossary, §18 Open Questions & Risks. Replaced vague qualifiers; picked a primary cloud target.
+>
 > **v1.2 changes:** Separate external-user portal with its own Google OAuth track (candidates, agencies, clients — no access to company data); cloud-agnostic deployment (no hard GCP dependency); timezone & localization rule added (store UTC, display in user's auto-detected local timezone); REST API versioning convention (`/api/v1/...`); GDPR right-to-erasure process; one-time initial employee/org backfill added to Phase 1; time entry simplified to manual entry (no start/stop timer).
 >
 > **v1.1 changes:** Single PostgreSQL database (schema-per-module), single Angular app with feature modules, Google SSO, Notification & Workflow Service moved to Phase 1–2, Express API Gateway, object-storage file storage with ClamAV scanning, security & compliance section added, data model gaps resolved, reporting scoped to per-module.
@@ -26,6 +28,10 @@
 12. [Project Structure](#12-project-structure)
 13. [Next Steps](#13-next-steps)
 14. [Confirmed Decisions — Master Reference](#14-confirmed-decisions--master-reference)
+15. [Non-Goals](#15-non-goals)
+16. [Assumptions](#16-assumptions)
+17. [Glossary](#17-glossary)
+18. [Open Questions & Risks](#18-open-questions--risks)
 
 ---
 
@@ -43,10 +49,10 @@ This document defines the requirements for a new **HR & Project Management Suite
 
 - Each module is **independent** — separate backend service and separate database schema; one shared Angular frontend with lazy-loaded feature modules
 - **Single PostgreSQL database** (`hr_suite_db`) with **schema-per-module** for isolation
-- All three modules share a **single SSO layer** (Google OAuth + JWT) for seamless user experience
+- All three modules share a **single SSO layer** (Google OAuth + JWT) so a user signs in once and moves between permitted modules without re-authenticating
 - Integration with **BS4 ERP** is via secured REST APIs (JSON over HTTPS)
 - Integration with **existing Directus ERP** for time entry sync (Project module)
-- **Cloud-agnostic deployment** — packaged as Docker containers; runs on any suitable cloud (managed PostgreSQL, S3-compatible object storage, container runtime, secrets manager). No hard dependency on a single provider.
+- **Cloud-agnostic by design, one target validated at launch** — packaged as Docker containers against portable primitives (managed PostgreSQL, S3-compatible object storage, container runtime, secrets manager) so there is no hard lock-in. **Exactly one primary cloud target is built, tested, and deployed for launch** (chosen during architecture, §18); the other targets are *portable-by-design but unvalidated* until actually exercised — the doc does not claim running parity across four clouds.
 
 ---
 
@@ -116,7 +122,9 @@ Additional Services:
 
 > **Two frontends:** the diagram above shows the **internal** Angular app used by staff. External users (candidates, agencies, clients) use a **separate `external-portal-app`** with its own Google OAuth app; it reaches the same gateway but carries `audience: "external"` tokens and can only touch its own records (see 4.5).
 
-**Schema isolation rule:** each service connects with a DB role granting access **only** to its own schema, plus read access to the `common` schema. Cross-schema joins in application code are not allowed; cross-module data flows through service APIs.
+**Schema isolation rule:** each service connects with a DB role granting access **only** to its own schema, plus **read** access to `common` **and INSERT-only** access to `common.audit_log` (every service must write audit rows — see 10.1). Cross-schema **joins** in application code are not allowed; cross-module data flows through service APIs.
+
+> **Cross-schema references are unenforced pointers, by design.** Columns like `notification.approval_task.entity_id` (pointing at a row in `recruitment`/`appraisal`/`project`) or `*_id (BS4)` cannot carry a real foreign key across the isolation boundary. Referential integrity for these is the **owning service's responsibility** (validate-on-write, reconcile-on-read); the database does not guarantee it. This is the accepted cost of schema isolation on a single database — the isolation is a blast-radius and access-control boundary, not a full physical partition.
 
 ### 3.2 External Integrations
 
@@ -142,7 +150,7 @@ AI Service ←──────── HTTPS/JSON ─────→ AI Provider
 
 ### 3.3 API Gateway Decision
 
-The API Gateway is a **lightweight Express-based gateway service** (`api-gateway`, port 8080) built with the same stack the team already uses:
+The API Gateway is a **thin Express-based gateway service** (`api-gateway`, port 8080) — **no business logic**, only routing, auth, and rate-limiting — built with the same stack the team already uses:
 
 - **JWT validation** — verifies access tokens before forwarding (shared middleware)
 - **RBAC pre-check** — coarse role checks at the edge; fine-grained checks remain in services
@@ -163,9 +171,40 @@ The API Gateway is a **lightweight Express-based gateway service** (`api-gateway
 
 - **All timestamps are stored in the database as UTC.** No local-time values are ever persisted.
 - **Display is in the user's local timezone**, auto-detected from the browser/system on each session. A user logging in from Pakistan sees times in PKT (GMT+5); a user elsewhere sees their own local time — no manual timezone setting required.
-- **Time entries** are recorded against the **user's local calendar day** at entry time; the stored UTC instant plus the captured timezone offset lets payroll/billing resolve the correct business day unambiguously.
+- **Time entries** are recorded against the **user's local calendar day** at entry time. The `time_entry` row persists **both** the UTC instant **and** the timezone offset captured at entry (`entry_tz_offset`); payroll/billing derive the business day from that **stored** offset, never from the live session — so a traveling user or shifted VPN cannot reassign an entry to a different day on a later view.
 - Appraisal cycle dates, interview schedules, and deadlines follow the same rule: stored UTC, rendered local.
 - The captured locale also drives multi-language notification template selection (see 9.4).
+
+### 3.6 Observability & Monitoring
+
+> **Status: DEFERRED — not built in the initial phases (owner decision).** Documented here so the gap is explicit rather than silently missing.
+
+- What exists today: per-request **correlation IDs** minted at the gateway and forwarded to every service (see 3.3), plus the failure alerts called out in 8.4 / 8.6.
+- Deferred to a later phase (revisit before scale-up): centralized structured-log aggregation, metrics, distributed tracing, per-service health/readiness endpoints, and an alerting policy with named channels and thresholds.
+- **Interim rule:** every service still emits structured logs with the correlation ID and exposes a basic `/health` endpoint, so the deferral does not block a minimal ops posture.
+
+### 3.7 Testing Strategy
+
+- **Unit tests** — per service, business logic and edge cases; run on every commit.
+- **Integration tests** — service ↔ database (per schema) and service ↔ mocked BS4/Directus adapters.
+- **Contract tests** — pinned against the BS4 and Directus REST contracts (§8.3); these guard the external dependencies whose contracts are not yet finalized (§18) and are the acceptance gate before the mock adapters are swapped for live ones.
+- **E2E happy-path tests** — one per module's primary flow (requisition→offer, cycle→score, project→approved-time).
+- **CI gate** — migrate + build + lint + unit/integration must pass before merge, wired from the foundation phase (not left to the end).
+- Detailed, per-requirement **acceptance criteria are authored at story-creation time** downstream; this document defines the testable *consequences* inline where a requirement is non-obvious (e.g., 5.4.1 approver-left-chain, 5.4.2 headcount-reduced-below-filled).
+
+### 3.8 Non-Functional Requirements & Scale
+
+> **Status: scale/performance targets DEFERRED to the architecture phase (owner decision).** Stated explicitly so downstream can distinguish *unknown* from *unbounded*.
+
+| NFR | Value |
+|---|---|
+| Concurrency / throughput / data-volume / user-count | **Deferred** — to be set with the architecture team; the single-DB decision (§14) is revisited against these numbers before build sign-off |
+| Access token lifetime | 15 min (§4.4) |
+| Refresh token lifetime | 7 days, rotated + reuse-detected (§4.4) |
+| Snapshot staleness tolerance | ≤ 24 h; auth-relevant role revocations force immediate re-sync (§4.3) |
+| RPO / RTO | ≤ 24 h / ≤ 4 h (§10.6) |
+| Notification/WS warm instances | ≥ 1 (§9.1) |
+| Audit retention | ≥ 7 years for payroll-adjacent records (§10.1) |
 
 ---
 
@@ -216,10 +255,13 @@ The API Gateway is a **lightweight Express-based gateway service** (`api-gateway
 
 **Consequence:** if BS4 is down, users still log in and work normally; only fresh profile/role changes are delayed until the next successful sync.
 
+**Staleness bound & revocation:** profile/role data may be at most **24 h** stale (the nightly sync cadence, §8.5). Because roles are embedded in the access token, a role change propagates within one token refresh (≤ 15 min) once the snapshot updates — worst case ≈ 24 h + 15 min. **Security-sensitive removals** (deactivation, HR-Admin/salary-access revocation) must **not** wait for the nightly cycle: they trigger an **immediate targeted re-sync + token-family invalidation** for that user so access is cut promptly.
+
 ### 4.4 Token Refresh
 
 - Access token expires every **15 minutes**
 - Refresh token valid for **7 days**, stored hashed in `auth.refresh_token`, rotated on each use
+- **Reuse detection (theft response):** refresh tokens are chained in a **token family**. Presenting an already-consumed (previously-rotated) refresh token is the canonical theft signal → the **entire family is invalidated** and the user is forced to re-authenticate. Rotation alone is not sufficient.
 - Angular interceptor auto-refreshes silently before expiry
 - On refresh token expiry, user is redirected to login
 
@@ -237,19 +279,30 @@ Candidates, recruitment agencies, and clients are **external** — they have no 
 | JWT payload | Full (roles, modules, `bs4EmployeeId`, `legalEntity`, `department`) | Minimal (see below) |
 | Data visibility | Per-role company data | **Only their own** applications/submissions/projects — enforced at service level, not just UI |
 
-**External JWT payload** (no company attributes):
+**External JWT payload** (no company attributes, **no record-ID list**):
 
 ```json
 {
-  "userId": "uuid",
+  "externalAccountId": "uuid",     // stable identity, NOT a list of record IDs
   "email": "candidate@gmail.com",
   "audience": "external",
-  "roles": ["candidate"],          // or "agency", "client"
-  "scopeIds": ["application:uuid"], // records this user may touch
+  "accountType": "candidate",      // or "agency", "client"
   "iat": 1234567890,
   "exp": 1234567890
 }
 ```
+
+**Server-side scoping (the actual enforcement — not the token).** The token carries only the stable `externalAccountId`; it never enumerates the rows a user may touch (an agency or client would need an unbounded, ever-changing list). Instead:
+
+1. The auth layer resolves `externalAccountId` → its linked business entity (`auth.external_account.linked_entity_type` + `linked_entity_id`) and injects a **trusted, signed request-context header** (e.g. `X-External-Scope: candidate:<uuid>`) that downstream services cannot spoof.
+2. Every external-facing query in a module service applies a **mandatory scoping predicate** derived from that context — `WHERE candidate_id = :scope` (Recruitment), `WHERE agency_id = :scope`, or `WHERE client_id = :scope` (Project). A request with no valid external scope returns **empty**, never all rows.
+3. This works **within** the schema-isolation rule (§3.1): the `auth → recruitment/project` linkage is resolved by the auth layer and passed as context, **not** as a cross-schema join or FK. The module tables already carry the scoping columns (`application.candidate_id`, `application.agency_id`, `project.client_id`); the predicate keys on those.
+
+**Field-level visibility whitelist.** External roles legitimately need *some* company data (an agency reads open postings; a client reads milestone status), so each external role has an explicit **read-whitelist** — not "no company data at all":
+- **Agency** → job **posting** public fields only (title, description, location, close date); **never** the internal `job_requisition` (salary band, cost center, approver notes).
+- **Client** → milestone name/target-date/status only; **never** budget, cost center, internal task detail, or comments.
+- **Candidate** → only their own `application`/`offer` status fields.
+Anything not on the whitelist is not serializable to an external token, enforced in the service's DTO layer.
 
 **Enforcement rules:**
 - The API Gateway rejects any `audience: "external"` token on internal routes and vice-versa — the two populations cannot cross the boundary even with a valid token.
@@ -260,8 +313,8 @@ Candidates, recruitment agencies, and clients are **external** — they have no 
 auth.external_account
   id, email, google_sub, account_type (candidate/agency/client),
   linked_entity_type, linked_entity_id (→ recruitment.agency /
-  recruitment.candidate / project.client), status, invited_by,
-  created_at, updated_at
+  recruitment.candidate / project.client resolved at the service layer,
+  not a cross-schema FK), status, invited_by, created_at, updated_at
 ```
 
 ---
@@ -294,12 +347,14 @@ A full Applicant Tracking System (ATS) supporting internal postings, external jo
 - Requisition includes: title, department, location, headcount, salary band, job description, required competencies
 - Multi-level approval workflow before posting
 - Requisition linked to BS4 department/cost center
+- **Edge — approver no longer available:** if a resolved approver has left or been deactivated (per snapshot), the workflow engine re-resolves to their current org-hierarchy replacement, or escalates to skip-level after the configured timeout (§9.2); a requisition never stalls on a dead approver.
 
 #### 5.4.2 Job Posting
 - Publish to internal portal, external boards, and/or agency portal simultaneously
 - Configurable application form per job type
 - Application deadline management
 - Auto-close when headcount filled
+- **Edge — headcount reduced below filled:** if headcount is lowered below the number of already-accepted offers, the posting stays closed and the system flags the over-hire for HR review rather than silently rescinding offers; reducing headcount never auto-cancels a confirmed hire.
 
 #### 5.4.3 AI-Assisted Resume Screening
 - AI parses uploaded resumes against job description requirements
@@ -345,6 +400,12 @@ Stage 4: Final/Panel Round  → Scorecard: Leadership, Panel consensus
 **HR Onboarding Notification:**
 - Automated checklist notification to HR for remaining BS4 steps
 - Items: bank details, documents upload, benefits enrollment, system access provisioning
+
+**Push reliability (this is the most business-critical write in Recruitment — a person has accepted a job):**
+- `POST /employees` to BS4 carries an **idempotency key** derived from `offer_id` (§8.4), so a retry after an ambiguous timeout **cannot create a duplicate employee**.
+- `employee_handoff.bs4_push_status` is an explicit state machine: `pending → pushing → pushed | failed → dead_letter`.
+- **Candidate is never told "you're hired" contingent on BS4** — acceptance is recorded in the suite immediately; the BS4 write is a downstream integration whose status is tracked separately.
+- On `dead_letter`, HR is alerted and the handoff appears on a **reconciliation queue** (mirroring the Directus reconciliation in §7.5.4) for manual recovery; the accepted offer is never lost regardless of BS4 availability.
 
 ### 5.5 Recruitment Data Model (schema: `recruitment`)
 
@@ -396,8 +457,10 @@ ai_screening_log
   prompt_hash, score, reasoning, pii_redacted (bool), created_at
 
 employee_handoff
-  id, offer_id, bs4_push_status, bs4_employee_id, pushed_at,
-  onboarding_notification_sent_at, created_at, updated_at
+  id, offer_id, idempotency_key (uuid, unique, derived from offer_id),
+  bs4_push_status (pending/pushing/pushed/failed/dead_letter),
+  bs4_employee_id, attempt_count, last_attempt_at, error_message,
+  pushed_at, onboarding_notification_sent_at, created_at, updated_at
 ```
 
 **Notes:**
@@ -430,7 +493,7 @@ A 360° feedback system with configurable review cycles (quarterly, mid-year, an
 
 | Cycle | Frequency | Scope |
 |---|---|---|
-| **Quarterly Check-in** | Every 3 months | Lightweight — progress update + blockers + manager notes |
+| **Quarterly Check-in** | Every 3 months | Progress update + blockers + manager notes (no full 360°, no scoring) |
 | **Mid-Year Review** | 6 months | Full 360° feedback round + goal adjustment |
 | **Annual Review** | 12 months | Comprehensive 360° + final scoring + calibration + recommendations |
 
@@ -456,13 +519,15 @@ A 360° feedback system with configurable review cycles (quarterly, mid-year, an
 #### 6.4.2 Feedback Collection
 - System auto-generates feedback requests based on cycle type
 - Employees nominate peers/subordinates (manager approves nominations)
-- Anonymous feedback option for peer/subordinate responses — **enforced at schema level** (see 10.3)
+- **Anonymity is fixed by reviewer type, not a per-response toggle:** peer and subordinate feedback is **always** anonymous (stored in `anonymous_feedback_response`); self, manager, and skip-level feedback is **always** attributed (stored in `feedback_response`). This removes the ambiguity of an "optional" flag — the schema, not a UI checkbox, determines anonymity (see 10.3, 6.6).
 - Deadline reminders via notification service
 - Feedback locked after submission
 
 #### 6.4.3 Scoring & Calibration
 - Weighted scoring: self (10%), peers (20%), subordinates (20%), manager (50%)
 - Configurable weights per organization/department (stored in `scoring_weight_config`)
+- **Weights must sum to exactly 100** — enforced by a check constraint / validation on `scoring_weight_config`; an invalid config cannot be saved.
+- **Empty reviewer class (e.g. an individual contributor with no subordinates, or nobody with approved peers):** the missing class's weight is **redistributed proportionally across the remaining classes** so the final score is always out of 100 and is never silently deflated. The redistribution rule is recorded on the score so calibration can see it was applied.
 - Calibration session: HR + managers review score distribution
 - Bell curve / forced distribution view for calibration (minimum cohort size applies, see 10.3)
 - Final calibrated score recorded
@@ -507,6 +572,8 @@ scoring_weight_config
   id, department_id (nullable = org-wide default), cycle_type,
   self_pct, peer_pct, subordinate_pct, manager_pct,
   created_at, updated_at
+  -- CHECK (self_pct + peer_pct + subordinate_pct + manager_pct = 100);
+  -- empty reviewer classes redistribute proportionally at scoring time (see 6.4.3)
 
 feedback_request
   id, employee_cycle_id, reviewer_id, reviewer_type
@@ -520,8 +587,9 @@ feedback_response
 
 anonymous_feedback_response
   id, employee_cycle_id, reviewer_type (peer/subordinate), competency,
-  rating (1-5), comments, submitted_at
-  -- NO reviewer_id, NO feedback_request_id: anonymity is schema-enforced
+  rating (1-5), comments, submitted_date (DAY granularity, not a timestamp)
+  -- NO reviewer_id, NO feedback_request_id, NO precise timestamp:
+  -- anonymity is schema-enforced and the timing side-channel is closed (see 10.3)
 
 calibration
   id, cycle_id, department_id, facilitated_by, held_at, notes,
@@ -617,9 +685,13 @@ Directus ERP processes for payroll / client billing
 - Sync status tracked per entry (pending / synced / failed)
 
 **Sync integrity rules (required):**
-- **Idempotency:** every time entry gets a unique `idempotency_key` (UUID) at creation. The key is sent with every sync attempt; Directus deduplicates on it, so retries never create duplicates.
+- **Idempotency:** every time entry gets a unique `idempotency_key` (UUID) at creation. The key is sent with every sync attempt. **Semantics = key + payload-hash:** if the same key arrives with a *different* payload (client bug re-using a key), Directus **rejects** it rather than overwriting or silently keeping the first — the mismatch is surfaced as a sync error, not swallowed. (This behavior is an assumption on the Directus contract, see §16 / §18.)
 - **Edit-after-sync:** an entry in `approved + synced` state is **locked**. Corrections are made as a **reversal entry** (negative-hours adjustment referencing the original), which syncs as a new entry. Payroll always sees an append-only ledger.
-- **Reconciliation:** a daily job flags entries in `approved` state with `directus_sync_status != synced` older than 2 days; flagged entries appear on the Project dashboard (see 11.3) and trigger an admin alert.
+- **Reversal preconditions (required to keep the ledger sane):**
+  - The original must already be `synced` — **you cannot reverse an entry that never reached Directus.** An unsynced `approved` entry is corrected by fixing it before it syncs, not by a reversal.
+  - **A reversal cannot itself be reversed.** To re-correct, void the whole (original + reversal) pair and submit a fresh entry — this bounds correction chains and prevents unbounded ± ladders.
+  - If a reversal **itself fails to sync**, it enters the same retry/DLQ/reconciliation path as any entry; the original stays locked and the pair is flagged as an incomplete correction.
+- **Reconciliation:** a daily job flags (a) entries in `approved` state with `directus_sync_status != synced` older than 2 days, **and (b) reversal entries whose sync is incomplete**; flagged items appear on the Project dashboard (see 11.3) and trigger an admin alert.
 
 ### 7.6 BS4 Integration
 
@@ -650,13 +722,16 @@ task
   title, description, assignee_id (BS4 employee), priority,
   due_date, estimated_hours, actual_hours, status, tags (jsonb),
   created_by, created_at, updated_at
+  -- "one level deep" (7.5.2) is ENFORCED: a task whose parent_task_id
+  -- is non-null cannot itself be a parent (app + DB check)
 
 task_dependency
   id, task_id, depends_on_task_id, dependency_type, created_at
 
 time_entry
-  id, task_id, employee_id (BS4), date, hours, description,
-  is_billable, status (draft/submitted/approved/rejected),
+  id, task_id, employee_id (BS4), date, entry_tz_offset (captured at entry,
+  see 3.5), hours, description, is_billable,
+  status (draft/submitted/approved/rejected),
   approved_by, approved_at, idempotency_key (uuid, unique),
   reversal_of_id (nullable → time_entry), directus_sync_status,
   directus_sync_at, created_at, updated_at
@@ -743,9 +818,9 @@ JSON Response → New App Service
 ### 8.4 Error Handling
 
 - Retry logic: 3 attempts with exponential backoff for transient failures
-- **Idempotency keys on all mutating outbound calls** (time entries, new-hire push) — retries are always safe
-- Dead letter queue for failed sync operations (`directus_sync_log` status = `dead_letter`)
-- Alert notification to admin on repeated failures
+- **Idempotency keys on all mutating outbound calls** — time entries (`time_entry.idempotency_key`, §7.5.4) **and** new-hire push (`employee_handoff.idempotency_key` derived from `offer_id`, §5.4.6) — retries are always safe
+- Dead letter queue for failed operations: `directus_sync_log.status = dead_letter` (time sync) and `employee_handoff.bs4_push_status = dead_letter` (hire push); both surface on a reconciliation queue for manual recovery
+- Alert notification to admin on repeated failures (channel + threshold defined per job in §8.6)
 - All integration calls logged with request/response for audit
 
 ### 8.5 Employee Snapshot (Resilience Cache)
@@ -764,6 +839,20 @@ common.employee_snapshot
 - Services read employee/org data from the snapshot; on-demand BS4 pull only as fallback for records missing or stale (> 24h)
 - Login never depends on BS4 availability (see 4.3)
 
+### 8.6 Scheduled Jobs — Ownership & Failure Handling
+
+Every recurring/background process has a named owner, trigger, failure behavior, and monitoring signal — none run "somewhere, somehow."
+
+| Job | Owner service | Trigger | On failure |
+|---|---|---|---|
+| Employee snapshot delta sync | Auth Service | Nightly cron | Alert if a run fails or last-success > 26 h (stale snapshot → stale roles); retries next cycle |
+| Directus time-entry sync | Project Service | On approval + nightly sweep | Retry/backoff → DLQ → reconciliation queue (§7.5.4) |
+| Directus reconciliation | Project Service | Daily | Admin alert; surfaces on Project dashboard (§11.3) |
+| BS4 hire-push | Recruitment Service | On offer-accept + start-date | Retry/backoff → `dead_letter` → HR reconciliation queue (§5.4.6) |
+| Retention purge (rejected-candidate resumes @ 12 mo) | Recruitment Service | Daily | Alert on failure; nothing is purged silently — purge actions are audited (§10.2) |
+| AI bias report | AI Service | Quarterly | Report generation failure alerts HR; prior report retained (§10.5) |
+| BS4 API key rotation | Ops / Auth Service | Quarterly | Rotation failure blocks nothing immediately but raises a high-priority ops alert (§8.2) |
+
 ---
 
 ## 9. Notifications & Workflow Engine
@@ -778,6 +867,13 @@ The **Notification & Workflow Service** (:3004, schema `notification`) owns all 
 | **Email** | SMTP / SendGrid | Interview invites, offer letters, appraisal cycle start, deadline reminders |
 
 > Deployment note: the service keeps **≥ 1 warm instance** (no scale-to-zero) so WebSocket/SSE connections are not dropped.
+
+**Real-time connection design (resolves the gateway/WebSocket question in §3.3):**
+- **Connection path:** the browser opens the socket **directly to the Notification & Workflow Service** (not proxied through the HTTP gateway, which handles request/response traffic only). The gateway remains HTTP-only; this removes the contradiction of routing long-lived sockets through a request-oriented proxy.
+- **Auth handshake:** the client obtains a **short-lived single-use WebSocket ticket** from an authenticated HTTP endpoint (validated like any `/api/v1` call), then presents that ticket to open the socket. The socket is **not** authenticated by the 15-min access token directly.
+- **Token expiry mid-connection:** the client **re-authenticates the live socket** on each access-token refresh (sends a fresh ticket over the open channel); a socket that fails to re-auth within a grace window is closed and the client reconnects. So "minute 16" does not silently keep an unauthorized socket open.
+- **Multi-instance fan-out:** with `≥ 1` and potentially many warm instances, a user's socket may land on any instance. A **pub/sub backplane (e.g. Redis)** fans events out to whichever instance holds the connection — no sticky-session requirement, no missed notifications across instances.
+- **Rate limiting:** connection-rate and message-rate limits are applied at the socket layer (distinct from the gateway's per-user/IP HTTP limits, §3.3).
 
 ### 9.2 Approval Routing Engine
 
@@ -835,7 +931,8 @@ notification_template
 
 notification
   id, recipient_id, template_id (nullable), channel, payload (jsonb),
-  status (pending/sent/failed/read), sent_at, read_at, created_at
+  status (pending/sent/failed/dead_letter/read), attempt_count,
+  last_attempt_at, sent_at, read_at, created_at
 
 workflow_rule
   id, module, trigger_event, step_order, approver_resolution
@@ -849,6 +946,8 @@ approval_task
   due_at, decided_at, decision_comments, created_at, updated_at
 ```
 
+**Delivery reliability (email).** Transactional emails (offer letters, interview invites, deadline reminders) are **not fire-and-forget**: a `failed` send is retried with backoff, and after exhausting retries moves to `dead_letter` with an admin alert — a dropped offer-letter email never sits silently unseen. In-app notifications degrade gracefully (delivered on next connect via the backplane, §9.1).
+
 ---
 
 ## 10. Security & Compliance
@@ -858,7 +957,7 @@ approval_task
 HR data changes must be fully auditable. Requirements:
 
 - Every mutating API call is logged: actor, action, entity, before/after values, timestamp, correlation ID
-- **Explicitly audited events:** score/rating changes, calibration adjustments, offer creation/approval/modification, salary recommendation views and edits, time entry approvals and reversals, file downloads of resumes/attachments
+- **Explicitly audited events:** score/rating changes, calibration adjustments, offer creation/approval/modification, salary recommendation views and edits, time entry approvals and reversals, and **file-download URL issuance** for resumes/attachments (the enforceable audit point — see 10.4)
 - Audit log is append-only, retained per company policy (minimum 7 years for payroll-adjacent records), queryable by HR Admin
 - Implementation: shared `audit_log` middleware writing to an append-only table per schema (or a single `common.audit_log`)
 
@@ -873,7 +972,8 @@ HR data changes must be fully auditable. Requirements:
 ### 10.3 Anonymous Feedback Integrity
 
 - Anonymous peer/subordinate responses are stored in `appraisal.anonymous_feedback_response` with **no reviewer identity column and no link to `feedback_request`** — anonymity is enforced by the schema, not by hiding columns in the UI
-- Results are only shown to the reviewed employee in aggregated form (minimum 2 responses per reviewer type; otherwise withheld as "insufficient responses")
+- Results are only shown to the reviewed employee in aggregated form with a **minimum of 3 responses per reviewer type** (raised from 2 — two responses in a small peer set is trivially de-anonymized); below the threshold, results are withheld as "insufficient responses"
+- **Timing side-channel is closed:** the anonymous row stores only a **coarse submission date (day granularity), not a precise timestamp**, and carries no `feedback_request_id`. The correlation attack via the `notification` layer (which does hold `recipient_id` + `read_at`, §9.5) is explicitly mitigated — notification delivery/read records for feedback requests are **not joinable** to anonymous responses, and anonymous submissions are written on a decoupled path so ordering cannot be aligned with request delivery.
 - Calibration bell-curve views require a minimum cohort size (e.g., 8 employees) to prevent reverse-engineering individual scores
 
 ### 10.4 File Storage & Malware Scanning
@@ -890,7 +990,9 @@ common.document
 
 - **ClamAV** (`clamd`) runs as a container in the compose/container environment; every upload is scanned before `scan_status = clean`
 - `infected` files are quarantined (a bucket with no public access bindings), uploader and admin are notified, file is never served
-- Downloads go **through the web application only**: service validates the user's permission, then issues a short-lived **pre-signed URL**. No publicly readable object URLs anywhere.
+- Downloads go **through the web application only**: the service validates the user's permission, then issues a **pre-signed URL with a short, explicit TTL of ≤ 60 seconds**, minimally scoped to a single object (GET only). No publicly readable object URLs anywhere.
+- **A pre-signed URL is a bearer credential** — anyone holding it can fetch the object until it expires. The short TTL bounds the leakage window; the URL is never logged or embedded in a shareable location.
+- **Audit reconciliation (important):** because the actual object fetch goes **directly to object storage and bypasses the app**, the auditable event is the **URL-issuance** — the app logs *"user X was granted a download URL for object Y at time T"* (§10.1). That is the accurate, enforceable audit record; the §10.1 "file downloads" requirement is satisfied by logging issuance, not the storage-side GET. (Object-storage server access logs, if enabled, are a secondary control.)
 
 ### 10.5 AI Screening Guardrails
 
@@ -920,12 +1022,18 @@ Where a data subject (typically a candidate or external user) exercises the righ
 - Object-storage files (resumes, attachments) are deleted from the bucket; the `common.document` row is anonymized.
 - **The append-only `audit_log` is exempt** — it retains the *fact* that an action occurred (actor, action, timestamp) under legitimate-interest/legal-obligation grounds, but PII payloads in before/after snapshots are redacted so the audit trail cannot be used to reconstruct erased data.
 - Every erasure is itself an audited event (who requested, who executed, when, what scope).
+- **Scope is limited to data the suite controls, and the employee case differs from the candidate case:**
+  - **Candidates / external users** — fully erasable within the suite (no downstream payroll copy).
+  - **Employees** — erasure collides with the **7-year payroll-adjacent retention** requirement (§10.1) and with **append-only time entries already pushed to Directus** (payroll). Payroll-adjacent records are retained under a **lawful-basis / legal-obligation exemption**, not erased on request; only non-payroll PII the suite controls is erased/anonymized.
+  - **Downstream ERPs (BS4, Directus)** hold their own copies that this suite does **not** control. Erasure there is a **separate process owned by those systems**; the suite's workflow explicitly states it cannot and does not erase downstream ERP data, and hands off an erasure request reference for the ERP teams to action.
 
 ---
 
 ## 11. Reporting & Analytics
 
 **Decision: reporting is independent per module.** Each dashboard queries only its own schema — no cross-module queries. If cross-module executive reports are needed later, introduce a separate reporting store (nightly ETL) as its own phase; it is **out of scope** for the initial build.
+
+> **These dashboards are operational metrics, by design — not product-level success targets.** As an internal tool, success is defined operationally (adoption + the metrics below), and setting numeric targets is a business decision for the pilot owners, deferred to the architecture/rollout phase (§18). Two guardrail counter-metrics are called out so metrics aren't gamed: **Time-to-Hire** is watched alongside **90-day new-hire retention / hiring-manager satisfaction** (so speed isn't bought by lowering the bar), and **Review Completion Rate** alongside **feedback quality flags** (so completion isn't bought with rubber-stamp reviews).
 
 ### 11.1 Recruitment Dashboard
 
@@ -1101,7 +1209,9 @@ hr-suite/
 - [ ] Implement **minimal Notification & Workflow Service** (email channel, templates, approval_task/workflow_rule, approval callbacks) — required by every later phase
 - [ ] Database migrations for all schemas (`auth`, `common`, `recruitment`, `appraisal`, `project`, `notification`)
 - [ ] **One-time initial BS4 backfill** of employee/org/cost-center data into `common.employee_snapshot`, then the nightly delta sync job
+- [ ] **Seed data** (prerequisite for the very first requisition/appraisal/approval to function): RBAC role/permission definitions, default `workflow_rule` set per module, default `notification_template` set, competency frameworks, and `scoring_weight_config` defaults — populate `database/seeds/`
 - [ ] Object-storage buckets + ClamAV (clamd) container with upload-scan pipeline
+- [ ] CI gate (migrate + build + lint + unit/integration) and contract-test harness for the BS4/Directus adapters (see 3.7)
 
 ### Phase 2 — Recruitment Module (Weeks 5–12)
 - [ ] Job Requisition + Approval workflow
@@ -1131,7 +1241,7 @@ hr-suite/
 
 ### Phase 5 — Cross-Cutting & Launch (Weeks 31–36)
 - [ ] In-app notification channel (WebSocket/SSE) on the existing Notification & Workflow Service
-- [ ] External job board integrations (LinkedIn, Indeed, Rozee.pk) — using Phase 1 API approvals
+- [ ] External job board integrations (LinkedIn, Indeed, Rozee.pk) — using Phase 1 API approvals; **manual-posting fallback ships regardless** so a delayed/denied board approval (a real schedule risk, §18) never blocks launch of that sourcing channel
 - [ ] Security audit (incl. audit-trail verification) + performance testing
 - [ ] Backup/DR restore drill
 - [ ] UAT with HR team, hiring managers, and pilot users
@@ -1161,7 +1271,7 @@ hr-suite/
 | **Recruitment — Sourcing** | Internal + External boards (LinkedIn/Indeed/Rozee) + Agencies |
 | **Recruitment — Roles** | HR Admin, Hiring Manager, Candidate, Agency |
 | **Recruitment — BS4 Hire** | Auto-push core fields + HR onboarding notification |
-| **Recruitment — Pipeline** | Advanced structured + AI resume screening + weighted scorecards |
+| **Recruitment — Pipeline** | Multi-stage configurable pipeline (per-job stage templates) + AI resume screening + weighted scorecards |
 | **Appraisal — Methodology** | 360° feedback + Quarterly / Mid-Year / Annual cycles |
 | **Appraisal — Anonymity** | Schema-enforced (no reviewer linkage for anonymous responses) |
 | **Appraisal — BS4 Push** | Partial — recommendations only, HR applies manually in BS4 |
@@ -1171,6 +1281,78 @@ hr-suite/
 
 ---
 
+## 15. Non-Goals
+
+Consolidates exclusions that were previously scattered inline or left to inference. These are **explicitly out of scope** for the initial build (some are deferred to named phases; some are simply not planned):
+
+| # | Non-Goal | Note |
+|---|---|---|
+| NG-1 | Cross-module executive reporting / shared analytics store | Deferred to a later ETL phase (§11) |
+| NG-2 | Auto-push of salary/grade/promotion changes to BS4 | Recommendations only; HR applies manually (§6.5) |
+| NG-3 | Start/stop time **timers** | Manual time entry only (§7.5.4) |
+| NG-4 | Task nesting beyond **one level** of subtasks | Enforced (§7.5.2) |
+| NG-5 | Gantt critical-path automation / advanced scheduling | Views exist; auto-scheduling is not in scope |
+| NG-6 | **Mobile / native apps** | Responsive web only; native mobile not planned |
+| NG-7 | **Offline mode** | Online-only |
+| NG-8 | Bulk data import/export beyond the one-time BS4 backfill | Not planned |
+| NG-9 | Formal end-user **SLA / support model** | Internal tool; ops posture only (§3.6) |
+| NG-10 | Full i18n | Only notification templates are multi-language (§9.4); UI i18n not in scope |
+| NG-11 | Running parity across all four clouds | One target validated; others portable-but-unvalidated (§1) |
+| NG-12 | Observability platform | Deferred; correlation IDs + `/health` + failure alerts only (§3.6) |
+| NG-13 | Numeric performance/scale targets in this doc | Deferred to architecture (§3.8) |
+
+## 16. Assumptions
+
+Inferences this document rests on that are **not yet confirmed** — each must be validated before the dependent work is built. Tagged so the BS4/Directus/board contract reviews have a checklist.
+
+- **[ASSUMPTION A-1]** BS4 exposes the seven inbound GET endpoints in §8.3 with the fields listed (employee, org-hierarchy, departments, cost-centers, salary-bands, legal-entities). *Validate in the BS4 API contract (§18).*
+- **[ASSUMPTION A-2]** BS4 accepts `POST /employees` and `POST /notifications` and honors an **idempotency key** (so retries don't duplicate a new hire). *Validate in the BS4 contract.*
+- **[ASSUMPTION A-3]** Directus accepts `POST /time-entries/bulk`, **deduplicates on the idempotency key**, and **rejects a key-reuse with a different payload** (§7.5.4). *Validate in the Directus contract.*
+- **[ASSUMPTION A-4]** LinkedIn, Indeed, and Rozee.pk offer usable posting APIs under terms we can meet. *Rozee.pk API existence is itself unverified (§18).*
+- **[ASSUMPTION A-5]** The company Google Workspace supports hosted-domain-restricted OAuth for the internal track (§4.1).
+- **[ASSUMPTION A-6]** BS4 remains the sole source of truth for employee/org data; the suite never becomes the master for those records.
+- **[ASSUMPTION A-7]** A managed Redis (or equivalent) is available on the chosen cloud for the WebSocket backplane (§9.1).
+
+## 17. Glossary
+
+Canonical definitions of the recurring domain nouns (removes the surface-form drift noted in review: "Notification & Workflow Service", "Hiring Manager/HM", etc.).
+
+| Term | Definition |
+|---|---|
+| **Requisition** | An approved request to hire for a role; parent of postings and applications (§5.4.1) |
+| **Posting** | A published instance of a requisition on a channel (internal/board/agency) (§5.4.2) |
+| **Application** | A candidate's submission against a posting; carries pipeline stage + AI score (§5.5) |
+| **Stage** | One step of a job's interview pipeline, defined by a stage template (§5.4.4) |
+| **Scorecard** | A weighted competency rating submitted by an interviewer for a stage (§5.5) |
+| **Cycle** | An appraisal round (quarterly / mid-year / annual) enrolling a set of employees (§6.3) |
+| **Calibration** | HR+manager session normalizing scores across a cohort (§6.4.3) |
+| **Cohort** | The group of employees compared in a calibration/bell-curve view (min size applies) (§10.3) |
+| **Snapshot** | `common.employee_snapshot`, the local cache of BS4 employee/org data (§8.5) |
+| **Reversal entry** | A negative-hours append-only correction to a synced time entry (§7.5.4) |
+| **Idempotency key** | A unique per-record token making outbound sync retries safe (§7.5.4, §8.4) |
+| **Handoff** | The BS4 new-hire push record + onboarding notification (`employee_handoff`) (§5.4.6) |
+| **Approval task** | A single approver's pending decision in a workflow (`approval_task`) (§9.5) |
+| **Notification & Workflow Service** | The single service (:3004) owning notification delivery **and** approval routing. Referred to only by this full name (not "Notification Service" or "workflow engine"). |
+| **Internal / External user** | Internal = company-Workspace staff; External = candidate/agency/client on the separate portal (§4.5) |
+
+## 18. Open Questions & Risks
+
+Unresolved items with owners — collected here instead of buried as task checkboxes.
+
+| # | Open question / risk | Owner | Blocks |
+|---|---|---|---|
+| OQ-1 | BS4 API contract not finalized (endpoints, auth, rate limits, idempotency support) | Eng + BS4 team | Confirms A-1/A-2; all BS4 integration |
+| OQ-2 | Does Rozee.pk expose a usable posting API? (existence unverified) | Recruitment lead | A-4; Phase-5 board integration |
+| OQ-3 | LinkedIn/Indeed partner-API approval timeline (weeks; may be denied) | Recruitment lead | Phase-5 sourcing (manual fallback mitigates, §13) |
+| OQ-4 | Directus dedup/rejection semantics on idempotency key | Eng + Directus team | Confirms A-3; time-entry sync integrity |
+| OQ-5 | Numeric scale/concurrency/data-volume targets → validate the single-DB decision | Architecture team | §3.8; single-DB sign-off |
+| OQ-6 | Which single cloud is the primary launch target? | Architecture + Ops | §1; deployment build |
+| OQ-7 | Data-processing agreement (zero-retention) per enabled AI provider | Legal + Eng | §10.5; AI screening in production |
+| OQ-8 | Applicable data-protection obligations (Pakistan ops; GDPR if EU subjects) | Legal | §10.2 / §10.7 scope |
+| OQ-9 | Observability platform choice + when it lands (currently deferred) | Ops | §3.6; production readiness |
+
+---
+
 *Document maintained by: Engineering Team*  
-*Last updated: 2026-07-30*  
-*Next review: After BS4 API contract finalization*
+*Version: 1.3 · Last updated: 2026-07-30*  
+*Next review: After BS4 API contract finalization (OQ-1) and primary-cloud selection (OQ-6)*
