@@ -1,0 +1,337 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ExpertFlow HR Suite - Kanban Board</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles/design-system.css"/>
+<style>
+.kanban-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.kanban-toolbar select,.kanban-toolbar input[type=text]{padding:7px 12px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;color:#334155;background:white;outline:none}
+.board-workspace{display:flex;gap:14px;overflow-x:auto}
+.board-scroll{display:flex;gap:14px;flex:1;overflow-x:auto;padding-bottom:4px;min-height:calc(100vh - 260px)}
+.kanban-col{flex:0 0 265px;display:flex;flex-direction:column;background:#F8FAFC;border-radius:12px;overflow:hidden}
+.kanban-col-header{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--col-color,#CBD5E1)}
+.kanban-col-title{font-size:13px;font-weight:700;color:#0F172A;display:flex;align-items:center;gap:8px}
+.col-dot{width:10px;height:10px;border-radius:50%;background:var(--col-color,#CBD5E1)}
+.kanban-col-count{font-size:11px;font-weight:700;color:white;background:var(--col-color,#94A3B8);border-radius:99px;padding:2px 8px}
+.kanban-col-body{flex:1;padding:10px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;max-height:calc(100vh - 320px)}
+.task-card{background:white;border:1px solid #E2E8F0;border-radius:10px;padding:12px 14px;cursor:pointer;transition:all 0.15s;border-left:3px solid var(--col-color,#CBD5E1)}
+.task-card:hover{box-shadow:0 4px 12px rgba(0,0,0,0.1);transform:translateY(-1px)}
+.task-card.selected{box-shadow:0 0 0 2px #0066CC}
+.task-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
+.task-id{font-size:10px;font-weight:600;color:#94A3B8;letter-spacing:0.5px}
+.task-priority{font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px}
+.priority-critical{background:#FEE2E2;color:#DC2626}.priority-high{background:#FEF3C7;color:#D97706}
+.priority-medium{background:#DBEAFE;color:#2563EB}.priority-low{background:#F0FDF4;color:#059669}
+.task-title{font-size:13px;font-weight:600;color:#0F172A;margin-bottom:4px;line-height:1.4}
+.task-project-link{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#0066CC;text-decoration:none;margin-bottom:6px}
+.task-project-link:hover{text-decoration:underline}
+.task-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.task-meta-item{font-size:10px;color:#64748B;display:flex;align-items:center;gap:3px}
+.task-meta-item.overdue{color:#DC2626;font-weight:600}
+.task-footer{display:flex;align-items:center;justify-content:space-between}
+.task-assignees{display:flex}
+.tav{margin-left:-5px;border:2px solid white;width:24px;height:24px;font-size:9px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700}
+.tav:first-child{margin-left:0}.tav-blue{background:#0066CC;color:white}.tav-teal{background:#00A3A3;color:white}.tav-purple{background:#7C3AED;color:white}.tav-orange{background:#EA580C;color:white}
+.task-tags{display:flex;gap:4px;flex-wrap:wrap}.task-tag{font-size:10px;padding:2px 6px;border-radius:4px;background:#F1F5F9;color:#475569}
+.task-progress-row{margin-bottom:6px}.task-progress-label{font-size:10px;color:#94A3B8;margin-bottom:3px}
+.task-progress-bar{height:4px;background:#E2E8F0;border-radius:99px;overflow:hidden}
+.task-progress-fill{height:100%;border-radius:99px;background:var(--col-color,#CBD5E1)}
+.subtask-count{font-size:10px;color:#64748B;display:flex;align-items:center;gap:3px}
+.subtask-count.all-done{color:#059669}
+.add-task-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;font-size:12px;color:#64748B;cursor:pointer;border-radius:8px;margin:4px 10px 10px;border:1px dashed #CBD5E1;background:transparent;width:calc(100% - 20px)}
+.add-task-btn:hover{background:#EFF6FF;color:#0066CC;border-color:#0066CC}
+.blocked-note{background:#FEF2F2;border:1px solid #FECACA;border-radius:6px;padding:6px 8px;font-size:11px;color:#DC2626;margin-bottom:8px}
+.sprint-bar{background:white;border:1px solid #E2E8F0;border-radius:10px;padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.sprint-bar-name{font-size:14px;font-weight:700;color:#0F172A}.sprint-bar-dates{font-size:12px;color:#64748B}
+.sprint-bar-stats{display:flex;gap:16px;margin-left:auto}.sprint-stat{text-align:center}
+.sprint-stat-val{font-size:18px;font-weight:800;color:#0066CC}.sprint-stat-lbl{font-size:10px;color:#94A3B8}
+.sprint-progress-wrap{flex:1;min-width:160px}
+.sprint-progress-label{font-size:11px;color:#64748B;margin-bottom:4px;display:flex;justify-content:space-between}
+.sprint-progress-bar{height:8px;background:#E2E8F0;border-radius:99px;overflow:hidden}
+.sprint-progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#0066CC,#00A3A3)}
+.detail-panel{width:480px;flex-shrink:0;background:white;border:1px solid #E2E8F0;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;max-height:calc(100vh - 220px)}
+.detail-panel-header{padding:14px 18px;border-bottom:1px solid #E2E8F0;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.detail-title-input{font-size:16px;font-weight:700;color:#0F172A;border:none;outline:none;flex:1;font-family:inherit;background:transparent;line-height:1.4}
+.detail-title-input:focus{background:#F8FAFC;border-radius:6px;padding:2px 6px;margin:-2px -6px}
+.detail-close{background:none;border:none;font-size:18px;color:#94A3B8;cursor:pointer;padding:0;flex-shrink:0}
+.detail-panel-tabs{display:flex;border-bottom:1px solid #E2E8F0;padding:0 18px}
+.detail-tab{padding:10px 14px;font-size:12px;font-weight:600;color:#64748B;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.detail-tab.active{color:#0066CC;border-bottom-color:#0066CC}
+.detail-panel-body{flex:1;overflow-y:auto;padding:16px 18px}
+.field-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.field-label{font-size:12px;color:#64748B;width:110px;flex-shrink:0;padding-top:6px;font-weight:500}
+.field-value{flex:1}
+.field-input{width:100%;padding:6px 10px;border:1px solid transparent;border-radius:6px;font-size:13px;color:#0F172A;font-family:inherit;background:transparent;outline:none;cursor:pointer}
+.field-input:hover{border-color:#E2E8F0;background:#F8FAFC}
+.field-input:focus{border-color:#0066CC;background:white;cursor:text}
+.field-select{width:100%;padding:6px 10px;border:1px solid transparent;border-radius:6px;font-size:13px;color:#0F172A;font-family:inherit;background:transparent;outline:none;cursor:pointer}
+.field-select:hover{border-color:#E2E8F0;background:#F8FAFC}
+.field-select:focus{border-color:#0066CC;background:white}
+.field-date{width:100%;padding:6px 10px;border:1px solid transparent;border-radius:6px;font-size:13px;color:#0F172A;font-family:inherit;background:transparent;outline:none;cursor:pointer}
+.field-date:hover{border-color:#E2E8F0;background:#F8FAFC}
+.field-date:focus{border-color:#0066CC;background:white}
+.project-link-field{display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid transparent;border-radius:6px;cursor:pointer}
+.project-link-field:hover{border-color:#E2E8F0;background:#F8FAFC}
+.project-link-text{font-size:13px;color:#0066CC;font-weight:600;text-decoration:none}
+.project-link-text:hover{text-decoration:underline}
+.project-link-icon{font-size:11px;color:#94A3B8}
+.assignee-picker{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 0}
+.assignee-chip{display:flex;align-items:center;gap:5px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:99px;padding:3px 8px 3px 4px;font-size:12px;color:#1D4ED8}
+.assignee-chip .tav{width:20px;height:20px;font-size:8px;margin-left:0}
+.assignee-chip-remove{background:none;border:none;color:#94A3B8;cursor:pointer;font-size:14px;padding:0;line-height:1;margin-left:2px}
+.assignee-chip-remove:hover{color:#DC2626}
+.add-assignee-btn{display:flex;align-items:center;gap:4px;padding:3px 10px;border:1px dashed #CBD5E1;border-radius:99px;font-size:12px;color:#64748B;cursor:pointer;background:transparent}
+.add-assignee-btn:hover{border-color:#0066CC;color:#0066CC;background:#EFF6FF}
+.bs4-dropdown{position:relative}
+.bs4-dropdown-menu{position:absolute;top:100%;left:0;z-index:200;background:white;border:1px solid #E2E8F0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);width:280px;max-height:260px;overflow-y:auto;display:none}
+.bs4-dropdown-menu.open{display:block}
+.bs4-search-input{width:100%;padding:10px 14px;border:none;border-bottom:1px solid #E2E8F0;font-size:13px;outline:none;font-family:inherit}
+.bs4-emp-item{display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;transition:background 0.1s}
+.bs4-emp-item:hover{background:#F8FAFC}
+.bs4-emp-item.selected{background:#EFF6FF}
+.bs4-emp-name{font-size:13px;color:#0F172A;font-weight:500}
+.bs4-emp-dept{font-size:11px;color:#94A3B8}
+.bs4-badge{font-size:9px;font-weight:700;padding:1px 5px;border-radius:99px;background:#D1FAE5;color:#059669;margin-left:auto}
+.subtask-section{margin-top:4px}
+.subtask-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.subtask-title{font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.6px}
+.subtask-progress-text{font-size:11px;color:#94A3B8}
+.subtask-progress-bar{height:4px;background:#E2E8F0;border-radius:99px;overflow:hidden;margin-bottom:10px}
+.subtask-progress-fill{height:100%;border-radius:99px;background:#059669}
+.subtask-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid #E2E8F0;border-radius:8px;margin-bottom:6px;background:white;cursor:pointer;transition:all 0.1s}
+.subtask-item:hover{border-color:#0066CC;background:#F8FAFC}
+.subtask-check{width:16px;height:16px;accent-color:#059669;flex-shrink:0;cursor:pointer}
+.subtask-name{flex:1;font-size:13px;color:#334155}
+.subtask-name.done{text-decoration:line-through;color:#94A3B8}
+.subtask-assignee{display:flex;align-items:center;gap:4px}
+.subtask-due{font-size:10px;color:#94A3B8}
+.subtask-due.overdue{color:#DC2626;font-weight:600}
+.add-subtask-row{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px dashed #CBD5E1;border-radius:8px;cursor:pointer;color:#64748B;font-size:12px}
+.add-subtask-row:hover{border-color:#0066CC;color:#0066CC;background:#EFF6FF}
+.activity-item{display:flex;gap:10px;margin-bottom:14px}
+.activity-body{flex:1}
+.activity-author{font-size:12px;font-weight:600;color:#0F172A}
+.activity-time{font-size:10px;color:#94A3B8;margin-left:6px}
+.activity-text{font-size:12px;color:#475569;margin-top:3px;line-height:1.5}
+.activity-log-item{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;font-size:11px;color:#94A3B8}
+.activity-log-dot{width:6px;height:6px;border-radius:50%;background:#CBD5E1;flex-shrink:0;margin-top:4px}
+.comment-input-row{display:flex;gap:8px;align-items:flex-start;padding-top:10px;border-top:1px solid #F1F5F9;margin-top:4px}
+.comment-input{flex:1;padding:8px 12px;border:1px solid #E2E8F0;border-radius:8px;font-size:12px;resize:none;outline:none;font-family:inherit}
+.comment-input:focus{border-color:#0066CC}
+.detail-panel-footer{padding:12px 18px;border-top:1px solid #E2E8F0;display:flex;gap:8px}
+.status-pill-bar{display:flex;gap:6px;padding:10px 18px;border-bottom:1px solid #F1F5F9;background:#FAFBFF;flex-wrap:wrap}
+.status-pill{padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid transparent;transition:all 0.15s}
+.status-pill.todo{background:#F1F5F9;color:#64748B;border-color:#E2E8F0}
+.status-pill.inprog{background:#DBEAFE;color:#2563EB;border-color:#BFDBFE}
+.status-pill.review{background:#FEF3C7;color:#D97706;border-color:#FDE68A}
+.status-pill.blocked{background:#FEE2E2;color:#DC2626;border-color:#FECACA}
+.status-pill.done{background:#D1FAE5;color:#059669;border-color:#A7F3D0}
+.status-pill.active{box-shadow:0 0 0 2px currentColor}
+</style></head><body>
+<div class="app-shell">
+<aside class="sidebar">
+<a class="sidebar-logo" href="02-shell-dashboard.html"><div class="ef-logo"><div class="ef-logo-mark">EF</div><div class="ef-logo-text"><div class="ef-logo-name">ExpertFlow</div><div class="ef-logo-product">HR Suite</div></div></div></a>
+<nav class="sidebar-nav">
+<div class="sidebar-section-label">Overview</div>
+<a class="sidebar-item" href="02-shell-dashboard.html"><span class="sidebar-icon">&#127968;</span> Dashboard</a>
+<div class="sidebar-section-label">Modules</div>
+<a class="sidebar-item" href="03-recruitment-dashboard.html"><span class="sidebar-icon">&#128101;</span> Recruitment<span class="sidebar-badge">5</span></a>
+<a class="sidebar-item" href="07-appraisal-dashboard.html"><span class="sidebar-icon">&#128202;</span> Performance Appraisal</a>
+<a class="sidebar-item active" href="11-project-dashboard.html"><span class="sidebar-icon">&#128203;</span> Project Management<span class="sidebar-badge green">2</span></a>
+<div class="sidebar-section-label">Projects</div>
+<a class="sidebar-item" href="11-project-dashboard.html"><span class="sidebar-icon">&#128200;</span> Dashboard</a>
+<a class="sidebar-item" href="#"><span class="sidebar-icon">&#128193;</span> All Projects</a>
+<a class="sidebar-item" href="14-tasks.html"><span class="sidebar-icon">&#9989;</span> Tasks</a>
+<a class="sidebar-item active" href="12-kanban.html"><span class="sidebar-icon">&#128208;</span> Kanban Board</a>
+<a class="sidebar-item" href="#"><span class="sidebar-icon">&#128197;</span> Gantt Chart</a>
+<a class="sidebar-item" href="13-timesheet.html"><span class="sidebar-icon">&#9201;</span> Timesheets</a>
+<a class="sidebar-item" href="#"><span class="sidebar-icon">&#128101;</span> Resources</a>
+</nav>
+<div class="sidebar-footer"><div class="sidebar-user"><div class="avatar avatar-teal">SH</div><div class="sidebar-user-info"><div class="sidebar-user-name">Sarah Hassan</div><div class="sidebar-user-role">HR Administrator</div></div></div></div>
+</aside>
+<main class="main-content">
+<header class="topbar">
+<div class="topbar-breadcrumb"><a href="02-shell-dashboard.html" style="color:#64748B;text-decoration:none">HR Suite</a><span class="topbar-breadcrumb-sep">&#8250;</span><a href="11-project-dashboard.html" style="color:#64748B;text-decoration:none">Project Management</a><span class="topbar-breadcrumb-sep">&#8250;</span><span class="topbar-breadcrumb-current">Kanban Board</span></div>
+<div class="topbar-search"><span>&#128269;</span><input type="text" placeholder="Search tasks..." /></div>
+<div class="topbar-actions"><button class="icon-btn" aria-label="Notifications">&#128276;<span class="badge-dot"></span></button><div class="avatar avatar-teal">SH</div></div>
+</header>
+<div class="page-content">
+<div class="page-header" style="margin-bottom:14px"><div><h1 class="page-title">Kanban Board</h1><p class="page-subtitle">CX Platform Redesign - Sprint 4</p></div><div style="display:flex;gap:10px;align-items:center"><button class="btn btn-secondary" onclick="window.location.href='11-project-dashboard.html'">List View</button><button class="btn btn-primary" onclick="openNewTask()">+ New Task</button></div></div>
+<div class="sprint-bar"><div><div class="sprint-bar-name">Sprint 4 - UI Components</div><div class="sprint-bar-dates">Jul 21 to Aug 3, 2026 - 4 days remaining</div></div><div class="sprint-progress-wrap"><div class="sprint-progress-label"><span>Sprint Progress</span><span>62%</span></div><div class="sprint-progress-bar"><div class="sprint-progress-fill" style="width:62%"></div></div></div><div class="sprint-bar-stats"><div class="sprint-stat"><div class="sprint-stat-val">18</div><div class="sprint-stat-lbl">Total Tasks</div></div><div class="sprint-stat"><div class="sprint-stat-val">7</div><div class="sprint-stat-lbl">Done</div></div><div class="sprint-stat"><div class="sprint-stat-val">3</div><div class="sprint-stat-lbl">Blocked</div></div><div class="sprint-stat"><div class="sprint-stat-val">42</div><div class="sprint-stat-lbl">Story Pts</div></div></div></div>
+<div class="kanban-toolbar"><select title="Filter by project"><option>All Projects</option><option selected>CX Platform Redesign</option><option>ERP Integration v2</option><option>Internal IT Ops</option></select><select title="Filter by assignee"><option>All Assignees</option><option>Ahmed Raza</option><option>Fatima Malik</option><option>Omar Sheikh</option><option>Zara Hussain</option></select><select title="Filter by priority"><option>All Priorities</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option></select><select title="Filter by label"><option>All Labels</option><option>Frontend</option><option>Backend</option><option>Design</option><option>QA</option></select><input type="text" placeholder="Filter tasks..." style="min-width:160px" /><div style="margin-left:auto;display:flex;gap:8px"><button class="btn btn-secondary" style="font-size:12px;padding:6px 12px">Group by Assignee</button><button class="btn btn-secondary" style="font-size:12px;padding:6px 12px">Board Settings</button></div></div>
+<div class="board-workspace"><div class="board-scroll">
+<div class="kanban-col" style="--col-color:#64748B"><div class="kanban-col-header"><div class="kanban-col-title"><div class="col-dot"></div>To Do</div><div class="kanban-col-count">5</div></div><div class="kanban-col-body"><div class="task-card" onclick="openDetail(this)" style="--col-color:#64748B"><div class="task-card-top"><span class="task-id">TASK-041</span><span class="task-priority priority-high">High</span></div><div class="task-title">Design system token audit</div><a class="task-project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">&#128193; CX Platform Redesign</a><div class="task-meta"><span class="task-meta-item">&#128197; Aug 1</span><span class="task-meta-item">&#9201; 4h est.</span><span class="task-meta-item">&#128172; 2</span></div><div class="task-footer"><div class="task-assignees"><div class="tav tav-blue" title="Zara Hussain">ZH</div></div><div style="display:flex;gap:6px;align-items:center"><span class="subtask-count">&#9776; 0/3 subtasks</span><div class="task-tags"><span class="task-tag">Design</span></div></div></div></div><div class="task-card" onclick="openDetail(this)" style="--col-color:#64748B"><div class="task-card-top"><span class="task-id">TASK-042</span><span class="task-priority priority-medium">Medium</span></div><div class="task-title">Write unit tests for auth service</div><a class="task-project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">&#128193; CX Platform Redesign</a><div class="task-meta"><span class="task-meta-item">&#128197; Aug 3</span><span class="task-meta-item">&#9201; 6h est.</span></div><div class="task-footer"><div class="task-assignees"><div class="tav tav-teal" title="Ahmed Raza">AR</div></div><div style="display:flex;gap:6px;align-items:center"><div class="task-tags"><span class="task-tag">QA</span><span class="task-tag">Backend</span></div></div></div></div><div class="task-card" onclick="openDetail(this)" style="--col-color:#64748B"><div class="task-card-top"><span class="task-id">TASK-043</span><span class="task-priority priority-low">Low</span></div><div class="task-title">Update API documentation for v2 endpoints</div><a class="task-project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">&#128193; ERP Integration v2</a><div class="task-meta"><span class="task-meta-item">&#128197; Aug 5</span><span class="task-meta-item">&#9201; 3h est.</span></div><div class="task-footer"><div class="task-assignees"><div class="tav tav-purple" title="Omar Sheikh">OS</div></div><div style="display:flex;gap:6px;align-items:center"><div class="task-tags"><span class="task-tag">Docs</span></div></div></div></div><div class="task-card" onclick="openDetail(this)" style="--col-color:#64748B"><div class="task-card-top"><span class="task-id">TASK-044</span><span class="task-priority priority-critical">Critical</span></div><div class="task-title">Fix SSO token expiry edge case</div><a class="task-project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">&#128193; CX Platform Redesign</a><div class="task-meta"><span class="task-meta-item  overdue">&#128197; Jul 28 - OVERDUE</span><span class="task-meta-item">&#9201; 2h est.</span><span class="task-meta-item">&#128172; 5</span></div><div class="task-footer"><div class="task-assignees"><div class="tav tav-blue" title="Fatima Malik">FM</div><div class="tav tav-teal" title="Ahmed Raza">AR</div></div><div style="display:flex;gap:6px;align-items:center"><div class="task-tags"><span class="task-tag">Backend</span><span class="task-tag">Security</span></div></div></div></div><div class="task-card" onclick="openDetail(this)" style="--col-color:#64748B"><div class="task-card-top"><span class="task-id">TASK-045</span><span class="task-priority priority-medium">Medium</span></div><div class="task-title">Responsive layout for mobile dashboard</div><a class="task-project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">&#128193; CX Platform Redesign</a><div class="task-meta"><span class="task-meta-item">&#128197; Aug 3</span><span class="task-meta-item">&#9201; 5h est.</span></div><div class="task-footer"><div class="task-assignees"><div class="tav tav-blue" title="Zara Hussain">ZH</div></div><div style="display:flex;gap:6px;align-items:center"><div class="task-tags"><span class="task-tag">Frontend</span></div></div></div></div></div><button class="add-task-btn" onclick="openNewTask()">+ Add task</button></div>
+<div class="kanban-col" style="--col-color:#2563EB"><div class="kanban-col-header"><div class="kanban-col-title"><div class="col-dot"></div>In Progress</div><div class="kanban-col-count">4</div></div><div class="kanban-col-body"><div class="task-card selected" onclick="openDetail(this)" style="--col-color:#2563EB"><div class="task-card-top"><span class="task-id">TASK-031</span><span class="task-priority priority-high">High</span></div><div class="task-title">Implement dashboard chart components</div><a class="task-project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">&#128193; CX Platform Redesign</a><div class="task-progress-row"><div class="task-progress-label">Progress 60%</div><div class="task-progress-bar"><div class="task-progress-fill" style="width:60%"></div></div></div><div class="task-meta"><span class="task-meta-item">&#128197; Jul 31</span><span class="task-meta-item">&#9201; 8h/12h</span><span class="task-meta-item">&#128172; 3</span></div><div class="task-footer"><div class="task-assignees"><div class="tav tav-blue" title="Fatima Malik">FM</div><div class="tav tav-blue" title="Zara Hussain">ZH</div></div><div style="display:flex;gap:6px;align-items:center"><span class="subtask-count">&#9776; 3/5 subtasks</span><div class="task-tags"><span class="task-tag">Frontend</span></div></div></div></div><div class="task-card" onclick="openDetail(this)" style="--col-color:#2563EB"><div class="task-card-top"><span class="task-id">TASK-032</span><span class="task-priority priority-critical">Critical</span></div><div class="task-title">Database migration script for v2 schema</div><a class="task-project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">&#128193; ERP Integration v2</a><div class="task-progress-row"><div class="task-progress-label">Progress 35%</div><div class="task-progress-bar"><div class="task-progress-fill" style="width:35%"></div></div></div><div class="task-meta"><span class="task-meta-item  overdue">&#128197; Jul 29 - OVERDUE</span><span class="task-meta-item">&#9201; 3.5h/10h</span><span class="task-meta-item">&#128172; 7</span></div><div class="task-footer"><div class="task-assignees"><div class="tav tav-teal" title="Ahmed Raza">AR</div></div><div style="display:flex;gap:6px;align-items:center"><div class="task-tags"><span class="task-tag">Backend</span><span class="task-tag">DB</span></div></div></div></div><div class="task-card" onclick="openDetail(this)" style="--col-color:#2563EB"><div class="task-card-top"><span class="task-id">TASK-033</span><span class="task-priority priority-medium">Medium</span></div><div class="task-title">User onboarding flow wireframes</div><a class="task-project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">&#128193; CX Platform Redesign</a><div class="task-progress-row"><div class="task-progress-label">Progress 80%</div><div class="task-progress-bar"><div class="task-progress-fill" style="width:80%"></div></div></div><div class="task-meta"><span class="task-meta-item">&#128197; Aug 1</span><span class="task-meta-item">&#9201; 6h/8h</span></div><div class="task-footer"><div class="task-assignees"><div class="tav tav-blue" title="Zara Hussain">ZH</div></div><div style="display:flex;gap:6px;align-items:center"><span class="subtask-count all-done">&#9776; 2/2 subtasks</span><div class="task-tags"><span class="task-tag">Design</span></div></div></div></div><div class="task-card" onclick="openDetail(this)" style="--col-color:#2563EB"><div class="task-card-top"><span class="task-id">TASK-034</span><span class="task-priority priority-high">High</span></div><div class="task-title">Notification service WebSocket integration</div><a class="task-project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">&#128193; CX Platform Redesign</a><div class="task-progress-row"><div class="task-progress-label">Progress 45%</div><div class="task-progress-bar"><div class="task-progress-fill" style="width:45%"></div></div></div><div class="task-meta"><span class="task-meta-item">&#128197; Aug 2</span><span class="task-meta-item">&#9201; 4.5h/10h</span><span class="task-meta-item">&#128172; 1</span></div><div class="task-footer"><div class="task-assignees"><div class="tav tav-purple" title="Omar Sheikh">OS</div></div><div style="display:flex;gap:6px;align-items:center"><div class="task-tags"><span class="task-tag">Backend</span></div></div></div></div></div><button class="add-task-btn" onclick="openNewTask()">+ Add task</button></div>
+<div class="kanban-col" style="--col-color:#D97706"><div class="kanban-col-header"><div class="kanban-col-title"><div class="col-dot"></div>In Review</div><div class="kanban-col-count">3</div></div><div class="kanban-col-body"><div class="task-card" onclick="openDetail(this)" style="--col-color:#D97706"><div class="task-card-top"><span class="task-id">TASK-021</span><span class="task-priority priority-high">High</span></div><div class="task-title">Login page redesign with SSO button</div><a class="task-project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">&#128193; CX Platform Redesign</a><div class="task-meta"><span class="task-meta-item">&#128197; Jul 30</span><span class="task-meta-item">&#9201; 8h logged</span><span class="task-meta-item">&#128172; 4</span></div><div class="task-footer"><div class="task-assignees"><div class="tav tav-blue" title="Fatima Malik">FM</div></div><div style="display:flex;gap:6px;align-items:center"><div class="task-tags"><span class="task-tag">Frontend</span><span class="task-tag">Design</span></div></div></div></div><div class="task-card" onclick="openDetail(this)" style="--col-color:#D97706"><div class="task-card-top"><span class="task-id">TASK-022</span><span class="task-priority priority-medium">Medium</span></div><div class="task-title">REST API rate limiting middleware</div><a class="task-project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">&#128193; ERP Integration v2</a><div class="task-meta"><span class="task-meta-item">&#128197; Jul 29</span><span class="task-meta-item">&#9201; 5h logged</span><span class="task-meta-item">&#128172; 2</span></div><div class="task-footer"><div class="task-assignees"><div class="tav tav-teal" title="Ahmed Raza">AR</div></div><div style="display:flex;gap:6px;align-items:center"><div class="task-tags"><span class="task-tag">Backend</span></div></div></div></div><div class="task-card" onclick="openDetail(this)" style="--col-color:#D97706"><div class="task-card-top"><span class="task-id">TASK-023</span><span class="task-priority priority-low">Low</span></div><div class="task-title">Accessibility audit - WCAG 2.1 AA</div><a class="task-project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">&#128193; CX Platform Redesign</a><div class="task-meta"><span class="task-meta-item">&#128197; Jul 31</span><span class="task-meta-item">&#9201; 6h logged</span></div><div class="task-footer"><div class="task-assignees"><div class="tav tav-blue" title="Zara Hussain">ZH</div></div><div style="display:flex;gap:6px;align-items:center"><div class="task-tags"><span class="task-tag">QA</span></div></div></div></div></div><button class="add-task-btn" onclick="openNewTask()">+ Add task</button></div>
+<div class="kanban-col" style="--col-color:#DC2626"><div class="kanban-col-header"><div class="kanban-col-title"><div class="col-dot"></div>Blocked</div><div class="kanban-col-count">3</div></div><div class="kanban-col-body"><div class="task-card" onclick="openDetail(this)" style="--col-color:#DC2626"><div class="task-card-top"><span class="task-id">TASK-051</span><span class="task-priority priority-critical">Critical</span></div><div class="task-title">Payment gateway integration</div><a class="task-project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">&#128193; ERP Integration v2</a><div class="blocked-note">&#128683; Blocked: Waiting for vendor API keys from procurement</div><div class="task-meta"><span class="task-meta-item  overdue">&#128197; Jul 25 - OVERDUE</span><span class="task-meta-item">&#128172; 8</span></div><div class="task-footer"><div class="task-assignees"><div class="tav tav-purple" title="Omar Sheikh">OS</div></div><div style="display:flex;gap:6px;align-items:center"><div class="task-tags"><span class="task-tag">Backend</span></div></div></div></div><div class="task-card" onclick="openDetail(this)" style="--col-color:#DC2626"><div class="task-card-top"><span class="task-id">TASK-052</span><span class="task-priority priority-high">High</span></div><div class="task-title">Cloud deployment pipeline - GCP permissions</div><a class="task-project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">&#128193; Internal IT Ops</a><div class="blocked-note">&#128683; Blocked: IAM role approval from IT Security</div><div class="task-meta"><span class="task-meta-item  overdue">&#128197; Jul 27 - OVERDUE</span><span class="task-meta-item">&#128172; 3</span></div><div class="task-footer"><div class="task-assignees"><div class="tav tav-teal" title="Ahmed Raza">AR</div></div><div style="display:flex;gap:6px;align-items:center"><div class="task-tags"><span class="task-tag">DevOps</span></div></div></div></div><div class="task-card" onclick="openDetail(this)" style="--col-color:#DC2626"><div class="task-card-top"><span class="task-id">TASK-053</span><span class="task-priority priority-medium">Medium</span></div><div class="task-title">Legal entity mapping - finance sign-off</div><a class="task-project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">&#128193; ERP Integration v2</a><div class="blocked-note">&#128683; Blocked: Finance team review pending</div><div class="task-meta"><span class="task-meta-item">&#128197; Aug 2</span><span class="task-meta-item">&#128172; 1</span></div><div class="task-footer"><div class="task-assignees"><div class="tav tav-blue" title="Fatima Malik">FM</div></div><div style="display:flex;gap:6px;align-items:center"><div class="task-tags"><span class="task-tag">Backend</span></div></div></div></div></div><button class="add-task-btn" onclick="openNewTask()">+ Add task</button></div>
+<div class="kanban-col" style="--col-color:#059669"><div class="kanban-col-header"><div class="kanban-col-title"><div class="col-dot"></div>Done</div><div class="kanban-col-count">7</div></div><div class="kanban-col-body"><div class="task-card" onclick="openDetail(this)" style="--col-color:#059669"><div class="task-card-top"><span class="task-id">TASK-011</span><span class="task-priority priority-high">High</span></div><div class="task-title">Project scaffolding and monorepo setup</div><a class="task-project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">&#128193; CX Platform Redesign</a><div class="task-meta"><span class="task-meta-item">&#10003; Jul 22</span><span class="task-meta-item">&#9201; 6h logged</span></div><div class="task-footer"><div class="task-assignees"><div class="tav tav-teal" title="Ahmed Raza">AR</div></div><div style="display:flex;gap:6px;align-items:center"><div class="task-tags"><span class="task-tag">DevOps</span></div></div></div></div><div class="task-card" onclick="openDetail(this)" style="--col-color:#059669"><div class="task-card-top"><span class="task-id">TASK-012</span><span class="task-priority priority-medium">Medium</span></div><div class="task-title">Design system color tokens defined</div><a class="task-project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">&#128193; CX Platform Redesign</a><div class="task-meta"><span class="task-meta-item">&#10003; Jul 23</span><span class="task-meta-item">&#9201; 4h logged</span></div><div class="task-footer"><div class="task-assignees"><div class="tav tav-blue" title="Zara Hussain">ZH</div></div><div style="display:flex;gap:6px;align-items:center"><div class="task-tags"><span class="task-tag">Design</span></div></div></div></div><div class="task-card" onclick="openDetail(this)" style="--col-color:#059669"><div class="task-card-top"><span class="task-id">TASK-013</span><span class="task-priority priority-high">High</span></div><div class="task-title">JWT authentication middleware</div><a class="task-project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">&#128193; CX Platform Redesign</a><div class="task-meta"><span class="task-meta-item">&#10003; Jul 24</span><span class="task-meta-item">&#9201; 10h logged</span></div><div class="task-footer"><div class="task-assignees"><div class="tav tav-blue" title="Fatima Malik">FM</div></div><div style="display:flex;gap:6px;align-items:center"><div class="task-tags"><span class="task-tag">Backend</span></div></div></div></div></div></div>
+</div>
+<div class="detail-panel" id="detailPanel">
+<div class="detail-panel-header">
+<input class="detail-title-input" type="text" value="Implement dashboard chart components" aria-label="Task title" />
+<button class="detail-close" onclick="closeDetail()" aria-label="Close">&#10005;</button>
+</div>
+<div class="status-pill-bar">
+<span class="status-pill todo" onclick="setStatus(this)">To Do</span>
+<span class="status-pill inprog active" onclick="setStatus(this)">In Progress</span>
+<span class="status-pill review" onclick="setStatus(this)">In Review</span>
+<span class="status-pill blocked" onclick="setStatus(this)">Blocked</span>
+<span class="status-pill done" onclick="setStatus(this)">Done</span>
+</div>
+<div class="detail-panel-tabs">
+<div class="detail-tab active" onclick="switchTab(this,'info')">Info</div>
+<div class="detail-tab" onclick="switchTab(this,'subtasks')">Subtasks (3/5)</div>
+<div class="detail-tab" onclick="switchTab(this,'activity')">Activity (6)</div>
+</div>
+<div class="detail-panel-body" id="detailBody">
+<div id="tab-info">
+<div class="field-row">
+<div class="field-label">Project</div>
+<div class="field-value"><div class="project-link-field"><a class="project-link-text" href="11-project-dashboard.html">CX Platform Redesign</a><span class="project-link-icon">&#8599;</span><span style="font-size:10px;color:#94A3B8;margin-left:6px">from BS4</span></div></div>
+</div>
+<div class="field-row">
+<div class="field-label">Assignees</div>
+<div class="field-value">
+<div class="assignee-picker" id="assigneePicker">
+<div class="assignee-chip"><div class="tav tav-blue">FM</div><span>Fatima Malik</span><button class="assignee-chip-remove" onclick="removeAssignee(this)" aria-label="Remove Fatima Malik">&#10005;</button></div>
+<div class="assignee-chip"><div class="tav tav-teal">ZH</div><span>Zara Hussain</span><button class="assignee-chip-remove" onclick="removeAssignee(this)" aria-label="Remove Zara Hussain">&#10005;</button></div>
+<div class="bs4-dropdown" id="assigneeDropdown">
+<button class="add-assignee-btn" onclick="toggleAssigneeDropdown()" aria-label="Add assignee">+ Add</button>
+<div class="bs4-dropdown-menu" id="assigneeMenu">
+<input type="text" class="bs4-search-input" placeholder="Search employees from BS4..." oninput="filterEmployees(this.value)" aria-label="Search employees" />
+<div id="empList">
+<div class="bs4-emp-item" onclick="toggleEmployee('AR','Ahmed Raza','teal')">
+<div class="tav tav-teal">AR</div>
+<div><div class="bs4-emp-name">Ahmed Raza</div><div class="bs4-emp-dept">Backend Engineering &middot; Senior Developer</div></div>
+</div>
+<div class="bs4-emp-item selected" onclick="toggleEmployee('FM','Fatima Malik','blue')">
+<div class="tav tav-blue">FM</div>
+<div><div class="bs4-emp-name">Fatima Malik</div><div class="bs4-emp-dept">Frontend Engineering &middot; UI Developer</div></div>
+<span class="bs4-badge">&#10003; Added</span>
+</div>
+<div class="bs4-emp-item" onclick="toggleEmployee('OS','Omar Sheikh','purple')">
+<div class="tav tav-purple">OS</div>
+<div><div class="bs4-emp-name">Omar Sheikh</div><div class="bs4-emp-dept">Full Stack &middot; Full Stack Developer</div></div>
+</div>
+<div class="bs4-emp-item selected" onclick="toggleEmployee('ZH','Zara Hussain','blue')">
+<div class="tav tav-blue">ZH</div>
+<div><div class="bs4-emp-name">Zara Hussain</div><div class="bs4-emp-dept">UX Design &middot; UX Designer</div></div>
+<span class="bs4-badge">&#10003; Added</span>
+</div>
+<div class="bs4-emp-item" onclick="toggleEmployee('KM','Khalid Mahmood','orange')">
+<div class="tav tav-orange">KM</div>
+<div><div class="bs4-emp-name">Khalid Mahmood</div><div class="bs4-emp-dept">Project Management &middot; Project Manager</div></div>
+</div>
+<div class="bs4-emp-item" onclick="toggleEmployee('NB','Nadia Baig','teal')">
+<div class="tav tav-teal">NB</div>
+<div><div class="bs4-emp-name">Nadia Baig</div><div class="bs4-emp-dept">QA Engineering &middot; QA Engineer</div></div>
+</div>
+<div class="bs4-emp-item" onclick="toggleEmployee('RA','Raza Ali','blue')">
+<div class="tav tav-blue">RA</div>
+<div><div class="bs4-emp-name">Raza Ali</div><div class="bs4-emp-dept">Backend Engineering &middot; DevOps Engineer</div></div>
+</div>
+<div class="bs4-emp-item" onclick="toggleEmployee('SH','Sarah Hassan','teal')">
+<div class="tav tav-teal">SH</div>
+<div><div class="bs4-emp-name">Sarah Hassan</div><div class="bs4-emp-dept">HR &middot; HR Administrator</div></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div></div>
+<div class="field-row"><div class="field-label">Due Date</div><div class="field-value"><input type="date" class="field-date" value="2026-07-31" aria-label="Due date" /></div></div>
+<div class="field-row"><div class="field-label">Priority</div><div class="field-value"><select class="field-select" title="Select priority"><option>Critical</option><option selected>High</option><option>Medium</option><option>Low</option></select></div></div>
+<div class="field-row"><div class="field-label">Est. Hours</div><div class="field-value"><input type="number" class="field-input" value="12" min="0.5" step="0.5" aria-label="Estimated hours" style="width:80px" /></div></div>
+<div class="field-row"><div class="field-label">Tags</div><div class="field-value"><div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center"><span class="task-tag">Frontend</span><span class="task-tag">Design</span><button style="font-size:11px;padding:2px 8px;border:1px dashed #CBD5E1;border-radius:4px;background:transparent;color:#64748B;cursor:pointer">+ Add tag</button></div></div></div>
+<div class="field-row" style="align-items:flex-start"><div class="field-label" style="padding-top:8px">Description</div><div class="field-value"><textarea class="field-input" rows="3" style="resize:vertical;width:100%" aria-label="Description">Implement interactive chart components for the analytics dashboard using Chart.js. Includes bar charts for pipeline metrics, line charts for trend analysis, and donut charts for status breakdowns.</textarea></div></div>
+</div>
+<div id="tab-subtasks" style="display:none">
+<div class="subtask-section">
+<div class="subtask-header"><span class="subtask-title">Subtasks</span><span class="subtask-progress-text">3 of 5 done</span></div>
+<div class="subtask-progress-bar"><div class="subtask-progress-fill" style="width:60%"></div></div>
+<div class="subtask-item">
+<input type="checkbox" class="subtask-check" checked aria-label="Bar chart component - pipeline metrics" />
+<span class="subtask-name done">Bar chart component - pipeline metrics</span>
+<div class="subtask-assignee"><div class="tav tav-blue" style="width:18px;height:18px;font-size:8px" title="Fatima Malik">FM</div></div>
+<span class="subtask-due">Jul 28</span>
+</div>
+<div class="subtask-item">
+<input type="checkbox" class="subtask-check" checked aria-label="Line chart - trend over time" />
+<span class="subtask-name done">Line chart - trend over time</span>
+<div class="subtask-assignee"><div class="tav tav-blue" style="width:18px;height:18px;font-size:8px" title="Fatima Malik">FM</div></div>
+<span class="subtask-due">Jul 28</span>
+</div>
+<div class="subtask-item">
+<input type="checkbox" class="subtask-check" checked aria-label="Donut chart - status breakdown" />
+<span class="subtask-name done">Donut chart - status breakdown</span>
+<div class="subtask-assignee"><div class="tav tav-blue" style="width:18px;height:18px;font-size:8px" title="Zara Hussain">ZH</div></div>
+<span class="subtask-due">Jul 29</span>
+</div>
+<div class="subtask-item">
+<input type="checkbox" class="subtask-check"  aria-label="Responsive breakpoints for mobile" />
+<span class="subtask-name">Responsive breakpoints for mobile</span>
+<div class="subtask-assignee"><div class="tav tav-blue" style="width:18px;height:18px;font-size:8px" title="Zara Hussain">ZH</div></div>
+<span class="subtask-due">Jul 31</span>
+</div>
+<div class="subtask-item">
+<input type="checkbox" class="subtask-check"  aria-label="Dark mode support" />
+<span class="subtask-name">Dark mode support</span>
+<div class="subtask-assignee"><div class="tav tav-blue" style="width:18px;height:18px;font-size:8px" title="Fatima Malik">FM</div></div>
+<span class="subtask-due">Aug 1</span>
+</div>
+<div class="add-subtask-row" onclick="addSubtask()">+ Add subtask</div>
+</div>
+</div>
+<div id="tab-activity" style="display:none">
+<div class="activity-log-item"><div class="activity-log-dot"></div><span>Status changed from <strong>To Do</strong> to <strong>In Progress</strong> by Fatima Malik &middot; Jul 27</span></div>
+<div class="activity-log-item"><div class="activity-log-dot"></div><span>Zara Hussain added as assignee by Sarah Hassan &middot; Jul 27</span></div>
+<div class="activity-log-item"><div class="activity-log-dot"></div><span>Due date set to <strong>Jul 31</strong> by Fatima Malik &middot; Jul 26</span></div>
+<div style="border-top:1px solid #F1F5F9;margin:12px 0"></div>
+<div class="activity-item"><div class="tav tav-blue" style="width:28px;height:28px;font-size:10px;flex-shrink:0">FM</div><div class="activity-body"><div><span class="activity-author">Fatima Malik</span><span class="activity-time">Jul 28, 2:30 PM</span></div><div class="activity-text">Bar and line charts are done. Working on the donut chart now - should be ready by EOD.</div></div></div>
+<div class="activity-item"><div class="tav tav-blue" style="width:28px;height:28px;font-size:10px;flex-shrink:0">ZH</div><div class="activity-body"><div><span class="activity-author">Zara Hussain</span><span class="activity-time">Jul 29, 10:15 AM</span></div><div class="activity-text">Looks great! Suggestion: add tooltip on hover showing exact values.</div></div></div>
+<div class="activity-item"><div class="tav tav-blue" style="width:28px;height:28px;font-size:10px;flex-shrink:0">FM</div><div class="activity-body"><div><span class="activity-author">Fatima Malik</span><span class="activity-time">Jul 29, 11:00 AM</span></div><div class="activity-text">Tooltips added. Moving to responsive breakpoints next.</div></div></div>
+<div class="comment-input-row"><div class="tav tav-teal" style="width:28px;height:28px;font-size:10px;flex-shrink:0">SH</div><textarea class="comment-input" rows="2" placeholder="Write a comment or @mention a teammate..." aria-label="Add comment"></textarea><button class="btn btn-primary" style="font-size:12px;padding:6px 12px;align-self:flex-end">Send</button></div>
+</div>
+</div>
+<div class="detail-panel-footer"><button class="btn btn-secondary" style="flex:1;font-size:12px">&#9201; Log Time</button><button class="btn btn-secondary" style="flex:1;font-size:12px">&#128206; Attach</button><button class="btn btn-primary" style="flex:1;font-size:12px">Move to Review &#8594;</button></div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<div id="newTaskModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
+<div style="background:white;border-radius:16px;width:620px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+<div style="padding:20px 24px;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;justify-content:space-between"><h2 style="font-size:16px;font-weight:700;color:#0F172A;margin:0">New Task</h2><button onclick="document.getElementById('newTaskModal').style.display='none'" style="background:none;border:none;font-size:20px;color:#94A3B8;cursor:pointer" aria-label="Close">&#10005;</button></div>
+<div style="padding:20px 24px">
+<div class="form-group"><label class="form-label">Task Name *</label><input type="text" class="form-input" placeholder="Enter task name..." aria-label="Task name" /></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+<div class="form-group"><label class="form-label">Project <span style="font-size:10px;color:#94A3B8;font-weight:400">(from BS4)</span></label>
+<select class="form-input" title="Select project from BS4"><option value="">-- Select Project --</option><option>CX Platform Redesign</option><option>ERP Integration v2</option><option>Internal IT Ops</option><option>HR Suite Development</option><option>Client Portal v3</option></select>
+<div style="font-size:10px;color:#94A3B8;margin-top:3px">&#128279; Links to project detail page</div></div>
+<div class="form-group"><label class="form-label">Assignee(s) <span style="font-size:10px;color:#94A3B8;font-weight:400">(from BS4)</span></label>
+<select class="form-input" title="Select assignees from BS4" multiple size="4"><option>Ahmed Raza - Backend Engineering</option><option>Fatima Malik - Frontend Engineering</option><option>Omar Sheikh - Full Stack</option><option>Zara Hussain - UX Design</option><option>Khalid Mahmood - Project Management</option><option>Nadia Baig - QA Engineering</option></select>
+<div style="font-size:10px;color:#94A3B8;margin-top:3px">Hold Ctrl/Cmd to select multiple</div></div>
+<div class="form-group"><label class="form-label">Due Date</label><input type="date" class="form-input" aria-label="Due date" /></div>
+<div class="form-group"><label class="form-label">Priority</label><select class="form-input" title="Select priority"><option>Critical</option><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+<div class="form-group"><label class="form-label">Status</label><select class="form-input" title="Select status"><option selected>To Do</option><option>In Progress</option><option>In Review</option><option>Blocked</option><option>Done</option></select></div>
+<div class="form-group"><label class="form-label">Estimated Hours</label><input type="number" class="form-input" placeholder="e.g. 8" min="0.5" step="0.5" aria-label="Estimated hours" /></div>
+</div>
+<div class="form-group"><label class="form-label">Description</label><textarea class="form-input" rows="3" placeholder="Describe the task..." style="resize:vertical" aria-label="Description"></textarea></div>
+<div class="form-group"><label class="form-label">Tags</label><input type="text" class="form-input" placeholder="e.g. Frontend, Backend, Design (comma separated)" aria-label="Tags" /></div>
+</div>
+<div style="padding:16px 24px;border-top:1px solid #E2E8F0;display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-secondary" onclick="document.getElementById('newTaskModal').style.display='none'">Cancel</button><button class="btn btn-secondary">Save &amp; Add Subtasks</button><button class="btn btn-primary">Create Task</button></div>
+</div></div>
+<script>
+function openDetail(el){var p=document.getElementById("detailPanel");p.style.display="flex";p.style.flexDirection="column";document.querySelectorAll(".task-card").forEach(c=>c.classList.remove("selected"));el.classList.add("selected");}
+function closeDetail(){document.getElementById("detailPanel").style.display="none";document.querySelectorAll(".task-card").forEach(c=>c.classList.remove("selected"));}
+function openNewTask(){document.getElementById("newTaskModal").style.display="flex";}
+function setStatus(el){document.querySelectorAll(".status-pill").forEach(p=>p.classList.remove("active"));el.classList.add("active");}
+function switchTab(el,tab){document.querySelectorAll(".detail-tab").forEach(t=>t.classList.remove("active"));el.classList.add("active");["info","subtasks","activity"].forEach(t=>{var el2=document.getElementById("tab-"+t);if(el2)el2.style.display=t===tab?"block":"none";});}
+function toggleAssigneeDropdown(){var m=document.getElementById("assigneeMenu");m.classList.toggle("open");}
+function filterEmployees(q){document.querySelectorAll("#empList .bs4-emp-item").forEach(function(item){var name=item.querySelector(".bs4-emp-name").textContent.toLowerCase();item.style.display=name.includes(q.toLowerCase())?"flex":"none";});}
+function toggleEmployee(init,name,cls){var picker=document.getElementById("assigneePicker");var existing=picker.querySelector("[data-init='"+init+"']");if(existing){existing.remove();}else{var chip=document.createElement("div");chip.className="assignee-chip";chip.setAttribute("data-init",init);chip.innerHTML='<div class="tav tav-'+cls+'">'+init+'</div><span>'+name+'</span><button class="assignee-chip-remove" onclick="this.parentElement.remove()" aria-label="Remove '+name+'">&#10005;</button>';var btn=picker.querySelector(".bs4-dropdown");picker.insertBefore(chip,btn);}document.getElementById("assigneeMenu").classList.remove("open");}
+function removeAssignee(btn){btn.parentElement.remove();}
+function addSubtask(){var name=prompt("Subtask name:");if(name){var list=document.querySelector(".subtask-section");var addBtn=list.querySelector(".add-subtask-row");var item=document.createElement("div");item.className="subtask-item";item.innerHTML='<input type="checkbox" class="subtask-check" aria-label="'+name+'" /><span class="subtask-name">'+name+'</span><span class="subtask-due">No date</span>';list.insertBefore(item,addBtn);}}
+document.addEventListener("click",function(e){var dd=document.getElementById("assigneeDropdown");if(dd&&!dd.contains(e.target)){document.getElementById("assigneeMenu").classList.remove("open");}});
+</script>
+</body></html>

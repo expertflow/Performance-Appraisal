@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ExpertFlow HR Suite — Sign In</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; background: #0A1628; }
+
+    .split { display: flex; width: 100%; min-height: 100vh; }
+
+    /* ── Left Brand Panel ── */
+    .brand-panel {
+      flex: 1;
+      background: linear-gradient(160deg, #0A1628 0%, #0D2444 60%, #0A1628 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 64px 72px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .brand-panel::before {
+      content: '';
+      position: absolute;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(0,102,204,0.18) 0%, transparent 70%);
+      top: -100px; right: -100px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .brand-panel::after {
+      content: '';
+      position: absolute;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(0,163,163,0.12) 0%, transparent 70%);
+      bottom: -80px; left: -80px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .ef-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 64px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .ef-logo-mark {
+      width: 42px; height: 42px;
+      background: linear-gradient(135deg, #0066CC, #00A3A3);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 800; color: white;
+    }
+
+    .ef-logo-name { font-size: 18px; font-weight: 700; color: white; }
+    .ef-logo-sub  { font-size: 11px; color: rgba(255,255,255,0.45); letter-spacing: 0.06em; text-transform: uppercase; }
+
+    .brand-headline {
+      font-size: 40px;
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 18px;
+      background: linear-gradient(135deg, #FFFFFF 0%, #7EC8E3 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      position: relative; z-index: 1;
+    }
+
+    .brand-desc {
+      font-size: 15px;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.75;
+      max-width: 400px;
+      margin-bottom: 48px;
+      position: relative; z-index: 1;
+    }
+
+    .module-cards { display: flex; flex-direction: column; gap: 12px; position: relative; z-index: 1; }
+
+    .module-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 12px;
+    }
+
+    .module-icon {
+      width: 38px; height: 38px;
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+
+    .module-icon.blue   { background: rgba(0,102,204,0.28); }
+    .module-icon.purple { background: rgba(91,33,182,0.28); }
+    .module-icon.teal   { background: rgba(0,163,163,0.28); }
+
+    .module-name { font-size: 13px; font-weight: 600; color: white; }
+    .module-desc { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 1px; }
+
+    /* ── Right Form Panel ── */
+    .form-panel {
+      width: 460px;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 56px 52px;
+      box-shadow: -24px 0 80px rgba(0,0,0,0.35);
+    }
+
+    .form-header { margin-bottom: 36px; }
+    .form-title { font-size: 26px; font-weight: 700; color: #0F172A; margin-bottom: 6px; }
+    .form-subtitle { font-size: 13px; color: #64748B; }
+
+    .google-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 13px 20px;
+      background: white;
+      border: 1.5px solid #CBD5E1;
+      border-radius: 9px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #0F172A;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      font-family: 'Inter', sans-serif;
+      margin-bottom: 22px;
+    }
+
+    .google-btn:hover { border-color: #0066CC; background: #EBF4FF; box-shadow: 0 0 0 3px rgba(0,102,204,0.1); }
+
+    .divider-or {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 22px;
+      font-size: 12px; color: #94A3B8;
+    }
+    .divider-or::before, .divider-or::after { content: ''; flex: 1; height: 1px; background: #E2E8F0; }
+
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 13px; font-weight: 500; color: #0F172A; margin-bottom: 5px; }
+
+    .field input {
+      width: 100%;
+      padding: 10px 13px;
+      border: 1.5px solid #CBD5E1;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      color: #0F172A;
+      outline: none;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+
+    .field input:focus { border-color: #0066CC; box-shadow: 0 0 0 3px rgba(0,102,204,0.1); }
+    .field input::placeholder { color: #94A3B8; }
+
+    .form-options {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 22px; font-size: 13px;
+    }
+
+    .form-options label { display: flex; align-items: center; gap: 6px; color: #64748B; cursor: pointer; }
+    .form-options a { color: #0066CC; font-weight: 500; text-decoration: none; }
+    .form-options a:hover { text-decoration: underline; }
+
+    .submit-btn {
+      width: 100%;
+      padding: 13px;
+      background: #0066CC;
+      color: white;
+      border: none;
+      border-radius: 9px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: background 0.18s;
+      margin-bottom: 20px;
+    }
+
+    .submit-btn:hover { background: #0052A3; }
+
+    .form-footer { text-align: center; font-size: 11px; color: #94A3B8; line-height: 1.6; }
+    .form-footer a { color: #0066CC; text-decoration: none; }
+
+    .trust-badges {
+      display: flex; align-items: center; justify-content: center; gap: 18px;
+      margin-top: 28px; padding-top: 20px;
+      border-top: 1px solid #E2E8F0;
+    }
+
+    .trust-badge { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #94A3B8; }
+  </style>
+</head>
+<body>
+  <div class="split">
+
+    <!-- Left: ExpertFlow Branding -->
+    <div class="brand-panel">
+      <div class="ef-logo">
+        <div class="ef-logo-mark">EF</div>
+        <div>
+          <div class="ef-logo-name">ExpertFlow</div>
+          <div class="ef-logo-sub">HR Suite · Internal Platform</div>
+        </div>
+      </div>
+
+      <h1 class="brand-headline">People &amp; Projects,<br/>Unified.</h1>
+      <p class="brand-desc">
+        ExpertFlow's internal HR platform — manage your entire employee lifecycle from hiring to performance reviews to project delivery, powered by your BS4 ERP data.
+      </p>
+
+      <div class="module-cards">
+        <div class="module-card">
+          <div class="module-icon blue">👥</div>
+          <div>
+            <div class="module-name">Recruitment</div>
+            <div class="module-desc">AI-assisted ATS · Multi-stage pipeline · Agency portal</div>
+          </div>
+        </div>
+        <div class="module-card">
+          <div class="module-icon purple">📊</div>
+          <div>
+            <div class="module-name">Performance Appraisal</div>
+            <div class="module-desc">360° feedback · Quarterly &amp; annual review cycles</div>
+          </div>
+        </div>
+        <div class="module-card">
+          <div class="module-icon teal">📋</div>
+          <div>
+            <div class="module-name">Project &amp; Task Management</div>
+            <div class="module-desc">Kanban · Gantt · Time tracking · ERP sync</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Sign In Form -->
+    <div class="form-panel">
+      <div class="form-header">
+        <div class="form-title">Welcome back</div>
+        <div class="form-subtitle">Sign in to your ExpertFlow HR Suite account</div>
+      </div>
+
+      <button class="google-btn" onclick="window.location.href='02-shell-dashboard.html'">
+        <svg width="20" height="20" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Continue with Google Workspace
+      </button>
+
+      <div class="divider-or">or sign in with email</div>
+
+      <div class="field">
+        <label>Work Email</label>
+        <input type="email" placeholder="you@expertflow.com" value="sarah.hr@expertflow.com" />
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <input type="password" placeholder="••••••••" value="password" />
+      </div>
+
+      <div class="form-options">
+        <label><input aria-label="Input field" type="checkbox" checked /> Keep me signed in</label>
+        <a href="#">Forgot password?</a>
+      </div>
+
+      <button class="submit-btn" onclick="window.location.href='02-shell-dashboard.html'">Sign In to HR Suite</button>
+
+      <div class="form-footer">
+        By signing in you agree to ExpertFlow's <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.<br/>
+        Access restricted to authorised ExpertFlow personnel only.
+      </div>
+
+      <div class="trust-badges">
+        <div class="trust-badge">🔒 SSL Encrypted</div>
+        <div class="trust-badge">🛡️ SOC 2</div>
+        <div class="trust-badge">✅ Google SSO</div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

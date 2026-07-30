@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ExpertFlow HR Suite — Candidate Pipeline</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/design-system.css" />
+  <style>
+    .pipeline-header-bar {
+      background:white; border:1px solid #E2E8F0; border-radius:12px;
+      padding:16px 20px; margin-bottom:20px;
+      display:flex; align-items:center; gap:20px;
+    }
+    .job-selector { display:flex; align-items:center; gap:10px; flex:1; }
+    .job-selector select { padding:8px 12px; border:1.5px solid #CBD5E1; border-radius:8px; font-size:14px; font-weight:600; font-family:'Inter',sans-serif; color:#0F172A; background:white; cursor:pointer; outline:none; }
+
+    .ai-score-bar { display:flex; align-items:center; gap:6px; }
+    .ai-score { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:white; }
+    .ai-score.high   { background:#059669; }
+    .ai-score.medium { background:#D97706; }
+    .ai-score.low    { background:#DC2626; }
+
+    .candidate-card {
+      background:white; border:1px solid #E2E8F0; border-radius:10px;
+      padding:12px 14px; cursor:pointer;
+      transition:box-shadow 0.15s, transform 0.15s;
+      box-shadow:0 1px 3px rgba(0,0,0,0.05);
+    }
+    .candidate-card:hover { box-shadow:0 6px 16px rgba(0,0,0,0.1); transform:translateY(-1px); }
+
+    .candidate-name { font-size:13px; font-weight:600; color:#0F172A; margin-bottom:3px; }
+    .candidate-meta { font-size:11px; color:#64748B; margin-bottom:8px; }
+    .candidate-footer { display:flex; align-items:center; justify-content:space-between; }
+    .candidate-source { font-size:10px; color:#94A3B8; }
+
+    .col-todo    { --col-color: #94A3B8; }
+    .col-screen  { --col-color: #0066CC; }
+    .col-tech    { --col-color: #5B21B6; }
+    .col-hr      { --col-color: #00A3A3; }
+    .col-offer   { --col-color: #D97706; }
+    .col-hired   { --col-color: #059669; }
+
+    .kanban-col-dot { width:8px; height:8px; border-radius:50%; background:var(--col-color); }
+
+    .detail-panel {
+      width:360px; flex-shrink:0;
+      background:white; border:1px solid #E2E8F0; border-radius:12px;
+      padding:20px; overflow-y:auto; max-height:calc(100vh - 160px);
+    }
+
+    .score-ring-wrap { display:flex; align-items:center; gap:16px; margin-bottom:16px; }
+    .big-score { width:72px; height:72px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:800; color:white; background:linear-gradient(135deg,#059669,#00A3A3); flex-shrink:0; }
+
+    .competency-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+    .competency-label { font-size:12px; color:#334155; width:140px; flex-shrink:0; }
+    .competency-bar { flex:1; height:6px; background:#E2E8F0; border-radius:99px; overflow:hidden; }
+    .competency-fill { height:100%; border-radius:99px; background:#0066CC; }
+    .competency-score { font-size:11px; font-weight:600; color:#0F172A; width:28px; text-align:right; }
+
+    .stage-btn { padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600; border:none; cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.15s; }
+    .stage-btn-primary { background:#0066CC; color:white; }
+    .stage-btn-primary:hover { background:#0052A3; }
+    .stage-btn-ghost { background:#F1F5F9; color:#334155; }
+    .stage-btn-ghost:hover { background:#E2E8F0; }
+    .stage-btn-danger { background:#FEE2E2; color:#DC2626; }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="sidebar-logo" href="02-shell-dashboard.html">
+      <div class="ef-logo"><div class="ef-logo-mark">EF</div><div class="ef-logo-text"><div class="ef-logo-name">ExpertFlow</div><div class="ef-logo-product">HR Suite</div></div></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item" href="02-shell-dashboard.html"><span class="sidebar-icon">🏠</span> Dashboard</a>
+      <div class="sidebar-section-label">Modules</div>
+      <a class="sidebar-item active" href="03-recruitment-dashboard.html"><span class="sidebar-icon">👥</span> Recruitment<span class="sidebar-badge">5</span></a>
+      <a class="sidebar-item" href="07-appraisal-dashboard.html"><span class="sidebar-icon">📊</span> Performance Appraisal</a>
+      <a class="sidebar-item" href="11-project-dashboard.html"><span class="sidebar-icon">📋</span> Project Management</a>
+      <div class="sidebar-section-label">Recruitment</div>
+      <a class="sidebar-item" href="03-recruitment-dashboard.html"><span class="sidebar-icon">📈</span> Dashboard</a>
+      <a class="sidebar-item" href="04-job-requisitions.html"><span class="sidebar-icon">📝</span> Job Requisitions</a>
+      <a class="sidebar-item active" href="05-pipeline.html"><span class="sidebar-icon">🔄</span> Pipeline</a>
+      <a class="sidebar-item" href="#"><span class="sidebar-icon">🏢</span> Agencies</a>
+      <a class="sidebar-item" href="06-offer.html"><span class="sidebar-icon">💼</span> Offers</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="avatar avatar-teal">SH</div><div class="sidebar-user-info"><div class="sidebar-user-name">Sarah Hassan</div><div class="sidebar-user-role">HR Administrator</div></div></div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-breadcrumb">
+        <a href="02-shell-dashboard.html" style="color:#64748B;text-decoration:none;">HR Suite</a>
+        <span class="topbar-breadcrumb-sep">›</span>
+        <a href="03-recruitment-dashboard.html" style="color:#64748B;text-decoration:none;">Recruitment</a>
+        <span class="topbar-breadcrumb-sep">›</span>
+        <span class="topbar-breadcrumb-current">Candidate Pipeline</span>
+      </div>
+      <div class="topbar-search"><span>🔍</span><input type="text" placeholder="Search candidates…" /></div>
+      <div class="topbar-actions">
+        <button aria-label="Action" class="icon-btn">🔔<span class="badge-dot"></span></button>
+        <div class="avatar avatar-teal">SH</div>
+      </div>
+    </header>
+
+    <div class="page-content" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- Job Selector Bar -->
+      <div class="pipeline-header-bar">
+        <div class="job-selector">
+          <span style="font-size:13px;font-weight:500;color:#64748B;white-space:nowrap;">Viewing:</span>
+          <select title="Select option">
+            <option>Senior Software Engineer — Node.js</option>
+            <option>UX Designer — Product Team</option>
+            <option>Sales Manager — Enterprise</option>
+            <option>DevOps Engineer</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:16px;font-size:12px;color:#64748B;">
+          <span>📋 <strong style="color:#0F172A;">28</strong> Applied</span>
+          <span>🤖 <strong style="color:#0F172A;">AI Active</strong></span>
+          <span>📅 <strong style="color:#0F172A;">Posted 12 Jul</strong></span>
+          <span>⏱️ <strong style="color:#0F172A;">18 days open</strong></span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary btn-sm">📤 Export</button>
+          <button class="btn btn-primary btn-sm" onclick="window.location.href='06-offer.html'">+ Create Offer</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:16px;align-items:flex-start;">
+
+        <!-- Kanban Board -->
+        <div style="flex:1;overflow-x:auto;">
+          <div class="kanban-board" style="min-height:560px;">
+
+            <!-- Applied -->
+            <div class="kanban-column col-todo">
+              <div class="kanban-col-header">
+                <div class="kanban-col-title"><div class="kanban-col-dot"></div>Applied</div>
+                <span class="kanban-col-count">8</span>
+              </div>
+              <div class="candidate-card">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                  <div class="avatar avatar-sm" style="background:#0066CC;">FK</div>
+                  <div>
+                    <div class="candidate-name">Fatima Khan</div>
+                    <div class="candidate-meta">5 yrs exp · Lahore</div>
+                  </div>
+                  <div class="ai-score high" style="margin-left:auto;">87</div>
+                </div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
+                  <span class="badge badge-blue" style="font-size:10px;">Node.js</span>
+                  <span class="badge badge-gray" style="font-size:10px;">PostgreSQL</span>
+                </div>
+                <div class="candidate-footer">
+                  <span class="candidate-source">🔗 LinkedIn</span>
+                  <span style="font-size:10px;color:#94A3B8;">2 days ago</span>
+                </div>
+              </div>
+              <div class="candidate-card">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                  <div class="avatar avatar-sm avatar-purple">AR</div>
+                  <div>
+                    <div class="candidate-name">Ahmed Raza</div>
+                    <div class="candidate-meta">3 yrs exp · Karachi</div>
+                  </div>
+                  <div class="ai-score medium" style="margin-left:auto;">72</div>
+                </div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
+                  <span class="badge badge-blue" style="font-size:10px;">Node.js</span>
+                  <span class="badge badge-gray" style="font-size:10px;">React</span>
+                </div>
+                <div class="candidate-footer">
+                  <span class="candidate-source">🏢 Agency</span>
+                  <span style="font-size:10px;color:#94A3B8;">3 days ago</span>
+                </div>
+              </div>
+              <div class="candidate-card">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                  <div class="avatar avatar-sm avatar-orange">ZM</div>
+                  <div>
+                    <div class="candidate-name">Zainab Mirza</div>
+                    <div class="candidate-meta">7 yrs exp · Remote</div>
+                  </div>
+                  <div class="ai-score high" style="margin-left:auto;">91</div>
+                </div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
+                  <span class="badge badge-blue" style="font-size:10px;">Node.js</span>
+                  <span class="badge badge-teal" style="font-size:10px;">AWS</span>
+                </div>
+                <div class="candidate-footer">
+                  <span class="candidate-source">🌐 Direct</span>
+                  <span style="font-size:10px;color:#94A3B8;">1 day ago</span>
+                </div>
+              </div>
+              <div class="kanban-add-card">+ Add Candidate</div>
+            </div>
+
+            <!-- Phone Screen -->
+            <div class="kanban-column col-screen">
+              <div class="kanban-col-header">
+                <div class="kanban-col-title"><div class="kanban-col-dot"></div>Phone Screen</div>
+                <span class="kanban-col-count">6</span>
+              </div>
+              <div class="candidate-card">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                  <div class="avatar avatar-sm avatar-green">OS</div>
+                  <div>
+                    <div class="candidate-name">Omar Sheikh</div>
+                    <div class="candidate-meta">6 yrs exp · Islamabad</div>
+                  </div>
+                  <div class="ai-score high" style="margin-left:auto;">88</div>
+                </div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
+                  <span class="badge badge-blue" style="font-size:10px;">Node.js</span>
+                  <span class="badge badge-purple" style="font-size:10px;">TypeScript</span>
+                </div>
+                <div class="candidate-footer">
+                  <span class="candidate-source">📅 Scheduled: 31 Jul</span>
+                  <span style="font-size:10px;color:#94A3B8;">5 days ago</span>
+                </div>
+              </div>
+              <div class="candidate-card">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                  <div class="avatar avatar-sm" style="background:#DC2626;">HA</div>
+                  <div>
+                    <div class="candidate-name">Hina Akhtar</div>
+                    <div class="candidate-meta">4 yrs exp · Lahore</div>
+                  </div>
+                  <div class="ai-score medium" style="margin-left:auto;">74</div>
+                </div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
+                  <span class="badge badge-blue" style="font-size:10px;">Node.js</span>
+                  <span class="badge badge-gray" style="font-size:10px;">MongoDB</span>
+                </div>
+                <div class="candidate-footer">
+                  <span class="candidate-source">🔗 Indeed</span>
+                  <span style="font-size:10px;color:#94A3B8;">6 days ago</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Technical Round -->
+            <div class="kanban-column col-tech">
+              <div class="kanban-col-header">
+                <div class="kanban-col-title"><div class="kanban-col-dot"></div>Technical Round</div>
+                <span class="kanban-col-count">4</span>
+              </div>
+              <div class="candidate-card" style="border-left:3px solid #5B21B6;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                  <div class="avatar avatar-sm avatar-purple">BK</div>
+                  <div>
+                    <div class="candidate-name">Bilal Khan</div>
+                    <div class="candidate-meta">8 yrs exp · Lahore</div>
+                  </div>
+                  <div class="ai-score high" style="margin-left:auto;">93</div>
+                </div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">
+                  <span class="badge badge-blue" style="font-size:10px;">Node.js</span>
+                  <span class="badge badge-purple" style="font-size:10px;">TypeScript</span>
+                  <span class="badge badge-teal" style="font-size:10px;">GCP</span>
+                </div>
+                <div style="font-size:11px;color:#64748B;margin-bottom:8px;">⭐ Top candidate · Score: 4.5/5</div>
+                <div class="candidate-footer">
+                  <span class="candidate-source">📅 Today 3pm</span>
+                  <span style="font-size:10px;color:#94A3B8;">8 days ago</span>
+                </div>
+              </div>
+              <div class="candidate-card">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                  <div class="avatar avatar-sm avatar-teal">SA</div>
+                  <div>
+                    <div class="candidate-name">Sana Aslam</div>
+                    <div class="candidate-meta">5 yrs exp · Remote</div>
+                  </div>
+                  <div class="ai-score high" style="margin-left:auto;">85</div>
+                </div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
+                  <span class="badge badge-blue" style="font-size:10px;">Node.js</span>
+                  <span class="badge badge-gray" style="font-size:10px;">Docker</span>
+                </div>
+                <div class="candidate-footer">
+                  <span class="candidate-source">📅 1 Aug 11am</span>
+                  <span style="font-size:10px;color:#94A3B8;">9 days ago</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- HR Interview -->
+            <div class="kanban-column col-hr">
+              <div class="kanban-col-header">
+                <div class="kanban-col-title"><div class="kanban-col-dot"></div>HR Interview</div>
+                <span class="kanban-col-count">3</span>
+              </div>
+              <div class="candidate-card" style="border-left:3px solid #00A3A3;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                  <div class="avatar avatar-sm" style="background:#00A3A3;">MR</div>
+                  <div>
+                    <div class="candidate-name">Maria Rehman</div>
+                    <div class="candidate-meta">6 yrs exp · Karachi</div>
+                  </div>
+                  <div class="ai-score high" style="margin-left:auto;">90</div>
+                </div>
+                <div style="font-size:11px;color:#64748B;margin-bottom:8px;">Tech score: 4.8/5 · Culture fit: TBD</div>
+                <div class="candidate-footer">
+                  <span class="candidate-source">📅 2 Aug 2pm</span>
+                  <span style="font-size:10px;color:#94A3B8;">12 days ago</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Offer Stage -->
+            <div class="kanban-column col-offer">
+              <div class="kanban-col-header">
+                <div class="kanban-col-title"><div class="kanban-col-dot"></div>Offer</div>
+                <span class="kanban-col-count">2</span>
+              </div>
+              <div class="candidate-card" style="border-left:3px solid #D97706;" onclick="window.location.href='06-offer.html'">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                  <div class="avatar avatar-sm avatar-orange">TH</div>
+                  <div>
+                    <div class="candidate-name">Tariq Hussain</div>
+                    <div class="candidate-meta">7 yrs exp · Lahore</div>
+                  </div>
+                  <span class="badge badge-orange" style="margin-left:auto;font-size:10px;">Pending</span>
+                </div>
+                <div style="font-size:11px;color:#64748B;margin-bottom:8px;">Offer: PKR 195,000 · Sent 28 Jul</div>
+                <div class="candidate-footer">
+                  <span class="candidate-source">⏳ Awaiting response</span>
+                  <span style="font-size:10px;color:#94A3B8;">15 days ago</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hired -->
+            <div class="kanban-column col-hired">
+              <div class="kanban-col-header">
+                <div class="kanban-col-title"><div class="kanban-col-dot"></div>Hired</div>
+                <span class="kanban-col-count">1</span>
+              </div>
+              <div class="candidate-card" style="border-left:3px solid #059669;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                  <div class="avatar avatar-sm avatar-green">NI</div>
+                  <div>
+                    <div class="candidate-name">Noman Iqbal</div>
+                    <div class="candidate-meta">5 yrs exp · Lahore</div>
+                  </div>
+                  <span class="badge badge-green" style="margin-left:auto;font-size:10px;">Hired</span>
+                </div>
+                <div style="font-size:11px;color:#64748B;margin-bottom:8px;">Start: 1 Sep 2026 · PKR 185,000</div>
+                <div class="candidate-footer">
+                  <span class="candidate-source">✅ BS4 synced</span>
+                  <span style="font-size:10px;color:#94A3B8;">20 days ago</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Candidate Detail Panel -->
+        <div class="detail-panel">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div style="font-size:14px;font-weight:700;color:#0F172A;">Candidate Detail</div>
+            <span class="badge badge-purple">Technical Round</span>
+          </div>
+
+          <div class="score-ring-wrap">
+            <div class="big-score">93</div>
+            <div>
+              <div style="font-size:16px;font-weight:700;color:#0F172A;">Bilal Khan</div>
+              <div style="font-size:12px;color:#64748B;">8 yrs · Senior Engineer · Lahore</div>
+              <div style="font-size:11px;color:#059669;margin-top:4px;">⭐ AI Top Match</div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-bottom:16px;">
+            <button class="stage-btn stage-btn-primary">Move to HR Interview →</button>
+            <button class="stage-btn stage-btn-ghost">Schedule</button>
+            <button class="stage-btn stage-btn-danger">Reject</button>
+          </div>
+
+          <div style="font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">AI Competency Match</div>
+
+          <div class="competency-row">
+            <div class="competency-label">Node.js / Express</div>
+            <div class="competency-bar"><div class="competency-fill" style="width:95%;"></div></div>
+            <div class="competency-score">95%</div>
+          </div>
+          <div class="competency-row">
+            <div class="competency-label">PostgreSQL</div>
+            <div class="competency-bar"><div class="competency-fill" style="width:88%;"></div></div>
+            <div class="competency-score">88%</div>
+          </div>
+          <div class="competency-row">
+            <div class="competency-label">TypeScript</div>
+            <div class="competency-bar"><div class="competency-fill" style="width:90%;"></div></div>
+            <div class="competency-score">90%</div>
+          </div>
+          <div class="competency-row">
+            <div class="competency-label">GCP / Cloud</div>
+            <div class="competency-bar"><div class="competency-fill" style="width:82%;background:#00A3A3;"></div></div>
+            <div class="competency-score">82%</div>
+          </div>
+          <div class="competency-row">
+            <div class="competency-label">REST API Design</div>
+            <div class="competency-bar"><div class="competency-fill" style="width:97%;"></div></div>
+            <div class="competency-score">97%</div>
+          </div>
+
+          <div style="height:1px;background:#E2E8F0;margin:14px 0;"></div>
+
+          <div style="font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">Interview Scores</div>
+
+          <div style="display:flex;gap:12px;margin-bottom:14px;">
+            <div style="flex:1;background:#F8FAFC;border-radius:8px;padding:10px;text-align:center;">
+              <div style="font-size:20px;font-weight:700;color:#0F172A;">4.5</div>
+              <div style="font-size:10px;color:#64748B;">Phone Screen</div>
+            </div>
+            <div style="flex:1;background:#F8FAFC;border-radius:8px;padding:10px;text-align:center;">
+              <div style="font-size:20px;font-weight:700;color:#0066CC;">—</div>
+              <div style="font-size:10px;color:#64748B;">Technical</div>
+            </div>
+            <div style="flex:1;background:#F8FAFC;border-radius:8px;padding:10px;text-align:center;">
+              <div style="font-size:20px;font-weight:700;color:#94A3B8;">—</div>
+              <div style="font-size:10px;color:#64748B;">HR Round</div>
+            </div>
+          </div>
+
+          <div style="font-size:12px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Contact</div>
+          <div style="font-size:12px;color:#334155;display:flex;flex-direction:column;gap:4px;">
+            <span>📧 bilal.khan@gmail.com</span>
+            <span>📱 +92 300 1234567</span>
+            <span>🔗 linkedin.com/in/bilalkhan</span>
+            <span>📍 Lahore, Pakistan</span>
+          </div>
+
+          <div style="height:1px;background:#E2E8F0;margin:14px 0;"></div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secondary btn-sm" style="flex:1;">📄 View CV</button>
+            <button class="btn btn-primary btn-sm" style="flex:1;" onclick="window.location.href='06-offer.html'">💼 Create Offer</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

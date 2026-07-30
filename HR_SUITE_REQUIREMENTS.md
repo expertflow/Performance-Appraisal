@@ -542,11 +542,58 @@ A 360° feedback system with configurable review cycles (quarterly, mid-year, an
 
 **Pulls from BS4:**
 - Employee master (name, designation, department, joining date)
-- Org hierarchy (reporting lines for 360° participant resolution)
+- Org hierarchy (reporting lines for 360° participant resolution and organogram display)
+- Manager hierarchy (`manager_id` per employee — used to build the org tree and resolve appraisal managers)
 - Salary bands (for increment recommendation context)
 - Legal entity assignments
 
 **No auto-push to BS4** — recommendations are generated as reports for HR to act on manually.
+
+### 6.5a Organogram & Appraisal Manager Assignment
+
+> **Full specification:** See [`ORGANOGRAM_REQUIREMENTS.md`](./ORGANOGRAM_REQUIREMENTS.md)
+
+**Purpose:** A dedicated Organogram page (`15-organogram.html`) within the Performance Appraisal module visualises the full organisational hierarchy from BS4 and makes explicit **which manager appraises each employee**.
+
+**Key features:**
+- **Tree view** — visual org chart with employee cards showing name, title, department badge, appraisal status dot (green/amber/grey), and score
+- **Table view** — flat sortable/filterable table with columns: Employee, Department, Title, Appraisal Manager (from BS4), Appraisal Status, Score
+- **Employee detail panel** — slide-in panel showing BS4 data, appraisal manager, appraisal history, direct reports, and links to cycle/feedback pages
+- **Assign Appraisal Manager modal** — HR Admin can assign or change who appraises an employee; manager list sourced from `GET /api/v1/bs4/employees?role=manager`
+- **Sync from BS4** — on-demand button triggers immediate refresh of `common.employee_snapshot`
+- **Filters:** Department, Appraisal Status, Manager, free-text search
+
+**Navigation:** Sidebar → Performance Appraisal → Appraisal → **Organogram** (below Feedback)
+
+**BS4 endpoints used:**
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/v1/bs4/employees` | All employees for org tree |
+| `GET /api/v1/bs4/employees?include=manager` | Hierarchy (manager_id per employee) |
+| `GET /api/v1/bs4/employees?role=manager` | Manager-only list for assignment picker |
+
+**New DB table:** `appraisal.appraisal_manager_assignment`
+
+| Column | Type | Description |
+|---|---|---|
+| `id` | UUID PK | |
+| `employee_id` | VARCHAR(64) | BS4 employee ID |
+| `manager_id` | VARCHAR(64) | BS4 manager employee ID |
+| `cycle_id` | UUID FK → `appraisal.cycle` | Which cycle this assignment applies to |
+| `effective_from` | DATE | Defaults to today |
+| `effective_to` | DATE | NULL = currently active |
+| `assigned_by` | UUID FK → `auth.user` | HR Admin who made the assignment |
+| `notes` | TEXT | Optional |
+
+**Permissions:**
+
+| Role | View Organogram | Assign Manager | View All Scores |
+|---|---|---|---|
+| HR Administrator | ✅ | ✅ | ✅ |
+| HR Manager | ✅ | ✅ (own dept) | ✅ (own dept) |
+| Manager | ✅ (own subtree) | ❌ | ✅ (own reports) |
+| Employee | ✅ (own card) | ❌ | ❌ |
 
 ### 6.6 Appraisal Data Model (schema: `appraisal`)
 
@@ -633,12 +680,14 @@ A comprehensive project and task management system supporting client-billable pr
 
 ### 7.4 Views (User-Switchable)
 
-| View | Description |
-|---|---|
-| **Kanban Board** | Drag-and-drop cards across status columns (To Do → In Progress → Review → Done) |
-| **Gantt Chart** | Timeline view with task dependencies, milestones, and critical path |
-| **List View** | Tabular, sortable, filterable task list with bulk actions |
-| **Calendar View** | Deadline and milestone calendar with task due dates |
+| View | Route / Page | Description |
+|---|---|---|
+| **Task List (Table)** | `14-tasks.html` | **Primary task view** — flat table of all tasks across projects; each row expands inline to reveal subtasks as indented child rows; columns: Task Name, Project (linked), Assignees (avatar chips from BS4), Due Date (overdue highlighted), Priority badge, Status badge, Subtask progress bar; supports expand-all / collapse-all; slide-in detail panel on task click |
+| **Kanban Board** | `12-kanban.html` | Drag-and-drop cards across status columns (To Do → In Progress → Review → Done); Odoo-style task detail panel |
+| **Gantt Chart** | *(planned)* | Timeline view with task dependencies, milestones, and critical path |
+| **Calendar View** | *(planned)* | Deadline and milestone calendar with task due dates |
+
+> **Navigation:** The sidebar "Projects" section exposes: Dashboard → All Projects → **Tasks** → Kanban Board → Gantt Chart → Timesheets → Resources. "Tasks" links directly to the Task List table view (`14-tasks.html`).
 
 ### 7.5 Core Feature Set
 
@@ -650,12 +699,55 @@ A comprehensive project and task management system supporting client-billable pr
 - Budget tracking (estimated vs. actual hours and cost)
 
 #### 7.5.2 Task Management
-- Tasks linked to projects (or standalone for operational tasks)
-- Task fields: title, description, assignee(s), priority, due date, estimated hours, status, tags
-- Subtask support (one level deep)
+
+**Primary View — Task List Table (`14-tasks.html`):**
+
+Tasks have a dedicated table/list view as the primary navigation destination (sidebar: Projects → Tasks). This is separate from the Kanban board.
+
+| Column | Description |
+|---|---|
+| **Task Name** | Expandable row trigger; clicking the name opens the slide-in detail panel |
+| **Project** | Linked to project detail page; value sourced from BS4 |
+| **Assignees** | Avatar chip stack; multi-assignee from BS4 employee list |
+| **Due Date** | ISO date; overdue shown in red, due-soon in amber |
+| **Priority** | Colour-coded badge: Critical / High / Medium / Low |
+| **Status** | Badge: To Do / In Progress / In Review / Done / Blocked |
+| **Subtasks** | Mini progress bar + `done/total` count |
+
+**Subtask rows in the table:**
+- Each task row has an expand toggle (▶) that reveals its subtasks as indented child rows in the same table
+- Subtask rows show the same columns (Project, Assignees, Due Date, Priority, Status) but are visually indented and styled differently
+- An "＋ Add subtask" row appears at the bottom of each expanded group
+- Expand All / Collapse All controls available in the filter bar
+- Subtasks are stored in the same `project.task` table via `parent_task_id` (one level deep enforced)
+
+**Task Form Fields (Odoo-style, inline-editable in slide-in detail panel):**
+
+| Field | Type | Source / Behaviour |
+|---|---|---|
+| **Name** | Text (required) | Free-text task title; displayed as heading in task detail view |
+| **Project** | Linked field (required) | Searchable dropdown — pulls project list from BS4 via `GET /bs4/projects`; clicking the project name navigates to the project detail page |
+| **Assignee(s)** | Multi-select people picker | Pulls employee list from BS4 via `GET /bs4/employees` (uses `common.employee_snapshot` cache); supports single or multiple selection; shows avatar + full name; searchable by name or department |
+| **Due Date** | Date picker | ISO 8601 date; shown in task table row and Kanban column; overdue tasks highlighted in red |
+| **Priority** | Single-select | Critical / High / Medium / Low; colour-coded badge |
+| **Status** | Status pill bar (clickable) | To Do / In Progress / In Review / Blocked / Done; drives Kanban column placement |
+| **Estimated Hours** | Number | Decimal hours; used for resource utilisation and budget tracking |
+| **Description** | Rich text | Markdown-supported; supports @mentions (resolved against BS4 employee list) |
+| **Tags** | Multi-select free-text | Stored as JSONB; used for filtering |
+
+**Subtask Support (one level deep):**
+- Any task can have child subtasks; subtasks share the same field set except they cannot themselves have subtasks (enforced at app + DB level via `parent_task_id` constraint)
+- Subtasks displayed in two places: (1) as expandable inline rows in the Task List table, (2) as a checklist in the "Subtasks" tab of the task detail panel
+- Subtask progress rolled up to parent: `(completed subtasks / total subtasks) × 100`
+- Subtask count + progress bar shown in the Task List table and on Kanban cards
+- Subtasks inherit parent's project; assignee and due date are independently settable per subtask
+
+**Additional task capabilities:**
 - Task dependencies (finish-to-start, start-to-start)
 - File attachments per task (stored in object storage, scanned by ClamAV — see 10.4)
-- Comment thread per task with @mentions
+- Comment thread per task with @mentions (employee list from BS4)
+- Activity log: auto-generated timeline of field changes, status transitions, comments
+- New Task modal: accessible from Task List page and Kanban board; includes BS4 employee multi-picker and BS4 project picker
 
 #### 7.5.3 Resource Management
 - Assign employees (from `common.employee_snapshot`, synced from BS4) to projects and tasks
@@ -718,15 +810,34 @@ milestone
   created_at, updated_at
 
 task
-  id, project_id, milestone_id (nullable), parent_task_id (nullable),
-  title, description, assignee_id (BS4 employee), priority,
-  due_date, estimated_hours, actual_hours, status, tags (jsonb),
-  created_by, created_at, updated_at
-  -- "one level deep" (7.5.2) is ENFORCED: a task whose parent_task_id
-  -- is non-null cannot itself be a parent (app + DB check)
+  id, project_id (FK → project; links to BS4 project via bs4_project_id),
+  milestone_id (nullable), parent_task_id (nullable → task),
+  title, description, priority (critical/high/medium/low),
+  due_date (date), estimated_hours (decimal), actual_hours (decimal),
+  status (todo/in_progress/in_review/blocked/done),
+  tags (jsonb), created_by, created_at, updated_at
+  -- "one level deep" ENFORCED: parent_task_id non-null → cannot be parent
+  -- CHECK (parent_task_id IS NULL OR NOT EXISTS (
+  --   SELECT 1 FROM task WHERE parent_task_id = task.id))
+
+task_assignee                          -- multi-assignee join table
+  id, task_id (FK → task), employee_id (BS4 employee_snapshot.id),
+  assigned_at, assigned_by
+  -- employee data resolved via common.employee_snapshot (BS4 cache)
+  -- UI picker: GET /api/v1/bs4/employees?search=&dept=&active=true
+
+project
+  id, name, type (client/internal/operational),
+  bs4_project_id (nullable — links to BS4 project record),
+  client_id (nullable), legal_entity_id, start_date, end_date,
+  budget_hours, budget_amount, status, health_status,
+  cost_center_id (BS4), created_by, created_at, updated_at
+  -- UI picker: GET /api/v1/bs4/projects?active=true
+  -- Clicking project name in task form → navigates to project detail page
 
 task_dependency
-  id, task_id, depends_on_task_id, dependency_type, created_at
+  id, task_id, depends_on_task_id, dependency_type
+  (finish_to_start | start_to_start), created_at
 
 time_entry
   id, task_id, employee_id (BS4), date, entry_tz_offset (captured at entry,

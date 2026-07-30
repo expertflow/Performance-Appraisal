@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tasks — ExpertFlow HR Suite</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Inter",system-ui,sans-serif;background:#F1F5F9;color:#1E293B;font-size:14px}
+.app-shell{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:240px;min-width:240px;background:#0A1628;display:flex;flex-direction:column;overflow-y:auto}
+.sidebar-logo{display:flex;align-items:center;padding:20px 16px 16px;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.08)}
+.ef-logo{display:flex;align-items:center;gap:10px}
+.ef-logo-mark{width:32px;height:32px;background:linear-gradient(135deg,#0066CC,#00A3A3);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:13px}
+.ef-logo-name{color:white;font-weight:700;font-size:14px;line-height:1.2}
+.ef-logo-product{color:#94A3B8;font-size:10px}
+.sidebar-nav{flex:1;padding:12px 8px}
+.sidebar-section-label{font-size:10px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:.08em;padding:12px 8px 4px}
+.sidebar-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;color:#94A3B8;text-decoration:none;font-size:13px;font-weight:500;transition:all .15s;margin-bottom:2px}
+.sidebar-item:hover{background:rgba(255,255,255,0.06);color:#E2E8F0}
+.sidebar-item.active{background:rgba(0,102,204,0.25);color:#60A5FA}
+.sidebar-icon{font-size:15px;width:20px;text-align:center}
+.sidebar-badge{margin-left:auto;background:#EF4444;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px}
+.sidebar-badge.green{background:#059669}
+.sidebar-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,0.08)}
+.sidebar-user{display:flex;align-items:center;gap:10px}
+.sidebar-user-name{color:#E2E8F0;font-size:13px;font-weight:600}
+.sidebar-user-role{color:#64748B;font-size:11px}
+.avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;flex-shrink:0}
+.avatar-teal{background:#00A3A3}.avatar-blue{background:#0066CC}.avatar-purple{background:#7C3AED}.avatar-orange{background:#D97706}
+.avatar-sm{width:24px;height:24px;font-size:9px}
+.main-content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:56px;background:white;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;padding:0 20px;gap:16px;flex-shrink:0}
+.topbar-breadcrumb{display:flex;align-items:center;gap:6px;font-size:13px;color:#64748B}
+.topbar-breadcrumb-sep{color:#CBD5E1}
+.topbar-breadcrumb-current{color:#1E293B;font-weight:600}
+.topbar-search{flex:1;max-width:360px;display:flex;align-items:center;gap:8px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:6px 12px;font-size:13px;color:#64748B}
+.topbar-search input{border:none;background:transparent;outline:none;flex:1;font-size:13px;color:#1E293B}
+.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+.icon-btn{background:none;border:none;cursor:pointer;font-size:18px;position:relative;padding:4px}
+.badge-dot{position:absolute;top:2px;right:2px;width:8px;height:8px;background:#EF4444;border-radius:50%;border:2px solid white}
+.page-content{flex:1;overflow-y:auto;padding:20px}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.page-title{font-size:22px;font-weight:700;color:#0A1628}
+.page-subtitle{font-size:13px;color:#64748B;margin-top:2px}
+.page-header-actions{display:flex;gap:10px;align-items:center}
+.btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:#0066CC;color:white}.btn-primary:hover{background:#0052A3}
+.btn-secondary{background:white;color:#334155;border:1px solid #E2E8F0}.btn-secondary:hover{background:#F8FAFC}
+.btn-teal{background:#00A3A3;color:white}.btn-teal:hover{background:#008585}
+.btn-sm{padding:5px 10px;font-size:12px}
+.filter-bar{display:flex;align-items:center;gap:10px;background:white;border:1px solid #E2E8F0;border-radius:10px;padding:10px 14px;margin-bottom:16px;flex-wrap:wrap}
+.filter-bar select,.filter-bar input[type=text]{border:1px solid #E2E8F0;border-radius:6px;padding:5px 10px;font-size:12px;color:#334155;background:white;outline:none}
+.filter-sep{width:1px;height:20px;background:#E2E8F0;margin:0 4px}
+.table-card{background:white;border-radius:12px;border:1px solid #E2E8F0;overflow:hidden}
+.table-toolbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #E2E8F0}
+.table-toolbar-left{display:flex;align-items:center;gap:10px;font-size:13px;color:#64748B}
+.task-count-badge{background:#EFF6FF;color:#0066CC;font-size:12px;font-weight:600;padding:2px 8px;border-radius:10px}
+table{width:100%;border-collapse:collapse}
+thead th{background:#F8FAFC;padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #E2E8F0;white-space:nowrap}
+tbody tr.task-row{border-bottom:1px solid #F1F5F9;cursor:pointer;transition:background .1s}
+tbody tr.task-row:hover{background:#F8FAFC}
+tbody tr.task-row.expanded{background:#EFF6FF}
+tbody tr.subtask-row{border-bottom:1px solid #F1F5F9;background:#FAFBFF;display:none}
+tbody tr.subtask-row.visible{display:table-row}
+tbody tr.subtask-row:hover{background:#F0F4FF}
+tbody tr.add-subtask-row{border-bottom:1px solid #F1F5F9;background:#FAFBFF;display:none}
+tbody tr.add-subtask-row.visible{display:table-row}
+td{padding:10px 14px;vertical-align:middle;font-size:13px;color:#334155}
+.task-name-cell{display:flex;align-items:center;gap:8px}
+.expand-btn{width:20px;height:20px;border:none;background:none;cursor:pointer;font-size:11px;color:#64748B;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .2s}
+.expand-btn.open{transform:rotate(90deg)}
+.task-name-text{font-weight:500;color:#1E293B;cursor:pointer}
+.task-name-text:hover{color:#0066CC;text-decoration:underline}
+.subtask-indent{padding-left:44px}
+.subtask-name-cell{display:flex;align-items:center;gap:8px}
+.subtask-dot{width:6px;height:6px;border-radius:50%;background:#CBD5E1;flex-shrink:0}
+.subtask-name-text{color:#475569;font-size:12px;cursor:pointer}
+.subtask-name-text:hover{color:#0066CC;text-decoration:underline}
+.priority-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.priority-critical{background:#FEE2E2;color:#DC2626}
+.priority-high{background:#FEF3C7;color:#D97706}
+.priority-medium{background:#EFF6FF;color:#0066CC}
+.priority-low{background:#F0FDF4;color:#059669}
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600}
+.status-todo{background:#F1F5F9;color:#64748B}
+.status-inprogress{background:#EFF6FF;color:#0066CC}
+.status-review{background:#F5F3FF;color:#7C3AED}
+.status-done{background:#F0FDF4;color:#059669}
+.status-blocked{background:#FEE2E2;color:#DC2626}
+.assignee-stack{display:flex;align-items:center}
+.assignee-stack .avatar-sm{margin-left:-6px;border:2px solid white}
+.assignee-stack .avatar-sm:first-child{margin-left:0}
+.subtask-progress{display:flex;align-items:center;gap:6px;font-size:12px;color:#64748B}
+.subtask-bar{width:48px;height:4px;background:#E2E8F0;border-radius:2px;overflow:hidden}
+.subtask-bar-fill{height:100%;background:#00A3A3;border-radius:2px}
+.due-date{font-size:12px;color:#64748B}
+.due-date.overdue{color:#DC2626;font-weight:600}
+.due-date.soon{color:#D97706;font-weight:600}
+.project-link{color:#0066CC;text-decoration:none;font-size:12px;font-weight:500}
+.project-link:hover{text-decoration:underline}
+.task-checkbox{width:16px;height:16px;cursor:pointer;accent-color:#0066CC}
+.add-subtask-btn{background:none;border:none;color:#0066CC;font-size:12px;cursor:pointer;padding:4px 8px;border-radius:4px;display:flex;align-items:center;gap:4px}
+.add-subtask-btn:hover{background:#EFF6FF}
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid #E2E8F0;font-size:13px;color:#64748B}
+.page-btns{display:flex;gap:4px}
+.page-btn{width:30px;height:30px;border:1px solid #E2E8F0;background:white;border-radius:6px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center}
+.page-btn.active{background:#0066CC;color:white;border-color:#0066CC}
+.page-btn:hover:not(.active){background:#F8FAFC}
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:200;display:none}
+.detail-overlay.open{display:block}
+.detail-panel{position:fixed;top:0;right:-700px;width:700px;height:100vh;background:white;box-shadow:-4px 0 24px rgba(0,0,0,0.12);z-index:201;display:flex;flex-direction:column;transition:right .3s ease}
+.detail-panel.open{right:0}
+.detail-panel-header{padding:16px 20px;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;gap:12px}
+.detail-panel-close{background:none;border:none;font-size:20px;cursor:pointer;color:#64748B;padding:4px;border-radius:6px}
+.detail-panel-close:hover{background:#F1F5F9}
+.detail-title-input{flex:1;font-size:18px;font-weight:700;color:#0A1628;border:none;outline:none;background:transparent}
+.detail-title-input:hover{background:#F8FAFC;border-radius:6px;padding:2px 6px}
+.detail-title-input:focus{background:#EFF6FF;border-radius:6px;padding:2px 6px}
+.status-pill-bar{display:flex;gap:4px;padding:10px 20px;border-bottom:1px solid #E2E8F0;background:#F8FAFC;flex-wrap:wrap}
+.status-pill{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:2px solid transparent;color:#64748B;background:white;transition:all .15s}
+.status-pill:hover{border-color:#CBD5E1}
+.status-pill.active{border-color:#0066CC;color:#0066CC;background:#EFF6FF}
+.status-pill.done-pill.active{border-color:#059669;color:#059669;background:#F0FDF4}
+.status-pill.blocked-pill.active{border-color:#DC2626;color:#DC2626;background:#FEE2E2}
+.detail-tabs{display:flex;gap:0;border-bottom:1px solid #E2E8F0;padding:0 20px}
+.detail-tab{padding:10px 16px;font-size:13px;font-weight:600;color:#64748B;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.detail-tab.active{color:#0066CC;border-bottom-color:#0066CC}
+.detail-tab:hover:not(.active){color:#334155}
+.detail-body{flex:1;overflow-y:auto;padding:16px 20px}
+.field-row{display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid #F1F5F9}
+.field-label{width:120px;font-size:12px;font-weight:600;color:#64748B;padding-top:4px;flex-shrink:0}
+.field-value{flex:1;font-size:13px;color:#334155}
+.field-value input,.field-value select,.field-value textarea{width:100%;border:1px solid transparent;border-radius:6px;padding:4px 8px;font-size:13px;color:#334155;background:transparent;outline:none;font-family:inherit}
+.field-value input:hover,.field-value select:hover,.field-value textarea:hover{border-color:#CBD5E1;background:#F8FAFC}
+.field-value input:focus,.field-value select:focus,.field-value textarea:focus{border-color:#0066CC;background:white}
+.bs4-picker{position:relative}
+.assignee-chips{display:flex;flex-wrap:wrap;gap:6px;min-height:28px;cursor:pointer;padding:2px}
+.assignee-chip{display:flex;align-items:center;gap:4px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:20px;padding:2px 8px 2px 4px;font-size:11px;font-weight:600;color:#1D4ED8}
+.chip-remove{background:none;border:none;cursor:pointer;color:#64748B;font-size:12px;line-height:1;padding:0 2px}
+.chip-remove:hover{color:#DC2626}
+.bs4-dropdown{position:absolute;top:calc(100% + 4px);left:0;width:320px;background:white;border:1px solid #E2E8F0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:300;display:none}
+.bs4-dropdown.open{display:block}
+.bs4-search{padding:10px 12px;border-bottom:1px solid #F1F5F9}
+.bs4-search input{width:100%;border:1px solid #E2E8F0;border-radius:6px;padding:6px 10px;font-size:12px;outline:none}
+.bs4-list{max-height:200px;overflow-y:auto}
+.bs4-item{display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;transition:background .1s}
+.bs4-item:hover{background:#F8FAFC}
+.bs4-item.selected{background:#EFF6FF}
+.bs4-item-info{flex:1}
+.bs4-item-name{font-size:13px;font-weight:600;color:#1E293B}
+.bs4-item-meta{font-size:11px;color:#64748B}
+.bs4-check{color:#0066CC;font-size:14px;opacity:0}
+.bs4-item.selected .bs4-check{opacity:1}
+.subtask-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.subtask-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#F8FAFC;border-radius:8px;border:1px solid #E2E8F0}
+.subtask-item input[type=checkbox]{accent-color:#00A3A3;width:15px;height:15px;cursor:pointer}
+.subtask-item-name{flex:1;font-size:13px;color:#334155}
+.subtask-item-name.done{text-decoration:line-through;color:#94A3B8}
+.subtask-progress-bar{height:4px;background:#E2E8F0;border-radius:2px;overflow:hidden;margin-bottom:10px}
+.subtask-progress-fill{height:100%;background:#00A3A3;border-radius:2px}
+.add-subtask-input{display:flex;gap:8px;margin-top:8px}
+.add-subtask-input input{flex:1;border:1px solid #E2E8F0;border-radius:6px;padding:6px 10px;font-size:13px;outline:none}
+.add-subtask-input input:focus{border-color:#0066CC}
+.activity-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #F1F5F9}
+.activity-content{flex:1}
+.activity-text{font-size:13px;color:#334155}
+.activity-time{font-size:11px;color:#94A3B8;margin-top:2px}
+.comment-box{margin-top:12px}
+.comment-box textarea{width:100%;border:1px solid #E2E8F0;border-radius:8px;padding:10px;font-size:13px;resize:vertical;min-height:72px;outline:none;font-family:inherit}
+.comment-box textarea:focus{border-color:#0066CC}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:400;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:white;border-radius:16px;width:640px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid #E2E8F0}
+.modal-title{font-size:18px;font-weight:700;color:#0A1628}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:#64748B}
+.modal-body{padding:20px 24px}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid #E2E8F0}
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;font-weight:600;color:#64748B;margin-bottom:4px;display:block}
+.form-control{width:100%;border:1px solid #E2E8F0;border-radius:8px;padding:8px 12px;font-size:13px;color:#334155;outline:none;font-family:inherit}
+.form-control:focus{border-color:#0066CC}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+</style>
+</head>
+<body>
+<div class="app-shell">
+<aside class="sidebar">
+<a class="sidebar-logo" href="02-shell-dashboard.html"><div class="ef-logo"><div class="ef-logo-mark">EF</div><div class="ef-logo-text"><div class="ef-logo-name">ExpertFlow</div><div class="ef-logo-product">HR Suite</div></div></div></a>
+<nav class="sidebar-nav">
+<div class="sidebar-section-label">Overview</div>
+<a class="sidebar-item" href="02-shell-dashboard.html"><span class="sidebar-icon">&#127968;</span> Dashboard</a>
+<div class="sidebar-section-label">Modules</div>
+<a class="sidebar-item" href="03-recruitment-dashboard.html"><span class="sidebar-icon">&#128101;</span> Recruitment<span class="sidebar-badge">5</span></a>
+<a class="sidebar-item" href="07-appraisal-dashboard.html"><span class="sidebar-icon">&#128202;</span> Performance Appraisal</a>
+<a class="sidebar-item active" href="11-project-dashboard.html"><span class="sidebar-icon">&#128203;</span> Project Management<span class="sidebar-badge green">2</span></a>
+<div class="sidebar-section-label">Projects</div>
+<a class="sidebar-item" href="11-project-dashboard.html"><span class="sidebar-icon">&#128200;</span> Dashboard</a>
+<a class="sidebar-item" href="#"><span class="sidebar-icon">&#128193;</span> All Projects</a>
+<a class="sidebar-item active" href="14-tasks.html"><span class="sidebar-icon">&#9989;</span> Tasks</a>
+<a class="sidebar-item" href="12-kanban.html"><span class="sidebar-icon">&#128208;</span> Kanban Board</a>
+<a class="sidebar-item" href="#"><span class="sidebar-icon">&#128197;</span> Gantt Chart</a>
+<a class="sidebar-item" href="13-timesheet.html"><span class="sidebar-icon">&#9201;</span> Timesheets</a>
+<a class="sidebar-item" href="#"><span class="sidebar-icon">&#128101;</span> Resources</a>
+</nav>
+<div class="sidebar-footer"><div class="sidebar-user"><div class="avatar avatar-teal">SH</div><div class="sidebar-user-info"><div class="sidebar-user-name">Sarah Hassan</div><div class="sidebar-user-role">HR Administrator</div></div></div></div>
+</aside>
+<main class="main-content">
+<header class="topbar">
+<div class="topbar-breadcrumb">
+<a href="02-shell-dashboard.html" style="color:#64748B;text-decoration:none">HR Suite</a>
+<span class="topbar-breadcrumb-sep">&#8250;</span>
+<a href="11-project-dashboard.html" style="color:#64748B;text-decoration:none">Project Management</a>
+<span class="topbar-breadcrumb-sep">&#8250;</span>
+<span class="topbar-breadcrumb-current">Tasks</span>
+</div>
+<div class="topbar-search"><span>&#128269;</span><input type="text" placeholder="Search tasks, subtasks&#8230;" aria-label="Search tasks" /></div>
+<div class="topbar-actions">
+<button class="icon-btn" aria-label="Notifications">&#128276;<span class="badge-dot"></span></button>
+<div class="avatar avatar-teal">SH</div>
+</div>
+</header>
+<div class="page-content">
+<div class="page-header">
+<div>
+<div class="page-title">Tasks</div>
+<div class="page-subtitle">All tasks across projects &#8212; expand rows to view subtasks</div>
+</div>
+<div class="page-header-actions">
+<button class="btn btn-secondary" onclick="window.location.href='11-project-dashboard.html'">&#128200; Projects</button>
+<button class="btn btn-secondary" onclick="window.location.href='12-kanban.html'">&#128208; Kanban</button>
+<button class="btn btn-teal" onclick="openNewTask()">+ New Task</button>
+</div>
+</div>
+
+<div class="filter-bar">
+<select title="Filter by project"><option value="">All Projects</option><option>CX Platform Redesign</option><option>ERP Integration v2</option><option>Internal IT Ops</option><option>Mobile App v3</option></select>
+<select title="Filter by assignee"><option value="">All Assignees</option><option>Ahmed Raza</option><option>Fatima Malik</option><option>Omar Sheikh</option><option>Zara Hussain</option><option>Khalid Mahmood</option></select>
+<select title="Filter by status"><option value="">All Statuses</option><option>To Do</option><option>In Progress</option><option>In Review</option><option>Done</option><option>Blocked</option></select>
+<select title="Filter by priority"><option value="">All Priorities</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option></select>
+<div class="filter-sep"></div>
+<input type="text" placeholder="Search tasks&#8230;" aria-label="Search tasks" style="min-width:160px" />
+<div style="margin-left:auto;display:flex;gap:8px">
+<button class="btn btn-secondary btn-sm" onclick="expandAll()">Expand All</button>
+<button class="btn btn-secondary btn-sm" onclick="collapseAll()">Collapse All</button>
+</div>
+</div>
+
+<div class="table-card">
+<div class="table-toolbar">
+<div class="table-toolbar-left">
+<span>Showing <strong>12</strong> tasks</span>
+<span class="task-count-badge">8 open &middot; 4 done</span>
+</div>
+<div style="display:flex;gap:8px">
+<select title="Group by" style="border:1px solid #E2E8F0;border-radius:6px;padding:4px 8px;font-size:12px;color:#334155"><option>Group by: None</option><option>Group by: Project</option><option>Group by: Assignee</option><option>Group by: Status</option></select>
+<select title="Sort by" style="border:1px solid #E2E8F0;border-radius:6px;padding:4px 8px;font-size:12px;color:#334155"><option>Sort: Due Date</option><option>Sort: Priority</option><option>Sort: Status</option><option>Sort: Name</option></select>
+</div>
+</div>
+
+<table>
+<thead>
+<tr>
+<th style="width:36px"><input type="checkbox" title="Select all tasks" class="task-checkbox" /></th>
+<th style="min-width:280px">Task Name</th>
+<th>Project</th>
+<th>Assignees</th>
+<th>Due Date</th>
+<th>Priority</th>
+<th>Status</th>
+<th>Subtasks</th>
+<th style="width:50px"></th>
+</tr>
+</thead>
+<tbody id="taskTableBody">
+<tr class="task-row" id="task-1" onclick="toggleTask(1,event)">
+<td><input type="checkbox" title="Select task" class="task-checkbox" onclick="event.stopPropagation()" /></td>
+<td><div class="task-name-cell"><button class="expand-btn" id="expand-1" title="Expand subtasks">&#9658;</button><span class="task-name-text" onclick="openDetail('Design system tokens update',event)">Design system tokens update</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-blue" title="Fatima Malik">FM</div><div class="avatar avatar-sm avatar-teal" title="Zara Hussain">ZH</div></div></td>
+<td><span class="due-date soon">Aug 2, 2026</span></td>
+<td><span class="priority-badge priority-high">&#9679; High</span></td>
+<td><span class="status-badge status-inprogress">In Progress</span></td>
+<td><div class="subtask-progress"><div class="subtask-bar"><div class="subtask-bar-fill" style="width:60%"></div></div><span>3/5</span></div></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openDetail('Design system tokens update',event)" title="Open detail">&#8599;</button></td>
+</tr>
+<tr class="subtask-row" data-parent="1">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Define color token variables</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-blue" title="Fatima Malik">FM</div></div></td>
+<td><span class="due-date ">Jul 30, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-done">Done</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="1">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Typography scale tokens</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-blue" title="Fatima Malik">FM</div></div></td>
+<td><span class="due-date ">Jul 31, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-done">Done</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="1">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Spacing &amp; radius tokens</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-teal" title="Zara Hussain">ZH</div></div></td>
+<td><span class="due-date ">Aug 1, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-done">Done</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="1">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Dark mode token variants</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-teal" title="Zara Hussain">ZH</div></div></td>
+<td><span class="due-date soon">Aug 2, 2026</span></td>
+<td><span class="priority-badge priority-high">&#9679; High</span></td>
+<td><span class="status-badge status-inprogress">In Progress</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="1">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Export tokens to Figma</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-blue" title="Fatima Malik">FM</div></div></td>
+<td><span class="due-date soon">Aug 2, 2026</span></td>
+<td><span class="priority-badge priority-low">&#9679; Low</span></td>
+<td><span class="status-badge status-todo">To Do</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="add-subtask-row" data-parent="1">
+<td></td><td class="subtask-indent" colspan="8"><button class="add-subtask-btn" onclick="event.stopPropagation()">&#65291; Add subtask</button></td>
+</tr>
+<tr class="task-row" id="task-2" onclick="toggleTask(2,event)">
+<td><input type="checkbox" title="Select task" class="task-checkbox" onclick="event.stopPropagation()" /></td>
+<td><div class="task-name-cell"><button class="expand-btn" id="expand-2" title="Expand subtasks">&#9658;</button><span class="task-name-text" onclick="openDetail('API authentication middleware',event)">API authentication middleware</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">ERP Integration v2</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-purple" title="Omar Sheikh">OS</div></div></td>
+<td><span class="due-date overdue">Jul 28, 2026</span></td>
+<td><span class="priority-badge priority-critical">&#9679; Critical</span></td>
+<td><span class="status-badge status-blocked">Blocked</span></td>
+<td><div class="subtask-progress"><div class="subtask-bar"><div class="subtask-bar-fill" style="width:33%"></div></div><span>1/3</span></div></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openDetail('API authentication middleware',event)" title="Open detail">&#8599;</button></td>
+</tr>
+<tr class="subtask-row" data-parent="2">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">JWT token validation</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">ERP Integration v2</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-purple" title="Omar Sheikh">OS</div></div></td>
+<td><span class="due-date overdue">Jul 26, 2026</span></td>
+<td><span class="priority-badge priority-critical">&#9679; Critical</span></td>
+<td><span class="status-badge status-done">Done</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="2">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Role-based access control</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">ERP Integration v2</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-purple" title="Omar Sheikh">OS</div></div></td>
+<td><span class="due-date overdue">Jul 28, 2026</span></td>
+<td><span class="priority-badge priority-critical">&#9679; Critical</span></td>
+<td><span class="status-badge status-blocked">Blocked</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="2">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Refresh token rotation</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">ERP Integration v2</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-purple" title="Omar Sheikh">OS</div></div></td>
+<td><span class="due-date ">Aug 3, 2026</span></td>
+<td><span class="priority-badge priority-high">&#9679; High</span></td>
+<td><span class="status-badge status-todo">To Do</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="add-subtask-row" data-parent="2">
+<td></td><td class="subtask-indent" colspan="8"><button class="add-subtask-btn" onclick="event.stopPropagation()">&#65291; Add subtask</button></td>
+</tr>
+<tr class="task-row" id="task-3" onclick="toggleTask(3,event)">
+<td><input type="checkbox" title="Select task" class="task-checkbox" onclick="event.stopPropagation()" /></td>
+<td><div class="task-name-cell"><button class="expand-btn" id="expand-3" title="Expand subtasks">&#9658;</button><span class="task-name-text" onclick="openDetail('Mobile responsive dashboard',event)">Mobile responsive dashboard</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">Mobile App v3</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-blue" title="Ahmed Raza">AR</div><div class="avatar avatar-sm avatar-orange" title="Khalid Mahmood">KM</div></div></td>
+<td><span class="due-date ">Aug 8, 2026</span></td>
+<td><span class="priority-badge priority-high">&#9679; High</span></td>
+<td><span class="status-badge status-inprogress">In Progress</span></td>
+<td><div class="subtask-progress"><div class="subtask-bar"><div class="subtask-bar-fill" style="width:50%"></div></div><span>2/4</span></div></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openDetail('Mobile responsive dashboard',event)" title="Open detail">&#8599;</button></td>
+</tr>
+<tr class="subtask-row" data-parent="3">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Breakpoint layout grid</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">Mobile App v3</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-blue" title="Ahmed Raza">AR</div></div></td>
+<td><span class="due-date ">Aug 4, 2026</span></td>
+<td><span class="priority-badge priority-high">&#9679; High</span></td>
+<td><span class="status-badge status-done">Done</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="3">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Navigation drawer component</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">Mobile App v3</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-orange" title="Khalid Mahmood">KM</div></div></td>
+<td><span class="due-date ">Aug 5, 2026</span></td>
+<td><span class="priority-badge priority-high">&#9679; High</span></td>
+<td><span class="status-badge status-done">Done</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="3">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Touch gesture handlers</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">Mobile App v3</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-blue" title="Ahmed Raza">AR</div></div></td>
+<td><span class="due-date ">Aug 7, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-inprogress">In Progress</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="3">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Performance optimization</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">Mobile App v3</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-orange" title="Khalid Mahmood">KM</div></div></td>
+<td><span class="due-date ">Aug 8, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-todo">To Do</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="add-subtask-row" data-parent="3">
+<td></td><td class="subtask-indent" colspan="8"><button class="add-subtask-btn" onclick="event.stopPropagation()">&#65291; Add subtask</button></td>
+</tr>
+<tr class="task-row" id="task-4" onclick="toggleTask(4,event)">
+<td><input type="checkbox" title="Select task" class="task-checkbox" onclick="event.stopPropagation()" /></td>
+<td><div class="task-name-cell"><button class="expand-btn" id="expand-4" title="Expand subtasks">&#9658;</button><span class="task-name-text" onclick="openDetail('Database schema migration',event)">Database schema migration</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">ERP Integration v2</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-purple" title="Omar Sheikh">OS</div><div class="avatar avatar-sm avatar-blue" title="Ahmed Raza">AR</div></div></td>
+<td><span class="due-date ">Aug 10, 2026</span></td>
+<td><span class="priority-badge priority-high">&#9679; High</span></td>
+<td><span class="status-badge status-todo">To Do</span></td>
+<td><div class="subtask-progress"><div class="subtask-bar"><div class="subtask-bar-fill" style="width:0%"></div></div><span>0/3</span></div></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openDetail('Database schema migration',event)" title="Open detail">&#8599;</button></td>
+</tr>
+<tr class="subtask-row" data-parent="4">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Write migration scripts</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">ERP Integration v2</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-purple" title="Omar Sheikh">OS</div></div></td>
+<td><span class="due-date ">Aug 7, 2026</span></td>
+<td><span class="priority-badge priority-high">&#9679; High</span></td>
+<td><span class="status-badge status-todo">To Do</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="4">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Test rollback procedures</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">ERP Integration v2</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-blue" title="Ahmed Raza">AR</div></div></td>
+<td><span class="due-date ">Aug 9, 2026</span></td>
+<td><span class="priority-badge priority-high">&#9679; High</span></td>
+<td><span class="status-badge status-todo">To Do</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="4">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Production deployment plan</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">ERP Integration v2</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-purple" title="Omar Sheikh">OS</div></div></td>
+<td><span class="due-date ">Aug 10, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-todo">To Do</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="add-subtask-row" data-parent="4">
+<td></td><td class="subtask-indent" colspan="8"><button class="add-subtask-btn" onclick="event.stopPropagation()">&#65291; Add subtask</button></td>
+</tr>
+<tr class="task-row" id="task-5" onclick="toggleTask(5,event)">
+<td><input type="checkbox" title="Select task" class="task-checkbox" onclick="event.stopPropagation()" /></td>
+<td><div class="task-name-cell"><button class="expand-btn" id="expand-5" title="Expand subtasks">&#9658;</button><span class="task-name-text" onclick="openDetail('User onboarding flow',event)">User onboarding flow</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-teal" title="Zara Hussain">ZH</div></div></td>
+<td><span class="due-date ">Aug 12, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-review">In Review</span></td>
+<td><div class="subtask-progress"><div class="subtask-bar"><div class="subtask-bar-fill" style="width:75%"></div></div><span>3/4</span></div></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openDetail('User onboarding flow',event)" title="Open detail">&#8599;</button></td>
+</tr>
+<tr class="subtask-row" data-parent="5">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Welcome screen design</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-teal" title="Zara Hussain">ZH</div></div></td>
+<td><span class="due-date ">Aug 8, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-done">Done</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="5">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Profile setup wizard</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-teal" title="Zara Hussain">ZH</div></div></td>
+<td><span class="due-date ">Aug 10, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-done">Done</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="5">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Tutorial tooltips</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-teal" title="Zara Hussain">ZH</div></div></td>
+<td><span class="due-date ">Aug 11, 2026</span></td>
+<td><span class="priority-badge priority-low">&#9679; Low</span></td>
+<td><span class="status-badge status-done">Done</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="5">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Completion celebration screen</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-teal" title="Zara Hussain">ZH</div></div></td>
+<td><span class="due-date ">Aug 12, 2026</span></td>
+<td><span class="priority-badge priority-low">&#9679; Low</span></td>
+<td><span class="status-badge status-review">In Review</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="add-subtask-row" data-parent="5">
+<td></td><td class="subtask-indent" colspan="8"><button class="add-subtask-btn" onclick="event.stopPropagation()">&#65291; Add subtask</button></td>
+</tr>
+<tr class="task-row" id="task-6" onclick="openDetail('Write unit tests for auth module',event)">
+<td><input type="checkbox" title="Select task" class="task-checkbox" onclick="event.stopPropagation()" /></td>
+<td><div class="task-name-cell"><span style="width:20px;flex-shrink:0"></span><span class="task-name-text" onclick="openDetail('Write unit tests for auth module',event)">Write unit tests for auth module</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">ERP Integration v2</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-blue" title="Ahmed Raza">AR</div></div></td>
+<td><span class="due-date ">Aug 5, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-todo">To Do</span></td>
+<td><span style="color:#CBD5E1;font-size:12px">No subtasks</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openDetail('Write unit tests for auth module',event)" title="Open detail">&#8599;</button></td>
+</tr>
+<tr class="task-row" id="task-7" onclick="toggleTask(7,event)">
+<td><input type="checkbox" title="Select task" class="task-checkbox" onclick="event.stopPropagation()" /></td>
+<td><div class="task-name-cell"><button class="expand-btn" id="expand-7" title="Expand subtasks">&#9658;</button><span class="task-name-text" onclick="openDetail('IT infrastructure audit',event)">IT infrastructure audit</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">Internal IT Ops</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-orange" title="Khalid Mahmood">KM</div><div class="avatar avatar-sm avatar-blue" title="Ahmed Raza">AR</div></div></td>
+<td><span class="due-date ">Aug 15, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-inprogress">In Progress</span></td>
+<td><div class="subtask-progress"><div class="subtask-bar"><div class="subtask-bar-fill" style="width:40%"></div></div><span>2/5</span></div></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openDetail('IT infrastructure audit',event)" title="Open detail">&#8599;</button></td>
+</tr>
+<tr class="subtask-row" data-parent="7">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Network topology mapping</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">Internal IT Ops</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-orange" title="Khalid Mahmood">KM</div></div></td>
+<td><span class="due-date ">Aug 10, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-done">Done</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="7">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Server inventory update</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">Internal IT Ops</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-blue" title="Ahmed Raza">AR</div></div></td>
+<td><span class="due-date ">Aug 11, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-done">Done</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="7">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Security vulnerability scan</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">Internal IT Ops</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-orange" title="Khalid Mahmood">KM</div></div></td>
+<td><span class="due-date ">Aug 12, 2026</span></td>
+<td><span class="priority-badge priority-high">&#9679; High</span></td>
+<td><span class="status-badge status-inprogress">In Progress</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="7">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">License compliance check</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">Internal IT Ops</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-blue" title="Ahmed Raza">AR</div></div></td>
+<td><span class="due-date ">Aug 14, 2026</span></td>
+<td><span class="priority-badge priority-low">&#9679; Low</span></td>
+<td><span class="status-badge status-todo">To Do</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="7">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Audit report draft</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">Internal IT Ops</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-orange" title="Khalid Mahmood">KM</div></div></td>
+<td><span class="due-date ">Aug 15, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-todo">To Do</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="add-subtask-row" data-parent="7">
+<td></td><td class="subtask-indent" colspan="8"><button class="add-subtask-btn" onclick="event.stopPropagation()">&#65291; Add subtask</button></td>
+</tr>
+<tr class="task-row" id="task-8" onclick="openDetail('Configure CI/CD pipeline',event)">
+<td><input type="checkbox" title="Select task" class="task-checkbox" onclick="event.stopPropagation()" /></td>
+<td><div class="task-name-cell"><span style="width:20px;flex-shrink:0"></span><span class="task-name-text" onclick="openDetail('Configure CI/CD pipeline',event)">Configure CI/CD pipeline</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">ERP Integration v2</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-purple" title="Omar Sheikh">OS</div></div></td>
+<td><span class="due-date ">Aug 6, 2026</span></td>
+<td><span class="priority-badge priority-high">&#9679; High</span></td>
+<td><span class="status-badge status-inprogress">In Progress</span></td>
+<td><span style="color:#CBD5E1;font-size:12px">No subtasks</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openDetail('Configure CI/CD pipeline',event)" title="Open detail">&#8599;</button></td>
+</tr>
+<tr class="task-row" id="task-9" onclick="toggleTask(9,event)">
+<td><input type="checkbox" title="Select task" class="task-checkbox" onclick="event.stopPropagation()" /></td>
+<td><div class="task-name-cell"><button class="expand-btn" id="expand-9" title="Expand subtasks">&#9658;</button><span class="task-name-text" onclick="openDetail('Notification system redesign',event)">Notification system redesign</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-blue" title="Fatima Malik">FM</div><div class="avatar avatar-sm avatar-teal" title="Nadia Baig">NB</div></div></td>
+<td><span class="due-date ">Aug 18, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-todo">To Do</span></td>
+<td><div class="subtask-progress"><div class="subtask-bar"><div class="subtask-bar-fill" style="width:0%"></div></div><span>0/3</span></div></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openDetail('Notification system redesign',event)" title="Open detail">&#8599;</button></td>
+</tr>
+<tr class="subtask-row" data-parent="9">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Email template builder</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-blue" title="Fatima Malik">FM</div></div></td>
+<td><span class="due-date ">Aug 14, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-todo">To Do</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="9">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">In-app notification center</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-teal" title="Nadia Baig">NB</div></div></td>
+<td><span class="due-date ">Aug 16, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-todo">To Do</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="9">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Push notification integration</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-blue" title="Fatima Malik">FM</div></div></td>
+<td><span class="due-date ">Aug 18, 2026</span></td>
+<td><span class="priority-badge priority-low">&#9679; Low</span></td>
+<td><span class="status-badge status-todo">To Do</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="add-subtask-row" data-parent="9">
+<td></td><td class="subtask-indent" colspan="8"><button class="add-subtask-btn" onclick="event.stopPropagation()">&#65291; Add subtask</button></td>
+</tr>
+<tr class="task-row" id="task-10" onclick="toggleTask(10,event)">
+<td><input type="checkbox" title="Select task" class="task-checkbox" onclick="event.stopPropagation()" /></td>
+<td><div class="task-name-cell"><button class="expand-btn" id="expand-10" title="Expand subtasks">&#9658;</button><span class="task-name-text" onclick="openDetail('Login page redesign',event)">Login page redesign</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-teal" title="Zara Hussain">ZH</div></div></td>
+<td><span class="due-date ">Jul 25, 2026</span></td>
+<td><span class="priority-badge priority-high">&#9679; High</span></td>
+<td><span class="status-badge status-done">Done</span></td>
+<td><div class="subtask-progress"><div class="subtask-bar"><div class="subtask-bar-fill" style="width:100%"></div></div><span>4/4</span></div></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openDetail('Login page redesign',event)" title="Open detail">&#8599;</button></td>
+</tr>
+<tr class="subtask-row" data-parent="10">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Wireframe mockups</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-teal" title="Zara Hussain">ZH</div></div></td>
+<td><span class="due-date ">Jul 20, 2026</span></td>
+<td><span class="priority-badge priority-high">&#9679; High</span></td>
+<td><span class="status-badge status-done">Done</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="10">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">SSO button integration</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-teal" title="Zara Hussain">ZH</div></div></td>
+<td><span class="due-date ">Jul 22, 2026</span></td>
+<td><span class="priority-badge priority-high">&#9679; High</span></td>
+<td><span class="status-badge status-done">Done</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="10">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Accessibility audit</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-teal" title="Zara Hussain">ZH</div></div></td>
+<td><span class="due-date ">Jul 23, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-done">Done</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="10">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">QA sign-off</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">CX Platform Redesign</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-teal" title="Zara Hussain">ZH</div></div></td>
+<td><span class="due-date ">Jul 25, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-done">Done</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="add-subtask-row" data-parent="10">
+<td></td><td class="subtask-indent" colspan="8"><button class="add-subtask-btn" onclick="event.stopPropagation()">&#65291; Add subtask</button></td>
+</tr>
+<tr class="task-row" id="task-11" onclick="openDetail('Update API documentation',event)">
+<td><input type="checkbox" title="Select task" class="task-checkbox" onclick="event.stopPropagation()" /></td>
+<td><div class="task-name-cell"><span style="width:20px;flex-shrink:0"></span><span class="task-name-text" onclick="openDetail('Update API documentation',event)">Update API documentation</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">ERP Integration v2</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-blue" title="Ahmed Raza">AR</div></div></td>
+<td><span class="due-date ">Jul 22, 2026</span></td>
+<td><span class="priority-badge priority-low">&#9679; Low</span></td>
+<td><span class="status-badge status-done">Done</span></td>
+<td><span style="color:#CBD5E1;font-size:12px">No subtasks</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openDetail('Update API documentation',event)" title="Open detail">&#8599;</button></td>
+</tr>
+<tr class="task-row" id="task-12" onclick="toggleTask(12,event)">
+<td><input type="checkbox" title="Select task" class="task-checkbox" onclick="event.stopPropagation()" /></td>
+<td><div class="task-name-cell"><button class="expand-btn" id="expand-12" title="Expand subtasks">&#9658;</button><span class="task-name-text" onclick="openDetail('Employee self-service portal',event)">Employee self-service portal</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">Mobile App v3</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-blue" title="Fatima Malik">FM</div><div class="avatar avatar-sm avatar-orange" title="Khalid Mahmood">KM</div></div></td>
+<td><span class="due-date ">Aug 22, 2026</span></td>
+<td><span class="priority-badge priority-high">&#9679; High</span></td>
+<td><span class="status-badge status-todo">To Do</span></td>
+<td><div class="subtask-progress"><div class="subtask-bar"><div class="subtask-bar-fill" style="width:0%"></div></div><span>0/4</span></div></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openDetail('Employee self-service portal',event)" title="Open detail">&#8599;</button></td>
+</tr>
+<tr class="subtask-row" data-parent="12">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Leave request form</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">Mobile App v3</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-blue" title="Fatima Malik">FM</div></div></td>
+<td><span class="due-date ">Aug 17, 2026</span></td>
+<td><span class="priority-badge priority-high">&#9679; High</span></td>
+<td><span class="status-badge status-todo">To Do</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="12">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Payslip download feature</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">Mobile App v3</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-orange" title="Khalid Mahmood">KM</div></div></td>
+<td><span class="due-date ">Aug 19, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-todo">To Do</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="12">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Profile update flow</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">Mobile App v3</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-blue" title="Fatima Malik">FM</div></div></td>
+<td><span class="due-date ">Aug 21, 2026</span></td>
+<td><span class="priority-badge priority-medium">&#9679; Medium</span></td>
+<td><span class="status-badge status-todo">To Do</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="subtask-row" data-parent="12">
+<td></td>
+<td class="subtask-indent"><div class="subtask-name-cell"><div class="subtask-dot"></div><span class="subtask-name-text">Document upload module</span></div></td>
+<td><a class="project-link" href="11-project-dashboard.html" onclick="event.stopPropagation()">Mobile App v3</a></td>
+<td><div class="assignee-stack"><div class="avatar avatar-sm avatar-orange" title="Khalid Mahmood">KM</div></div></td>
+<td><span class="due-date ">Aug 22, 2026</span></td>
+<td><span class="priority-badge priority-low">&#9679; Low</span></td>
+<td><span class="status-badge status-todo">To Do</span></td>
+<td>&#8212;</td><td></td>
+</tr>
+<tr class="add-subtask-row" data-parent="12">
+<td></td><td class="subtask-indent" colspan="8"><button class="add-subtask-btn" onclick="event.stopPropagation()">&#65291; Add subtask</button></td>
+</tr></tbody>
+</table>
+<div class="pagination">
+<span>Showing 1&#8211;12 of 47 tasks</span>
+<div class="page-btns">
+<button class="page-btn active">1</button>
+<button class="page-btn">2</button>
+<button class="page-btn">3</button>
+<button class="page-btn">4</button>
+<button class="page-btn">&#8250;</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+<!-- Detail overlay -->
+<div class="detail-overlay" id="detailOverlay" onclick="closeDetail()"></div>
+
+<!-- Detail panel -->
+<div class="detail-panel" id="detailPanel">
+<div class="detail-panel-header">
+<button class="detail-panel-close" onclick="closeDetail()" aria-label="Close detail panel">&#10005;</button>
+<input class="detail-title-input" id="detailTitle" type="text" value="Design system tokens update" aria-label="Task title" />
+<button class="btn btn-secondary btn-sm" onclick="window.location.href='12-kanban.html'" title="Open in Kanban">&#128208; Kanban</button>
+</div>
+<div class="status-pill-bar">
+<button class="status-pill" onclick="setPill(this)">To Do</button>
+<button class="status-pill active" onclick="setPill(this)">In Progress</button>
+<button class="status-pill" onclick="setPill(this)">In Review</button>
+<button class="status-pill done-pill" onclick="setPill(this)">Done</button>
+<button class="status-pill blocked-pill" onclick="setPill(this)">Blocked</button>
+</div>
+<div class="detail-tabs">
+<div class="detail-tab active" onclick="switchTab('info',this)">Info</div>
+<div class="detail-tab" onclick="switchTab('subtasks',this)">Subtasks <span style="background:#E2E8F0;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:4px">5</span></div>
+<div class="detail-tab" onclick="switchTab('activity',this)">Activity</div>
+</div>
+<div class="detail-body">
+
+<!-- Info tab -->
+<div id="tab-info">
+<div class="field-row">
+<div class="field-label">Project</div>
+<div class="field-value">
+<div style="display:flex;align-items:center;gap:8px">
+<a href="11-project-dashboard.html" style="color:#0066CC;font-weight:600;font-size:13px;text-decoration:none">CX Platform Redesign</a>
+<span style="font-size:10px;background:#EFF6FF;color:#0066CC;padding:1px 6px;border-radius:4px;font-weight:600">from BS4</span>
+<button style="background:none;border:none;cursor:pointer;color:#64748B;font-size:14px" title="Change project">&#8250;</button>
+</div>
+</div>
+</div>
+<div class="field-row">
+<div class="field-label">Assignees</div>
+<div class="field-value">
+<div class="bs4-picker">
+<div class="assignee-chips" id="detailChips" onclick="toggleAssigneeDropdown()">
+<div class="assignee-chip"><div class="avatar avatar-sm avatar-blue">FM</div>&nbsp;Fatima Malik<button class="chip-remove" onclick="removeChip(this,event)" aria-label="Remove Fatima Malik">&#10005;</button></div>
+<div class="assignee-chip"><div class="avatar avatar-sm avatar-teal">ZH</div>&nbsp;Zara Hussain<button class="chip-remove" onclick="removeChip(this,event)" aria-label="Remove Zara Hussain">&#10005;</button></div>
+<span style="color:#94A3B8;font-size:12px;padding:4px">+ Add assignee (BS4)</span>
+</div>
+<div class="bs4-dropdown" id="assigneeDropdown">
+<div class="bs4-search"><input type="text" placeholder="Search employees from BS4&#8230;" aria-label="Search employees" oninput="filterEmployees(this.value)" /></div>
+<div class="bs4-list" id="empList">
+<div class="bs4-item" onclick="toggleEmp(this,'AR','Ahmed Raza','avatar-blue')"><div class="avatar avatar-sm avatar-blue">AR</div><div class="bs4-item-info"><div class="bs4-item-name">Ahmed Raza</div><div class="bs4-item-meta">Engineering &middot; Senior Dev</div></div><span class="bs4-check">&#10003;</span></div>
+<div class="bs4-item selected" onclick="toggleEmp(this,'FM','Fatima Malik','avatar-blue')"><div class="avatar avatar-sm avatar-blue">FM</div><div class="bs4-item-info"><div class="bs4-item-name">Fatima Malik</div><div class="bs4-item-meta">Design &middot; UI Lead</div></div><span class="bs4-check">&#10003;</span></div>
+<div class="bs4-item" onclick="toggleEmp(this,'OS','Omar Sheikh','avatar-purple')"><div class="avatar avatar-sm avatar-purple">OS</div><div class="bs4-item-info"><div class="bs4-item-name">Omar Sheikh</div><div class="bs4-item-meta">Engineering &middot; Backend Dev</div></div><span class="bs4-check">&#10003;</span></div>
+<div class="bs4-item selected" onclick="toggleEmp(this,'ZH','Zara Hussain','avatar-teal')"><div class="avatar avatar-sm avatar-teal">ZH</div><div class="bs4-item-info"><div class="bs4-item-name">Zara Hussain</div><div class="bs4-item-meta">Design &middot; UX Designer</div></div><span class="bs4-check">&#10003;</span></div>
+<div class="bs4-item" onclick="toggleEmp(this,'KM','Khalid Mahmood','avatar-orange')"><div class="avatar avatar-sm avatar-orange">KM</div><div class="bs4-item-info"><div class="bs4-item-name">Khalid Mahmood</div><div class="bs4-item-meta">Engineering &middot; Mobile Dev</div></div><span class="bs4-check">&#10003;</span></div>
+<div class="bs4-item" onclick="toggleEmp(this,'NB','Nadia Baig','avatar-teal')"><div class="avatar avatar-sm avatar-teal">NB</div><div class="bs4-item-info"><div class="bs4-item-name">Nadia Baig</div><div class="bs4-item-meta">QA &middot; Test Engineer</div></div><span class="bs4-check">&#10003;</span></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="field-row">
+<div class="field-label">Due Date</div>
+<div class="field-value"><input type="date" value="2026-08-02" title="Due date" /></div>
+</div>
+<div class="field-row">
+<div class="field-label">Priority</div>
+<div class="field-value">
+<select title="Priority">
+<option>Low</option><option selected>High</option><option>Medium</option><option>Critical</option>
+</select>
+</div>
+</div>
+<div class="field-row">
+<div class="field-label">Est. Hours</div>
+<div class="field-value"><input type="number" value="16" min="0" title="Estimated hours" /></div>
+</div>
+<div class="field-row">
+<div class="field-label">Tags</div>
+<div class="field-value"><input type="text" value="frontend, design-system, tokens" title="Tags" /></div>
+</div>
+<div class="field-row" style="border:none">
+<div class="field-label">Description</div>
+<div class="field-value"><textarea rows="4" title="Description" placeholder="Add a description&#8230;">Update all design tokens to align with the new ExpertFlow brand guidelines. Includes color, typography, spacing, and dark mode variants.</textarea></div>
+</div>
+</div>
+
+<!-- Subtasks tab -->
+<div id="tab-subtasks" style="display:none">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+<span style="font-size:13px;font-weight:600;color:#334155">Subtasks (3 of 5 done)</span>
+<span style="font-size:12px;color:#64748B">60%</span>
+</div>
+<div class="subtask-progress-bar"><div class="subtask-progress-fill" style="width:60%"></div></div>
+<div class="subtask-list">
+<div class="subtask-item"><input type="checkbox" checked title="Mark subtask done" /><span class="subtask-item-name done">Define color token variables</span><div class="subtask-item-meta"><div class="avatar avatar-sm avatar-blue" title="Fatima Malik">FM</div></div></div>
+<div class="subtask-item"><input type="checkbox" checked title="Mark subtask done" /><span class="subtask-item-name done">Typography scale tokens</span><div class="subtask-item-meta"><div class="avatar avatar-sm avatar-blue" title="Fatima Malik">FM</div></div></div>
+<div class="subtask-item"><input type="checkbox" checked title="Mark subtask done" /><span class="subtask-item-name done">Spacing &amp; radius tokens</span><div class="subtask-item-meta"><div class="avatar avatar-sm avatar-teal" title="Zara Hussain">ZH</div></div></div>
+<div class="subtask-item"><input type="checkbox" title="Mark subtask done" /><span class="subtask-item-name">Dark mode token variants</span><div class="subtask-item-meta"><div class="avatar avatar-sm avatar-teal" title="Zara Hussain">ZH</div></div></div>
+<div class="subtask-item"><input type="checkbox" title="Mark subtask done" /><span class="subtask-item-name">Export tokens to Figma</span><div class="subtask-item-meta"><div class="avatar avatar-sm avatar-blue" title="Fatima Malik">FM</div></div></div>
+</div>
+<div class="add-subtask-input">
+<input type="text" placeholder="Add a subtask&#8230;" aria-label="New subtask name" />
+<button class="btn btn-secondary btn-sm">Add</button>
+</div>
+</div>
+
+<!-- Activity tab -->
+<div id="tab-activity" style="display:none">
+<div class="activity-item">
+<div class="avatar avatar-sm avatar-teal">SH</div>
+<div class="activity-content">
+<div class="activity-text"><strong>Sarah Hassan</strong> changed status from <em>To Do</em> to <em>In Progress</em></div>
+<div class="activity-time">Today at 9:14 AM</div>
+</div>
+</div>
+<div class="activity-item">
+<div class="avatar avatar-sm avatar-blue">FM</div>
+<div class="activity-content">
+<div class="activity-text"><strong>Fatima Malik</strong> completed subtask <em>Typography scale tokens</em></div>
+<div class="activity-time">Yesterday at 4:32 PM</div>
+</div>
+</div>
+<div class="activity-item">
+<div class="avatar avatar-sm avatar-teal">ZH</div>
+<div class="activity-content">
+<div class="activity-text"><strong>Zara Hussain</strong> was assigned to this task</div>
+<div class="activity-time">Jul 28, 2026 at 11:00 AM</div>
+</div>
+</div>
+<div class="activity-item">
+<div class="avatar avatar-sm avatar-blue">FM</div>
+<div class="activity-content">
+<div class="activity-text"><strong>Fatima Malik</strong> created this task</div>
+<div class="activity-time">Jul 27, 2026 at 2:15 PM</div>
+</div>
+</div>
+<div class="comment-box">
+<textarea placeholder="Write a comment&#8230;" aria-label="Add comment"></textarea>
+<div style="display:flex;justify-content:flex-end;margin-top:8px">
+<button class="btn btn-primary btn-sm">Post Comment</button>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- New Task Modal -->
+<div class="modal-overlay" id="newTaskModal" onclick="if(event.target===this)closeNewTask()">
+<div class="modal">
+<div class="modal-header">
+<div class="modal-title">New Task</div>
+<button class="modal-close" onclick="closeNewTask()" aria-label="Close modal">&#10005;</button>
+</div>
+<div class="modal-body">
+<div class="form-group">
+<label class="form-label">Task Name *</label>
+<input class="form-control" type="text" placeholder="Enter task name&#8230;" aria-label="Task name" />
+</div>
+<div class="form-row">
+<div class="form-group">
+<label class="form-label">Project (from BS4) *</label>
+<select class="form-control" title="Select project from BS4">
+<option value="">Select project&#8230;</option>
+<option>CX Platform Redesign</option>
+<option>ERP Integration v2</option>
+<option>Internal IT Ops</option>
+<option>Mobile App v3</option>
+</select>
+</div>
+<div class="form-group">
+<label class="form-label">Status</label>
+<select class="form-control" title="Select status">
+<option>To Do</option><option>In Progress</option><option>In Review</option><option>Done</option><option>Blocked</option>
+</select>
+</div>
+</div>
+<div class="form-group">
+<label class="form-label">Assignees (from BS4)</label>
+<div style="border:1px solid #E2E8F0;border-radius:8px;padding:8px 12px;background:#F8FAFC">
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px" id="modalChips">
+<span style="color:#94A3B8;font-size:12px">Click employees below to assign</span>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<button type="button" onclick="toggleModalEmp(this,'AR','Ahmed Raza','avatar-blue')" style="display:flex;align-items:center;gap:4px;border:1px solid #E2E8F0;border-radius:20px;padding:3px 10px;background:white;cursor:pointer;font-size:12px"><div class="avatar avatar-sm avatar-blue">AR</div> Ahmed Raza</button>
+<button type="button" onclick="toggleModalEmp(this,'FM','Fatima Malik','avatar-blue')" style="display:flex;align-items:center;gap:4px;border:1px solid #E2E8F0;border-radius:20px;padding:3px 10px;background:white;cursor:pointer;font-size:12px"><div class="avatar avatar-sm avatar-blue">FM</div> Fatima Malik</button>
+<button type="button" onclick="toggleModalEmp(this,'OS','Omar Sheikh','avatar-purple')" style="display:flex;align-items:center;gap:4px;border:1px solid #E2E8F0;border-radius:20px;padding:3px 10px;background:white;cursor:pointer;font-size:12px"><div class="avatar avatar-sm avatar-purple">OS</div> Omar Sheikh</button>
+<button type="button" onclick="toggleModalEmp(this,'ZH','Zara Hussain','avatar-teal')" style="display:flex;align-items:center;gap:4px;border:1px solid #E2E8F0;border-radius:20px;padding:3px 10px;background:white;cursor:pointer;font-size:12px"><div class="avatar avatar-sm avatar-teal">ZH</div> Zara Hussain</button>
+<button type="button" onclick="toggleModalEmp(this,'KM','Khalid Mahmood','avatar-orange')" style="display:flex;align-items:center;gap:4px;border:1px solid #E2E8F0;border-radius:20px;padding:3px 10px;background:white;cursor:pointer;font-size:12px"><div class="avatar avatar-sm avatar-orange">KM</div> Khalid Mahmood</button>
+<button type="button" onclick="toggleModalEmp(this,'NB','Nadia Baig','avatar-teal')" style="display:flex;align-items:center;gap:4px;border:1px solid #E2E8F0;border-radius:20px;padding:3px 10px;background:white;cursor:pointer;font-size:12px"><div class="avatar avatar-sm avatar-teal">NB</div> Nadia Baig</button>
+</div>
+</div>
+</div>
+<div class="form-row">
+<div class="form-group">
+<label class="form-label">Due Date</label>
+<input class="form-control" type="date" title="Due date" />
+</div>
+<div class="form-group">
+<label class="form-label">Priority</label>
+<select class="form-control" title="Select priority">
+<option>Low</option><option selected>Medium</option><option>High</option><option>Critical</option>
+</select>
+</div>
+</div>
+<div class="form-row">
+<div class="form-group">
+<label class="form-label">Estimated Hours</label>
+<input class="form-control" type="number" placeholder="0" min="0" title="Estimated hours" />
+</div>
+<div class="form-group">
+<label class="form-label">Tags</label>
+<input class="form-control" type="text" placeholder="frontend, backend&#8230;" title="Tags" />
+</div>
+</div>
+<div class="form-group">
+<label class="form-label">Description</label>
+<textarea class="form-control" rows="3" placeholder="Describe the task&#8230;" aria-label="Task description"></textarea>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" onclick="closeNewTask()">Cancel</button>
+<button class="btn btn-teal">Create Task</button>
+</div>
+</div>
+</div>
+
+<script>
+// ── Expand/collapse subtask rows ──
+function toggleTask(id, e) {
+  if (e && e.target && (e.target.classList.contains('task-checkbox') || e.target.tagName === 'A' || e.target.tagName === 'BUTTON' || e.target.classList.contains('task-name-text'))) return;
+  var row = document.getElementById('task-' + id);
+  var btn = document.getElementById('expand-' + id);
+  if (!btn) return;
+  var expanded = row.classList.toggle('expanded');
+  btn.classList.toggle('open', expanded);
+  document.querySelectorAll('[data-parent="' + id + '"]').forEach(function(r) {
+    r.classList.toggle('visible', expanded);
+  });
+}
+
+function expandAll() {
+  document.querySelectorAll('.task-row').forEach(function(row) {
+    var id = row.id.replace('task-', '');
+    var btn = document.getElementById('expand-' + id);
+    if (!btn) return;
+    row.classList.add('expanded');
+    btn.classList.add('open');
+    document.querySelectorAll('[data-parent="' + id + '"]').forEach(function(r) { r.classList.add('visible'); });
+  });
+}
+
+function collapseAll() {
+  document.querySelectorAll('.task-row').forEach(function(row) {
+    var id = row.id.replace('task-', '');
+    var btn = document.getElementById('expand-' + id);
+    if (!btn) return;
+    row.classList.remove('expanded');
+    btn.classList.remove('open');
+    document.querySelectorAll('[data-parent="' + id + '"]').forEach(function(r) { r.classList.remove('visible'); });
+  });
+}
+
+// ── Detail panel ──
+function openDetail(name, e) {
+  if (e) e.stopPropagation();
+  document.getElementById('detailTitle').value = name;
+  document.getElementById('detailPanel').classList.add('open');
+  document.getElementById('detailOverlay').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').classList.remove('open');
+  document.getElementById('detailOverlay').classList.remove('open');
+}
+
+// ── Status pills ──
+function setPill(el) {
+  document.querySelectorAll('.status-pill').forEach(function(p) { p.classList.remove('active'); });
+  el.classList.add('active');
+}
+
+// ── Detail tabs ──
+function switchTab(name, el) {
+  ['info','subtasks','activity'].forEach(function(t) {
+    document.getElementById('tab-' + t).style.display = t === name ? '' : 'none';
+  });
+  document.querySelectorAll('.detail-tab').forEach(function(t) { t.classList.remove('active'); });
+  el.classList.add('active');
+}
+
+// ── Assignee dropdown ──
+function toggleAssigneeDropdown() {
+  document.getElementById('assigneeDropdown').classList.toggle('open');
+}
+
+document.addEventListener('click', function(e) {
+  var dd = document.getElementById('assigneeDropdown');
+  if (dd && !dd.contains(e.target) && !document.getElementById('detailChips').contains(e.target)) {
+    dd.classList.remove('open');
+  }
+});
+
+function toggleEmp(el, initials, name, cls) {
+  el.classList.toggle('selected');
+  var chips = document.getElementById('detailChips');
+  var existing = chips.querySelector('[data-emp="' + initials + '"]');
+  if (existing) {
+    existing.remove();
+  } else {
+    var chip = document.createElement('div');
+    chip.className = 'assignee-chip';
+    chip.setAttribute('data-emp', initials);
+    chip.innerHTML = '<div class="avatar avatar-sm ' + cls + '">' + initials + '</div>&nbsp;' + name + '<button class="chip-remove" onclick="removeChip(this,event)" aria-label="Remove ' + name + '">&#10005;</button>';
+    chips.insertBefore(chip, chips.lastElementChild);
+  }
+}
+
+function removeChip(btn, e) {
+  e.stopPropagation();
+  var chip = btn.parentElement;
+  var initials = chip.getAttribute('data-emp');
+  chip.remove();
+  if (initials) {
+    var item = document.querySelector('#empList [onclick*="' + initials + '"]');
+    if (item) item.classList.remove('selected');
+  }
+}
+
+function filterEmployees(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('#empList .bs4-item').forEach(function(item) {
+    var name = item.querySelector('.bs4-item-name').textContent.toLowerCase();
+    item.style.display = name.includes(q) ? '' : 'none';
+  });
+}
+
+// ── New Task Modal ──
+function openNewTask() {
+  document.getElementById('newTaskModal').classList.add('open');
+}
+
+function closeNewTask() {
+  document.getElementById('newTaskModal').classList.remove('open');
+}
+
+function toggleModalEmp(btn, initials, name, cls) {
+  var active = btn.style.background === 'rgb(239, 246, 255)';
+  btn.style.background = active ? 'white' : '#EFF6FF';
+  btn.style.borderColor = active ? '#E2E8F0' : '#0066CC';
+  var chips = document.getElementById('modalChips');
+  var placeholder = chips.querySelector('span');
+  var existing = chips.querySelector('[data-emp="' + initials + '"]');
+  if (existing) {
+    existing.remove();
+  } else {
+    if (placeholder) placeholder.style.display = 'none';
+    var chip = document.createElement('div');
+    chip.className = 'assignee-chip';
+    chip.setAttribute('data-emp', initials);
+    chip.innerHTML = '<div class="avatar avatar-sm ' + cls + '">' + initials + '</div>&nbsp;' + name;
+    chips.appendChild(chip);
+  }
+}
+</script>
+</body>
+</html>

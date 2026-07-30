@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ExpertFlow HR Suite — Project Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/design-system.css" />
+  <style>
+    .project-card {
+      background:white; border:1px solid #E2E8F0; border-radius:12px;
+      padding:18px 20px; margin-bottom:12px;
+      box-shadow:0 1px 3px rgba(0,0,0,0.05);
+      cursor:pointer; transition:all 0.15s;
+    }
+    .project-card:hover { box-shadow:0 6px 16px rgba(0,0,0,0.1); transform:translateY(-1px); }
+    .project-card-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:12px; }
+    .project-name { font-size:14px; font-weight:700; color:#0F172A; }
+    .project-client { font-size:12px; color:#64748B; margin-top:2px; }
+    .project-meta { display:flex; gap:16px; margin-bottom:12px; flex-wrap:wrap; }
+    .project-meta-item { font-size:11px; color:#64748B; display:flex; align-items:center; gap:4px; }
+    .project-progress-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+    .project-progress-label { font-size:11px; color:#64748B; width:80px; flex-shrink:0; }
+    .project-progress-bar { flex:1; height:6px; background:#E2E8F0; border-radius:99px; overflow:hidden; }
+    .project-progress-fill { height:100%; border-radius:99px; }
+    .project-progress-pct { font-size:11px; font-weight:600; color:#0F172A; width:32px; text-align:right; }
+    .project-footer { display:flex; align-items:center; justify-content:space-between; padding-top:10px; border-top:1px solid #F1F5F9; }
+    .project-team { display:flex; }
+    .project-team .avatar { margin-left:-6px; border:2px solid white; }
+    .project-team .avatar:first-child { margin-left:0; }
+
+    .health-dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:5px; }
+    .health-on-track { background:#059669; }
+    .health-at-risk   { background:#D97706; }
+    .health-delayed   { background:#DC2626; }
+
+    .util-bar { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #F1F5F9; }
+    .util-bar:last-child { border-bottom:none; }
+    .util-name { font-size:12px; color:#334155; width:120px; flex-shrink:0; }
+    .util-bar-wrap { flex:1; height:8px; background:#E2E8F0; border-radius:99px; overflow:hidden; }
+    .util-bar-fill { height:100%; border-radius:99px; }
+    .util-pct { font-size:11px; font-weight:600; color:#0F172A; width:36px; text-align:right; }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="sidebar-logo" href="02-shell-dashboard.html">
+      <div class="ef-logo"><div class="ef-logo-mark">EF</div><div class="ef-logo-text"><div class="ef-logo-name">ExpertFlow</div><div class="ef-logo-product">HR Suite</div></div></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item" href="02-shell-dashboard.html"><span class="sidebar-icon">🏠</span> Dashboard</a>
+      <div class="sidebar-section-label">Modules</div>
+      <a class="sidebar-item" href="03-recruitment-dashboard.html"><span class="sidebar-icon">👥</span> Recruitment<span class="sidebar-badge">5</span></a>
+      <a class="sidebar-item" href="07-appraisal-dashboard.html"><span class="sidebar-icon">📊</span> Performance Appraisal</a>
+      <a class="sidebar-item active" href="11-project-dashboard.html"><span class="sidebar-icon">📋</span> Project Management<span class="sidebar-badge green">2</span></a>
+      <div class="sidebar-section-label">Projects</div>
+      <a class="sidebar-item active" href="11-project-dashboard.html"><span class="sidebar-icon">📈</span> Dashboard</a>
+      <a class="sidebar-item" href="#"><span class="sidebar-icon">📁</span> All Projects</a>
+      <a class="sidebar-item" href="14-tasks.html"><span class="sidebar-icon">✅</span> Tasks</a>
+      <a class="sidebar-item" href="12-kanban.html"><span class="sidebar-icon">🗂️</span> Kanban Board</a>
+      <a class="sidebar-item" href="#"><span class="sidebar-icon">📅</span> Gantt Chart</a>
+      <a class="sidebar-item" href="13-timesheet.html"><span class="sidebar-icon">⏱️</span> Timesheets</a>
+      <a class="sidebar-item" href="#"><span class="sidebar-icon">👥</span> Resources</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="avatar avatar-teal">SH</div><div class="sidebar-user-info"><div class="sidebar-user-name">Sarah Hassan</div><div class="sidebar-user-role">HR Administrator</div></div></div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-breadcrumb">
+        <a href="02-shell-dashboard.html" style="color:#64748B;text-decoration:none;">HR Suite</a>
+        <span class="topbar-breadcrumb-sep">›</span>
+        <span class="topbar-breadcrumb-current">Project Management</span>
+      </div>
+      <div class="topbar-search"><span>🔍</span><input type="text" placeholder="Search projects, tasks…" /></div>
+      <div class="topbar-actions">
+        <button aria-label="Action" class="icon-btn">🔔<span class="badge-dot"></span></button>
+        <div class="avatar avatar-teal">SH</div>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Project Management</div>
+          <div class="page-subtitle">Track projects, manage tasks, and sync time entries to ERP</div>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-secondary" onclick="window.location.href='13-timesheet.html'">⏱️ Timesheets</button>
+          <button class="btn btn-secondary" onclick="window.location.href='12-kanban.html'">🗂️ Kanban</button>
+          <button class="btn btn-teal">+ New Project</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stat-grid" style="grid-template-columns:repeat(5,1fr);">
+        <div class="stat-card">
+          <div class="stat-card-header"><div class="stat-icon stat-icon-teal">📁</div></div>
+          <div class="stat-value">34</div><div class="stat-label">Active Projects</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-header"><div class="stat-icon stat-icon-blue">✅</div><span class="stat-trend up">↑ 12 done</span></div>
+          <div class="stat-value">218</div><div class="stat-label">Open Tasks</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-header"><div class="stat-icon stat-icon-orange">⚠️</div></div>
+          <div class="stat-value">2</div><div class="stat-label">At Risk Projects</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-header"><div class="stat-icon stat-icon-green">⏱️</div><span class="stat-trend up">↑ 8%</span></div>
+          <div class="stat-value">1,240h</div><div class="stat-label">Hours This Month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-header"><div class="stat-icon stat-icon-purple">💰</div></div>
+          <div class="stat-value">68%</div><div class="stat-label">Billable Hours</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;">
+        <div>
+          <!-- Tabs -->
+          <div class="tabs" style="margin-bottom:16px;">
+            <div class="tab active">All Projects <span class="tab-count">34</span></div>
+            <div class="tab">Client <span class="tab-count">18</span></div>
+            <div class="tab">Internal <span class="tab-count">10</span></div>
+            <div class="tab">Operational <span class="tab-count">6</span></div>
+            <div class="tab">At Risk <span class="tab-count">2</span></div>
+          </div>
+
+          <!-- Project Cards -->
+          <div class="project-card" onclick="window.location.href='12-kanban.html'">
+            <div class="project-card-header">
+              <div>
+                <div class="project-name">CX Platform v3 — Customer Experience Overhaul</div>
+                <div class="project-client">🏢 Client: TeleCom Pakistan · Engineering + Product</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span><span class="health-dot health-on-track"></span><span style="font-size:11px;color:#059669;font-weight:600;">On Track</span></span>
+                <span class="badge badge-blue">Client</span>
+              </div>
+            </div>
+            <div class="project-meta">
+              <div class="project-meta-item">📅 1 Apr → 30 Sep 2026</div>
+              <div class="project-meta-item">💰 Budget: PKR 8.5M</div>
+              <div class="project-meta-item">✅ 142 / 180 tasks</div>
+              <div class="project-meta-item">⏱️ 680h logged</div>
+            </div>
+            <div class="project-progress-row">
+              <div class="project-progress-label">Overall</div>
+              <div class="project-progress-bar"><div class="project-progress-fill" style="width:79%;background:#059669;"></div></div>
+              <div class="project-progress-pct">79%</div>
+            </div>
+            <div class="project-progress-row">
+              <div class="project-progress-label">Budget Used</div>
+              <div class="project-progress-bar"><div class="project-progress-fill" style="width:65%;background:#0066CC;"></div></div>
+              <div class="project-progress-pct">65%</div>
+            </div>
+            <div class="project-footer">
+              <div class="project-team">
+                <div class="avatar avatar-sm" style="background:#0066CC;">BK</div>
+                <div class="avatar avatar-sm avatar-purple">MR</div>
+                <div class="avatar avatar-sm avatar-teal">SA</div>
+                <div class="avatar avatar-sm avatar-orange">OS</div>
+                <div class="avatar avatar-sm avatar-gray" style="font-size:9px;">+6</div>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();window.location.href='12-kanban.html'">Kanban</button>
+                <button class="btn btn-ghost btn-sm">⋮</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="project-card">
+            <div class="project-card-header">
+              <div>
+                <div class="project-name">Internal HR Suite Development</div>
+                <div class="project-client">🏢 Internal · Engineering</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span><span class="health-dot health-on-track"></span><span style="font-size:11px;color:#059669;font-weight:600;">On Track</span></span>
+                <span class="badge badge-teal">Internal</span>
+              </div>
+            </div>
+            <div class="project-meta">
+              <div class="project-meta-item">📅 1 Jun → 31 Dec 2026</div>
+              <div class="project-meta-item">💰 Cost Center: IT-001</div>
+              <div class="project-meta-item">✅ 38 / 95 tasks</div>
+              <div class="project-meta-item">⏱️ 320h logged</div>
+            </div>
+            <div class="project-progress-row">
+              <div class="project-progress-label">Overall</div>
+              <div class="project-progress-bar"><div class="project-progress-fill" style="width:40%;background:#00A3A3;"></div></div>
+              <div class="project-progress-pct">40%</div>
+            </div>
+            <div class="project-footer">
+              <div class="project-team">
+                <div class="avatar avatar-sm" style="background:#0066CC;">AH</div>
+                <div class="avatar avatar-sm avatar-purple">FK</div>
+                <div class="avatar avatar-sm avatar-green">NI</div>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-secondary btn-sm">View</button>
+                <button class="btn btn-ghost btn-sm">⋮</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="project-card" style="border-left:3px solid #D97706;">
+            <div class="project-card-header">
+              <div>
+                <div class="project-name">ERP Integration — BS4 Connector</div>
+                <div class="project-client">🏢 Client: FinTech Corp · Engineering</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span><span class="health-dot health-at-risk"></span><span style="font-size:11px;color:#D97706;font-weight:600;">At Risk</span></span>
+                <span class="badge badge-blue">Client</span>
+              </div>
+            </div>
+            <div class="project-meta">
+              <div class="project-meta-item">📅 15 May → 15 Aug 2026</div>
+              <div class="project-meta-item">💰 Budget: PKR 3.2M</div>
+              <div class="project-meta-item">✅ 28 / 60 tasks</div>
+              <div class="project-meta-item">⏱️ 210h logged</div>
+            </div>
+            <div class="project-progress-row">
+              <div class="project-progress-label">Overall</div>
+              <div class="project-progress-bar"><div class="project-progress-fill" style="width:47%;background:#D97706;"></div></div>
+              <div class="project-progress-pct">47%</div>
+            </div>
+            <div class="project-progress-row">
+              <div class="project-progress-label">Budget Used</div>
+              <div class="project-progress-bar"><div class="project-progress-fill" style="width:82%;background:#DC2626;"></div></div>
+              <div class="project-progress-pct">82%</div>
+            </div>
+            <div style="background:#FEF3C7;border-radius:6px;padding:8px 10px;font-size:11px;color:#92400E;margin-bottom:10px;">
+              ⚠️ Budget 82% consumed with only 47% completion. Scope review recommended.
+            </div>
+            <div class="project-footer">
+              <div class="project-team">
+                <div class="avatar avatar-sm avatar-orange">KA</div>
+                <div class="avatar avatar-sm avatar-purple">RM</div>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-warning btn-sm" style="background:#FEF3C7;color:#D97706;border:1px solid #FDE68A;">Review Budget</button>
+                <button class="btn btn-ghost btn-sm">⋮</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="project-card">
+            <div class="project-card-header">
+              <div>
+                <div class="project-name">Monthly Payroll Processing</div>
+                <div class="project-client">🏢 Operational · Finance</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span><span class="health-dot health-on-track"></span><span style="font-size:11px;color:#059669;font-weight:600;">On Track</span></span>
+                <span class="badge badge-gray">Operational</span>
+              </div>
+            </div>
+            <div class="project-meta">
+              <div class="project-meta-item">📅 Recurring · Monthly</div>
+              <div class="project-meta-item">✅ 8 / 12 tasks</div>
+              <div class="project-meta-item">⏱️ 48h this month</div>
+            </div>
+            <div class="project-progress-row">
+              <div class="project-progress-label">This Month</div>
+              <div class="project-progress-bar"><div class="project-progress-fill" style="width:67%;background:#059669;"></div></div>
+              <div class="project-progress-pct">67%</div>
+            </div>
+            <div class="project-footer">
+              <div class="project-team">
+                <div class="avatar avatar-sm avatar-green">IH</div>
+                <div class="avatar avatar-sm" style="background:#5B21B6;">ZA</div>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-secondary btn-sm">View Tasks</button>
+                <button class="btn btn-ghost btn-sm">⋮</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div>
+          <!-- Resource Utilization -->
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header">
+              <div><div class="card-title">Resource Utilization</div><div class="card-subtitle">This month</div></div>
+              <button class="btn btn-ghost btn-sm">View all</button>
+            </div>
+            <div class="util-bar">
+              <div class="util-name">Bilal Khan</div>
+              <div class="util-bar-wrap"><div class="util-bar-fill" style="width:92%;background:#DC2626;"></div></div>
+              <div class="util-pct" style="color:#DC2626;">92%</div>
+            </div>
+            <div class="util-bar">
+              <div class="util-name">Maria Rehman</div>
+              <div class="util-bar-wrap"><div class="util-bar-fill" style="width:78%;background:#059669;"></div></div>
+              <div class="util-pct">78%</div>
+            </div>
+            <div class="util-bar">
+              <div class="util-name">Omar Sheikh</div>
+              <div class="util-bar-wrap"><div class="util-bar-fill" style="width:85%;background:#D97706;"></div></div>
+              <div class="util-pct" style="color:#D97706;">85%</div>
+            </div>
+            <div class="util-bar">
+              <div class="util-name">Sana Aslam</div>
+              <div class="util-bar-wrap"><div class="util-bar-fill" style="width:60%;background:#059669;"></div></div>
+              <div class="util-pct">60%</div>
+            </div>
+            <div class="util-bar">
+              <div class="util-name">Kamran Ali</div>
+              <div class="util-bar-wrap"><div class="util-bar-fill" style="width:45%;background:#0066CC;"></div></div>
+              <div class="util-pct">45%</div>
+            </div>
+            <div style="margin-top:10px;font-size:11px;color:#64748B;display:flex;gap:12px;">
+              <span><span style="color:#059669;">●</span> Optimal (60–80%)</span>
+              <span><span style="color:#D97706;">●</span> High (80–90%)</span>
+              <span><span style="color:#DC2626;">●</span> Over (90%+)</span>
+            </div>
+          </div>
+
+          <!-- Time Entry Sync -->
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header">
+              <div><div class="card-title">ERP Sync Status</div><div class="card-subtitle">Time entries → Directus ERP</div></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#F0FDF4;border-radius:8px;">
+                <span style="font-size:12px;color:#064E3B;">✅ Synced</span>
+                <span style="font-size:14px;font-weight:700;color:#059669;">1,180h</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#FEF3C7;border-radius:8px;">
+                <span style="font-size:12px;color:#92400E;">⏳ Pending Approval</span>
+                <span style="font-size:14px;font-weight:700;color:#D97706;">48h</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#FEE2E2;border-radius:8px;">
+                <span style="font-size:12px;color:#991B1B;">❌ Sync Failed</span>
+                <span style="font-size:14px;font-weight:700;color:#DC2626;">12h</span>
+              </div>
+            </div>
+            <button class="btn btn-secondary" style="width:100%;margin-top:10px;justify-content:center;" onclick="window.location.href='13-timesheet.html'">View Timesheets →</button>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="card">
+            <div class="card-header"><div class="card-title">Quick Actions</div></div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <button class="btn btn-secondary" style="justify-content:flex-start;gap:10px;" onclick="window.location.href='12-kanban.html'">
+                <span>🗂️</span> Open Kanban Board
+              </button>
+              <button class="btn btn-secondary" style="justify-content:flex-start;gap:10px;" onclick="window.location.href='13-timesheet.html'">
+                <span>⏱️</span> Approve Timesheets (5)
+              </button>
+              <button class="btn btn-secondary" style="justify-content:flex-start;gap:10px;">
+                <span>📊</span> Generate Utilization Report
+              </button>
+              <button class="btn btn-secondary" style="justify-content:flex-start;gap:10px;">
+                <span>🔄</span> Retry Failed ERP Sync
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

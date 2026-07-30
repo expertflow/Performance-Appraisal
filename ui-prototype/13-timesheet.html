@@ -1,0 +1,201 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ExpertFlow HR Suite - Timesheets</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles/design-system.css"/>
+<style>
+.ts-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.ts-toolbar select,.ts-toolbar input[type=text]{padding:7px 12px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;color:#334155;background:white;outline:none}
+.week-nav{display:flex;align-items:center;gap:10px;background:white;border:1px solid #E2E8F0;border-radius:10px;padding:8px 14px}
+.week-nav-btn{background:none;border:none;font-size:18px;color:#64748B;cursor:pointer;padding:2px 6px;border-radius:6px}
+.week-nav-btn:hover{background:#F1F5F9;color:#0066CC}
+.week-label{font-size:13px;font-weight:700;color:#0F172A;min-width:200px;text-align:center}
+.ts-summary-bar{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.ts-summary-card{background:white;border:1px solid #E2E8F0;border-radius:10px;padding:12px 18px;flex:1;min-width:120px}
+.ts-summary-label{font-size:11px;color:#94A3B8;margin-bottom:4px}
+.ts-summary-val{font-size:22px;font-weight:800;color:#0F172A}
+.ts-summary-sub{font-size:11px;color:#64748B;margin-top:2px}
+.ts-table-wrap{background:white;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;margin-bottom:18px}
+.ts-table{width:100%;border-collapse:collapse}
+.ts-table th{background:#F8FAFC;padding:10px 14px;font-size:11px;font-weight:700;color:#64748B;text-align:left;border-bottom:1px solid #E2E8F0;white-space:nowrap}
+.ts-table th.day-col{text-align:center;min-width:70px}
+.ts-table td{padding:10px 14px;font-size:13px;color:#334155;border-bottom:1px solid #F1F5F9;vertical-align:middle}
+.ts-table tr:last-child td{border-bottom:none}
+.ts-table tr:hover td{background:#FAFBFF}
+.ts-table td.day-cell{text-align:center}
+.ts-table td.total-cell{font-weight:700;color:#0F172A;text-align:center}
+.time-input{width:52px;padding:4px 6px;border:1px solid #E2E8F0;border-radius:6px;font-size:12px;text-align:center;outline:none;font-family:inherit}
+.time-input:focus{border-color:#0066CC}
+.time-input.over{border-color:#DC2626;background:#FEF2F2;color:#DC2626}
+.project-cell{display:flex;flex-direction:column;gap:2px}
+.project-name{font-size:13px;font-weight:600;color:#0F172A}
+.project-task{font-size:11px;color:#64748B}
+.project-badge{display:inline-block;font-size:10px;font-weight:600;padding:1px 7px;border-radius:99px;background:#EFF6FF;color:#2563EB;margin-top:2px}
+.day-header-date{font-size:10px;color:#94A3B8;font-weight:400}
+.day-header-name{font-size:11px;font-weight:700}
+.day-header-today .day-header-name{color:#0066CC}
+.day-header-today .day-header-date{color:#0066CC}
+.day-header-weekend .day-header-name{color:#94A3B8}
+.ts-row-total{background:#F8FAFC}
+.ts-row-total td{font-weight:700;color:#0F172A;border-top:2px solid #E2E8F0}
+.add-row-btn{display:flex;align-items:center;gap:6px;padding:10px 14px;font-size:12px;color:#64748B;cursor:pointer;border:none;background:transparent;width:100%;text-align:left}
+.add-row-btn:hover{background:#F8FAFC;color:#0066CC}
+.status-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px}
+.status-draft{background:#F1F5F9;color:#64748B}
+.status-submitted{background:#DBEAFE;color:#2563EB}
+.status-approved{background:#D1FAE5;color:#059669}
+.status-rejected{background:#FEE2E2;color:#DC2626}
+.erp-sync-panel{background:white;border:1px solid #E2E8F0;border-radius:12px;padding:18px 20px;margin-bottom:18px}
+.erp-sync-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.erp-sync-title{font-size:14px;font-weight:700;color:#0F172A}
+.erp-sync-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #F1F5F9}
+.erp-sync-row:last-child{border-bottom:none}
+.erp-sync-name{font-size:13px;color:#334155;flex:1}
+.erp-sync-hours{font-size:13px;font-weight:600;color:#0F172A;width:60px;text-align:right}
+.erp-sync-status{width:80px;text-align:right}
+.sync-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
+.sync-ok{background:#059669}.sync-pending{background:#D97706}.sync-error{background:#DC2626}
+.approval-panel{background:white;border:1px solid #E2E8F0;border-radius:12px;padding:18px 20px}
+.approval-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #F1F5F9}
+.approval-row:last-child{border-bottom:none}
+.approval-emp{display:flex;align-items:center;gap:8px;flex:1}
+.approval-meta{font-size:11px;color:#64748B;margin-top:2px}
+.approval-hours{font-size:14px;font-weight:700;color:#0F172A;width:60px;text-align:right}
+.approval-actions{display:flex;gap:6px}
+.btn-approve{padding:5px 12px;background:#059669;color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+.btn-approve:hover{background:#047857}
+.btn-reject{padding:5px 12px;background:white;color:#DC2626;border:1px solid #DC2626;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+.btn-reject:hover{background:#FEF2F2}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+</style></head><body>
+<div class="app-shell">
+<aside class="sidebar">
+<a class="sidebar-logo" href="02-shell-dashboard.html"><div class="ef-logo"><div class="ef-logo-mark">EF</div><div class="ef-logo-text"><div class="ef-logo-name">ExpertFlow</div><div class="ef-logo-product">HR Suite</div></div></div></a>
+<nav class="sidebar-nav">
+<div class="sidebar-section-label">Overview</div>
+<a class="sidebar-item" href="02-shell-dashboard.html"><span class="sidebar-icon">&#127968;</span> Dashboard</a>
+<div class="sidebar-section-label">Modules</div>
+<a class="sidebar-item" href="03-recruitment-dashboard.html"><span class="sidebar-icon">&#128101;</span> Recruitment<span class="sidebar-badge">5</span></a>
+<a class="sidebar-item" href="07-appraisal-dashboard.html"><span class="sidebar-icon">&#128202;</span> Performance Appraisal</a>
+<a class="sidebar-item active" href="11-project-dashboard.html"><span class="sidebar-icon">&#128203;</span> Project Management<span class="sidebar-badge green">2</span></a>
+<div class="sidebar-section-label">Projects</div>
+<a class="sidebar-item" href="11-project-dashboard.html"><span class="sidebar-icon">&#128200;</span> Dashboard</a>
+<a class="sidebar-item" href="#"><span class="sidebar-icon">&#128193;</span> All Projects</a>
+<a class="sidebar-item" href="14-tasks.html"><span class="sidebar-icon">&#9989;</span> Tasks</a>
+<a class="sidebar-item" href="12-kanban.html"><span class="sidebar-icon">&#128208;</span> Kanban Board</a>
+<a class="sidebar-item" href="#"><span class="sidebar-icon">&#128197;</span> Gantt Chart</a>
+<a class="sidebar-item active" href="13-timesheet.html"><span class="sidebar-icon">&#9201;</span> Timesheets</a>
+<a class="sidebar-item" href="#"><span class="sidebar-icon">&#128101;</span> Resources</a>
+</nav>
+<div class="sidebar-footer"><div class="sidebar-user"><div class="avatar avatar-teal">SH</div><div class="sidebar-user-info"><div class="sidebar-user-name">Sarah Hassan</div><div class="sidebar-user-role">HR Administrator</div></div></div></div>
+</aside>
+<main class="main-content">
+<header class="topbar">
+<div class="topbar-breadcrumb"><a href="02-shell-dashboard.html" style="color:#64748B;text-decoration:none">HR Suite</a><span class="topbar-breadcrumb-sep">&#8250;</span><a href="11-project-dashboard.html" style="color:#64748B;text-decoration:none">Project Management</a><span class="topbar-breadcrumb-sep">&#8250;</span><span class="topbar-breadcrumb-current">Timesheets</span></div>
+<div class="topbar-search"><span>&#128269;</span><input type="text" placeholder="Search timesheets..." /></div>
+<div class="topbar-actions"><button class="icon-btn" aria-label="Notifications">&#128276;<span class="badge-dot"></span></button><div class="avatar avatar-teal">SH</div></div>
+</header>
+<div class="page-content">
+<div class="page-header" style="margin-bottom:14px"><div><h1 class="page-title">Timesheets</h1><p class="page-subtitle">Track, approve and sync time entries to Directus ERP</p></div><div style="display:flex;gap:10px;align-items:center"><button class="btn btn-secondary">Export CSV</button><button class="btn btn-secondary">Sync to ERP</button><button class="btn btn-primary" onclick="document.getElementById('submitModal').style.display='flex'">Submit Timesheet</button></div></div>
+<div class="ts-toolbar">
+<div class="week-nav"><button class="week-nav-btn" aria-label="Previous week">&#8249;</button><span class="week-label">Jul 28 - Aug 3, 2026</span><button class="week-nav-btn" aria-label="Next week">&#8250;</button></div>
+<select title="Filter by employee"><option>My Timesheet</option><option>All Employees</option><option>Ahmed Raza</option><option>Fatima Malik</option><option>Omar Sheikh</option><option>Zara Hussain</option></select>
+<select title="Filter by project"><option>All Projects</option><option>CX Platform Redesign</option><option>ERP Integration v2</option><option>Internal IT Ops</option></select>
+<span class="status-badge status-draft">Draft</span>
+<div style="margin-left:auto;display:flex;gap:8px"><button class="btn btn-secondary" style="font-size:12px;padding:6px 12px">View: Weekly</button><button class="btn btn-secondary" style="font-size:12px;padding:6px 12px">Print</button></div>
+</div>
+<div class="ts-summary-bar">
+<div class="ts-summary-card"><div class="ts-summary-label">This Week</div><div class="ts-summary-val">36.5h</div><div class="ts-summary-sub">of 40h target</div></div>
+<div class="ts-summary-card"><div class="ts-summary-label">Billable Hours</div><div class="ts-summary-val" style="color:#059669">28.0h</div><div class="ts-summary-sub">76.7% billable</div></div>
+<div class="ts-summary-card"><div class="ts-summary-label">Non-Billable</div><div class="ts-summary-val" style="color:#D97706">8.5h</div><div class="ts-summary-sub">Internal / Admin</div></div>
+<div class="ts-summary-card"><div class="ts-summary-label">Overtime</div><div class="ts-summary-val" style="color:#DC2626">0h</div><div class="ts-summary-sub">3.5h remaining</div></div>
+<div class="ts-summary-card"><div class="ts-summary-label">ERP Sync</div><div class="ts-summary-val" style="color:#0066CC">Synced</div><div class="ts-summary-sub">Last: Jul 29, 6:00 PM</div></div>
+</div>
+<div class="ts-table-wrap">
+<table class="ts-table">
+<thead><tr>
+<th style="min-width:220px">Project / Task</th>
+<th><div class="day-header-name">Mon</div><div class="day-header-date">Jul 28</div></th>
+<th><div class="day-header-name">Tue</div><div class="day-header-date">Jul 29</div></th>
+<th class="day-header-today"><div class="day-header-name" style="color:#0066CC">Wed</div><div class="day-header-date" style="color:#0066CC">Jul 30</div></th>
+<th><div class="day-header-name">Thu</div><div class="day-header-date">Jul 31</div></th>
+<th><div class="day-header-name">Fri</div><div class="day-header-date">Aug 1</div></th>
+<th class="day-header-weekend"><div class="day-header-name" style="color:#94A3B8">Sat</div><div class="day-header-date">Aug 2</div></th>
+<th class="day-header-weekend"><div class="day-header-name" style="color:#94A3B8">Sun</div><div class="day-header-date">Aug 3</div></th>
+<th>Total</th><th>Status</th>
+</tr></thead><tbody>
+<tr><td><div class="project-cell"><div class="project-name">CX Platform Redesign</div><div class="project-task">TASK-031: Dashboard charts</div><span class="project-badge">&#128181; Billable</span></div></td><td class="day-cell"><input type="text" class="time-input" value="4" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="4" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="4" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="4" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="4" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="" aria-label="Hours" /></td><td class="total-cell">20h</td><td><span class="status-badge status-approved">Approved</span></td></tr>
+<tr><td><div class="project-cell"><div class="project-name">CX Platform Redesign</div><div class="project-task">TASK-033: Onboarding wireframes</div><span class="project-badge">&#128181; Billable</span></div></td><td class="day-cell"><input type="text" class="time-input" value="2" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="2" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="2" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="" aria-label="Hours" /></td><td class="total-cell">6h</td><td><span class="status-badge status-submitted">Submitted</span></td></tr>
+<tr><td><div class="project-cell"><div class="project-name">ERP Integration v2</div><div class="project-task">TASK-032: DB migration script</div><span class="project-badge">&#128181; Billable</span></div></td><td class="day-cell"><input type="text" class="time-input" value="2" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="2" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="2" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="" aria-label="Hours" /></td><td class="total-cell">6h</td><td><span class="status-badge status-draft">Draft</span></td></tr>
+<tr><td><div class="project-cell"><div class="project-name">Internal IT Ops</div><div class="project-task">Team standup & planning</div><span class="project-badge">&#128196; Non-Billable</span></div></td><td class="day-cell"><input type="text" class="time-input" value="0.5" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="0.5" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="0.5" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="0.5" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="0.5" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="" aria-label="Hours" /></td><td class="total-cell">2.5h</td><td><span class="status-badge status-approved">Approved</span></td></tr>
+<tr><td><div class="project-cell"><div class="project-name">Internal IT Ops</div><div class="project-task">Code review & documentation</div><span class="project-badge">&#128196; Non-Billable</span></div></td><td class="day-cell"><input type="text" class="time-input" value="" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="1" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="1" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="" aria-label="Hours" /></td><td class="day-cell"><input type="text" class="time-input" value="" aria-label="Hours" /></td><td class="total-cell">2h</td><td><span class="status-badge status-draft">Draft</span></td></tr>
+<tr class="ts-row-total"><td><strong>Daily Total</strong></td>
+<td class="total-cell" style="color:#DC2626">8.5h</td>
+<td class="total-cell" style="color:#DC2626">9.5h</td>
+<td class="total-cell">6.5h</td>
+<td class="total-cell">7.5h</td>
+<td class="total-cell">4.5h</td>
+<td class="total-cell">0h</td>
+<td class="total-cell">0h</td>
+<td class="total-cell">36.5h</td><td></td></tr>
+</tbody></table>
+<button class="add-row-btn" onclick="document.getElementById('addEntryModal').style.display='flex'">+ Add time entry</button>
+</div>
+<div class="grid-2">
+<div class="erp-sync-panel">
+<div class="erp-sync-header"><div class="erp-sync-title">Directus ERP Sync Status</div><button class="btn btn-secondary" style="font-size:12px;padding:6px 12px">Sync Now</button></div>
+<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#059669;display:flex;align-items:center;gap:8px">&#10003; Last sync successful - Jul 29, 2026 at 6:00 PM - 28.0h synced</div>
+<div class="erp-sync-row"><div class="erp-sync-name">CX Platform Redesign</div><div class="erp-sync-hours">20.0h</div><div class="erp-sync-status"><span class="sync-dot sync-ok"></span><span style="font-size:11px;color:#64748B">Synced</span></div></div>
+<div class="erp-sync-row"><div class="erp-sync-name">ERP Integration v2</div><div class="erp-sync-hours">6.0h</div><div class="erp-sync-status"><span class="sync-dot sync-pending"></span><span style="font-size:11px;color:#64748B">Pending</span></div></div>
+<div class="erp-sync-row"><div class="erp-sync-name">Internal IT Ops - Standup</div><div class="erp-sync-hours">2.5h</div><div class="erp-sync-status"><span class="sync-dot sync-ok"></span><span style="font-size:11px;color:#64748B">Synced</span></div></div>
+<div class="erp-sync-row"><div class="erp-sync-name">Internal IT Ops - Code Review</div><div class="erp-sync-hours">2.0h</div><div class="erp-sync-status"><span class="sync-dot sync-error"></span><span style="font-size:11px;color:#64748B">Not synced</span></div></div>
+<div style="margin-top:14px;padding-top:14px;border-top:1px solid #E2E8F0;display:flex;justify-content:space-between;font-size:12px;color:#64748B"><span>Total synced to ERP</span><strong style="color:#0F172A">22.5h / 36.5h</strong></div>
+</div>
+<div class="approval-panel">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><div style="font-size:14px;font-weight:700;color:#0F172A">Pending Approvals</div><span class="sidebar-badge" style="background:#DC2626">4</span></div>
+<div class="approval-row"><div class="approval-emp"><div class="avatar avatar-teal" style="width:32px;height:32px;font-size:11px">AR</div><div><div style="font-size:13px;font-weight:600;color:#0F172A">Ahmed Raza</div><div class="approval-meta">Backend Dev - Jul 28 - Aug 3</div></div></div><div class="approval-hours">42.0h</div><div class="approval-actions"><button class="btn-approve" aria-label="Approve">Approve</button><button class="btn-reject" aria-label="Reject">Reject</button></div></div>
+<div class="approval-row"><div class="approval-emp"><div class="avatar avatar-blue" style="width:32px;height:32px;font-size:11px">FM</div><div><div style="font-size:13px;font-weight:600;color:#0F172A">Fatima Malik</div><div class="approval-meta">Frontend Dev - Jul 28 - Aug 3</div></div></div><div class="approval-hours">38.5h</div><div class="approval-actions"><button class="btn-approve" aria-label="Approve">Approve</button><button class="btn-reject" aria-label="Reject">Reject</button></div></div>
+<div class="approval-row"><div class="approval-emp"><div class="avatar " style="width:32px;height:32px;font-size:11px">OS</div><div><div style="font-size:13px;font-weight:600;color:#0F172A">Omar Sheikh</div><div class="approval-meta">Full Stack Dev - Jul 28 - Aug 3</div></div></div><div class="approval-hours">40.0h</div><div class="approval-actions"><button class="btn-approve" aria-label="Approve">Approve</button><button class="btn-reject" aria-label="Reject">Reject</button></div></div>
+<div class="approval-row"><div class="approval-emp"><div class="avatar avatar-blue" style="width:32px;height:32px;font-size:11px">ZH</div><div><div style="font-size:13px;font-weight:600;color:#0F172A">Zara Hussain</div><div class="approval-meta">UX Designer - Jul 28 - Aug 3</div></div></div><div class="approval-hours">36.0h</div><div class="approval-actions"><button class="btn-approve" aria-label="Approve">Approve</button><button class="btn-reject" aria-label="Reject">Reject</button></div></div>
+<div style="margin-top:14px;padding-top:14px;border-top:1px solid #E2E8F0"><button class="btn btn-secondary" style="width:100%;font-size:12px">View All Timesheets</button></div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<div id="submitModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
+<div style="background:white;border-radius:16px;width:480px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+<div style="padding:20px 24px;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;justify-content:space-between"><h2 style="font-size:16px;font-weight:700;color:#0F172A;margin:0">Submit Timesheet for Approval</h2><button onclick="document.getElementById('submitModal').style.display='none'" style="background:none;border:none;font-size:20px;color:#94A3B8;cursor:pointer" aria-label="Close">&#10005;</button></div>
+<div style="padding:20px 24px">
+<div style="background:#F8FAFC;border-radius:10px;padding:14px 16px;margin-bottom:16px">
+<div style="font-size:13px;font-weight:700;color:#0F172A;margin-bottom:8px">Week: Jul 28 - Aug 3, 2026</div>
+<div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B;margin-bottom:4px"><span>Total Hours</span><strong style="color:#0F172A">36.5h</strong></div>
+<div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B;margin-bottom:4px"><span>Billable</span><strong style="color:#059669">28.0h</strong></div>
+<div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B"><span>Non-Billable</span><strong style="color:#D97706">8.5h</strong></div>
+</div>
+<div class="form-group"><label class="form-label">Approver</label><select class="form-input" title="Select approver"><option>Khalid Mahmood (Project Manager)</option><option>Sarah Hassan (HR Admin)</option></select></div>
+<div class="form-group"><label class="form-label">Notes (optional)</label><textarea class="form-input" rows="3" placeholder="Add any notes for your approver..." style="resize:vertical"></textarea></div>
+<div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400E">Note: Submitting will lock this timesheet. Entries will be synced to Directus ERP after approval.</div>
+</div>
+<div style="padding:16px 24px;border-top:1px solid #E2E8F0;display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-secondary" onclick="document.getElementById('submitModal').style.display='none'">Cancel</button><button class="btn btn-primary">Submit for Approval</button></div>
+</div></div>
+<div id="addEntryModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
+<div style="background:white;border-radius:16px;width:480px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+<div style="padding:20px 24px;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;justify-content:space-between"><h2 style="font-size:16px;font-weight:700;color:#0F172A;margin:0">Add Time Entry</h2><button onclick="document.getElementById('addEntryModal').style.display='none'" style="background:none;border:none;font-size:20px;color:#94A3B8;cursor:pointer" aria-label="Close">&#10005;</button></div>
+<div style="padding:20px 24px">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+<div class="form-group"><label class="form-label">Project</label><select class="form-input" title="Select project"><option>CX Platform Redesign</option><option>ERP Integration v2</option><option>Internal IT Ops</option></select></div>
+<div class="form-group"><label class="form-label">Task</label><select class="form-input" title="Select task"><option>TASK-031: Dashboard charts</option><option>TASK-032: DB migration</option><option>TASK-033: Wireframes</option><option>TASK-034: WebSocket</option></select></div>
+<div class="form-group"><label class="form-label">Date</label><input aria-label="Input field" type="date" class="form-input" /></div>
+<div class="form-group"><label class="form-label">Hours</label><input type="number" class="form-input" placeholder="e.g. 2.5" min="0.5" max="24" step="0.5" /></div>
+</div>
+<div class="form-group"><label class="form-label">Billable</label><div style="display:flex;gap:16px"><label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input aria-label="Input field" type="radio" name="billable" checked /> Billable</label><label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input aria-label="Input field" type="radio" name="billable" /> Non-Billable</label></div></div>
+<div class="form-group"><label class="form-label">Description</label><textarea class="form-input" rows="2" placeholder="What did you work on?" style="resize:vertical"></textarea></div>
+</div>
+<div style="padding:16px 24px;border-top:1px solid #E2E8F0;display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-secondary" onclick="document.getElementById('addEntryModal').style.display='none'">Cancel</button><button class="btn btn-primary">Add Entry</button></div>
+</div></div>
+<script>
+document.querySelectorAll(".btn-approve").forEach(b=>b.addEventListener("click",function(){this.closest(".approval-row").style.opacity="0.5";this.textContent="Approved";}));
+document.querySelectorAll(".btn-reject").forEach(b=>b.addEventListener("click",function(){this.closest(".approval-row").style.opacity="0.5";this.textContent="Rejected";}));
+</script>
+</body></html>

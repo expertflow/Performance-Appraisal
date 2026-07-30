@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Organogram — ExpertFlow HR Suite</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Inter",system-ui,sans-serif;background:#F1F5F9;color:#1E293B;font-size:14px}
+.app-shell{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:240px;min-width:240px;background:#0A1628;display:flex;flex-direction:column;overflow-y:auto}
+.sidebar-logo{display:flex;align-items:center;padding:20px 16px 16px;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.08)}
+.ef-logo{display:flex;align-items:center;gap:10px}
+.ef-logo-mark{width:32px;height:32px;background:linear-gradient(135deg,#0066CC,#00A3A3);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:13px}
+.ef-logo-name{color:white;font-weight:700;font-size:14px;line-height:1.2}
+.ef-logo-product{color:#94A3B8;font-size:10px}
+.sidebar-nav{flex:1;padding:12px 8px}
+.sidebar-section-label{font-size:10px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:.08em;padding:12px 8px 4px}
+.sidebar-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;color:#94A3B8;text-decoration:none;font-size:13px;font-weight:500;transition:all .15s;margin-bottom:2px}
+.sidebar-item:hover{background:rgba(255,255,255,0.06);color:#E2E8F0}
+.sidebar-item.active{background:rgba(91,33,182,0.3);color:#C4B5FD}
+.sidebar-icon{font-size:15px;width:20px;text-align:center}
+.sidebar-badge{margin-left:auto;background:#EF4444;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px}
+.sidebar-badge.orange{background:#D97706}
+.sidebar-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,0.08)}
+.sidebar-user{display:flex;align-items:center;gap:10px}
+.sidebar-user-name{color:#E2E8F0;font-size:13px;font-weight:600}
+.sidebar-user-role{color:#64748B;font-size:11px}
+.avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;flex-shrink:0}
+.avatar-teal{background:#00A3A3}.avatar-blue{background:#0066CC}.avatar-purple{background:#7C3AED}.avatar-orange{background:#D97706}.avatar-green{background:#059669}.avatar-pink{background:#DB2777}
+.avatar-lg{width:48px;height:48px;font-size:16px}
+.avatar-xl{width:64px;height:64px;font-size:20px}
+.main-content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:56px;background:white;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;padding:0 20px;gap:16px;flex-shrink:0}
+.topbar-breadcrumb{display:flex;align-items:center;gap:6px;font-size:13px;color:#64748B}
+.topbar-breadcrumb-sep{color:#CBD5E1}
+.topbar-breadcrumb-current{color:#1E293B;font-weight:600}
+.topbar-search{flex:1;max-width:360px;display:flex;align-items:center;gap:8px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:6px 12px;font-size:13px;color:#64748B}
+.topbar-search input{border:none;background:transparent;outline:none;flex:1;font-size:13px;color:#1E293B}
+.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+.icon-btn{background:none;border:none;cursor:pointer;font-size:18px;position:relative;padding:4px}
+.badge-dot{position:absolute;top:2px;right:2px;width:8px;height:8px;background:#EF4444;border-radius:50%;border:2px solid white}
+.page-content{flex:1;overflow-y:auto;padding:20px}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.page-title{font-size:22px;font-weight:700;color:#0A1628}
+.page-subtitle{font-size:13px;color:#64748B;margin-top:2px}
+.page-header-actions{display:flex;gap:10px;align-items:center}
+.btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:#5B21B6;color:white}.btn-primary:hover{background:#4C1D95}
+.btn-secondary{background:white;color:#334155;border:1px solid #E2E8F0}.btn-secondary:hover{background:#F8FAFC}
+.btn-teal{background:#00A3A3;color:white}.btn-teal:hover{background:#008585}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+/* Toolbar */
+.org-toolbar{display:flex;align-items:center;gap:10px;background:white;border:1px solid #E2E8F0;border-radius:10px;padding:10px 14px;margin-bottom:16px;flex-wrap:wrap}
+.org-toolbar select,.org-toolbar input[type=text]{border:1px solid #E2E8F0;border-radius:6px;padding:5px 10px;font-size:12px;color:#334155;background:white;outline:none}
+.view-toggle{display:flex;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden}
+.view-btn{padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:white;color:#64748B;transition:all .15s}
+.view-btn.active{background:#5B21B6;color:white}
+
+/* Stats bar */
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.stat-card{background:white;border:1px solid #E2E8F0;border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px}
+.stat-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.stat-icon-purple{background:#F5F3FF}
+.stat-icon-teal{background:#F0FDFA}
+.stat-icon-blue{background:#EFF6FF}
+.stat-icon-orange{background:#FFF7ED}
+.stat-value{font-size:22px;font-weight:700;color:#0A1628}
+.stat-label{font-size:12px;color:#64748B}
+
+/* Org chart canvas area */
+.org-canvas{background:white;border:1px solid #E2E8F0;border-radius:12px;overflow:auto;position:relative;min-height:600px}
+.org-canvas-inner{padding:32px;min-width:1200px}
+
+/* Tree layout */
+.org-tree{display:flex;flex-direction:column;align-items:center;gap:0}
+.org-level{display:flex;justify-content:center;gap:0;position:relative}
+.org-level-row{display:flex;gap:24px;justify-content:center;margin-bottom:0}
+
+/* Node card */
+.org-node{display:flex;flex-direction:column;align-items:center;position:relative;padding:0 12px}
+.org-node-card{background:white;border:2px solid #E2E8F0;border-radius:12px;padding:14px 16px;width:180px;cursor:pointer;transition:all .2s;position:relative;text-align:center}
+.org-node-card:hover{border-color:#5B21B6;box-shadow:0 4px 16px rgba(91,33,182,0.15);transform:translateY(-2px)}
+.org-node-card.ceo{border-color:#5B21B6;background:linear-gradient(135deg,#F5F3FF,#EDE9FE)}
+.org-node-card.manager{border-color:#0066CC;background:#EFF6FF}
+.org-node-card.employee{border-color:#E2E8F0;background:white}
+.org-node-card.highlighted{border-color:#00A3A3;box-shadow:0 0 0 3px rgba(0,163,163,0.2)}
+.org-node-name{font-size:13px;font-weight:700;color:#0A1628;margin-top:8px;margin-bottom:2px}
+.org-node-title{font-size:11px;color:#64748B;margin-bottom:4px}
+.org-node-dept{font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;display:inline-block}
+.dept-eng{background:#EFF6FF;color:#0066CC}
+.dept-design{background:#F5F3FF;color:#7C3AED}
+.dept-hr{background:#F0FDF4;color:#059669}
+.dept-finance{background:#FFF7ED;color:#D97706}
+.dept-ops{background:#FEF2F2;color:#DC2626}
+.dept-sales{background:#F0FDFA;color:#00A3A3}
+.org-node-appraisal{font-size:10px;color:#64748B;margin-top:6px;padding-top:6px;border-top:1px solid #F1F5F9;display:flex;align-items:center;gap:4px;justify-content:center}
+.appraisal-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.appraisal-dot.done{background:#059669}
+.appraisal-dot.pending{background:#D97706}
+.appraisal-dot.not-started{background:#CBD5E1}
+
+/* Connector lines */
+.org-connector{display:flex;flex-direction:column;align-items:center}
+.org-connector-v{width:2px;height:24px;background:#E2E8F0}
+.org-connector-h-wrap{display:flex;align-items:flex-start;position:relative}
+.org-connector-h{height:2px;background:#E2E8F0;position:absolute;top:0}
+.org-children{display:flex;gap:24px;position:relative;padding-top:24px}
+.org-children::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:2px;height:24px;background:#E2E8F0}
+
+/* Legend */
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;color:#64748B}
+.legend-item{display:flex;align-items:center;gap:6px}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+
+/* Employee detail panel */
+.emp-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:200;display:none}
+.emp-overlay.open{display:block}
+.emp-panel{position:fixed;top:0;right:-520px;width:520px;height:100vh;background:white;box-shadow:-4px 0 24px rgba(0,0,0,0.12);z-index:201;display:flex;flex-direction:column;transition:right .3s ease}
+.emp-panel.open{right:0}
+.emp-panel-header{padding:20px 24px;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;gap:12px}
+.emp-panel-close{background:none;border:none;font-size:20px;cursor:pointer;color:#64748B;padding:4px;border-radius:6px;margin-left:auto}
+.emp-panel-close:hover{background:#F1F5F9}
+.emp-panel-body{flex:1;overflow-y:auto;padding:20px 24px}
+.emp-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.emp-info-item{background:#F8FAFC;border-radius:8px;padding:10px 12px}
+.emp-info-label{font-size:11px;font-weight:600;color:#64748B;margin-bottom:2px}
+.emp-info-value{font-size:13px;font-weight:600;color:#1E293B}
+.section-title{font-size:14px;font-weight:700;color:#0A1628;margin-bottom:10px;margin-top:16px}
+.appraisal-history{display:flex;flex-direction:column;gap:8px}
+.appraisal-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#F8FAFC;border-radius:8px;border:1px solid #E2E8F0}
+.appraisal-cycle{font-size:13px;font-weight:600;color:#1E293B;flex:1}
+.appraisal-score{font-size:13px;font-weight:700;color:#5B21B6}
+.appraisal-status-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px}
+.status-completed{background:#F0FDF4;color:#059669}
+.status-pending{background:#FEF3C7;color:#D97706}
+.status-not-started{background:#F1F5F9;color:#64748B}
+.manager-card{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#F5F3FF;border:1px solid #DDD6FE;border-radius:10px;margin-bottom:8px}
+.manager-card-info{flex:1}
+.manager-card-name{font-size:13px;font-weight:700;color:#1E293B}
+.manager-card-role{font-size:11px;color:#64748B}
+.manager-card-badge{font-size:10px;font-weight:600;background:#5B21B6;color:white;padding:2px 8px;border-radius:10px}
+.bs4-badge{font-size:10px;font-weight:600;background:#EFF6FF;color:#0066CC;padding:2px 8px;border-radius:4px;border:1px solid #BFDBFE}
+
+/* Table view */
+.table-card{background:white;border-radius:12px;border:1px solid #E2E8F0;overflow:hidden;display:none}
+.table-card.active{display:block}
+table{width:100%;border-collapse:collapse}
+thead th{background:#F8FAFC;padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #E2E8F0;white-space:nowrap}
+tbody tr{border-bottom:1px solid #F1F5F9;cursor:pointer;transition:background .1s}
+tbody tr:hover{background:#F8FAFC}
+td{padding:10px 14px;vertical-align:middle;font-size:13px;color:#334155}
+.emp-name-cell{display:flex;align-items:center;gap:10px}
+.emp-name-text{font-weight:600;color:#1E293B}
+.score-pill{display:inline-flex;align-items:center;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:700}
+.score-excellent{background:#F0FDF4;color:#059669}
+.score-good{background:#EFF6FF;color:#0066CC}
+.score-average{background:#FEF3C7;color:#D97706}
+.score-poor{background:#FEE2E2;color:#DC2626}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:400;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:white;border-radius:16px;width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid #E2E8F0}
+.modal-title{font-size:18px;font-weight:700;color:#0A1628}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:#64748B}
+.modal-body{padding:20px 24px}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid #E2E8F0}
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;font-weight:600;color:#64748B;margin-bottom:4px;display:block}
+.form-control{width:100%;border:1px solid #E2E8F0;border-radius:8px;padding:8px 12px;font-size:13px;color:#334155;outline:none;font-family:inherit}
+.form-control:focus{border-color:#5B21B6}
+.bs4-source-note{font-size:11px;color:#0066CC;margin-top:4px;display:flex;align-items:center;gap:4px}
+</style>
+</head>
+<body>
+<div class="app-shell">
+<aside class="sidebar">
+<a class="sidebar-logo" href="02-shell-dashboard.html"><div class="ef-logo"><div class="ef-logo-mark">EF</div><div class="ef-logo-text"><div class="ef-logo-name">ExpertFlow</div><div class="ef-logo-product">HR Suite</div></div></div></a>
+<nav class="sidebar-nav">
+<div class="sidebar-section-label">Overview</div>
+<a class="sidebar-item" href="02-shell-dashboard.html"><span class="sidebar-icon">&#127968;</span> Dashboard</a>
+<div class="sidebar-section-label">Modules</div>
+<a class="sidebar-item" href="03-recruitment-dashboard.html"><span class="sidebar-icon">&#128101;</span> Recruitment<span class="sidebar-badge">5</span></a>
+<a class="sidebar-item active" href="07-appraisal-dashboard.html"><span class="sidebar-icon">&#128202;</span> Performance Appraisal<span class="sidebar-badge orange">3</span></a>
+<a class="sidebar-item" href="11-project-dashboard.html"><span class="sidebar-icon">&#128203;</span> Project Management</a>
+<div class="sidebar-section-label">Appraisal</div>
+<a class="sidebar-item" href="07-appraisal-dashboard.html"><span class="sidebar-icon">&#128200;</span> Dashboard</a>
+<a class="sidebar-item" href="08-cycles.html"><span class="sidebar-icon">&#128260;</span> Review Cycles</a>
+<a class="sidebar-item" href="09-goals.html"><span class="sidebar-icon">&#127919;</span> Goals</a>
+<a class="sidebar-item" href="10-feedback.html"><span class="sidebar-icon">&#128172;</span> Feedback</a>
+<a class="sidebar-item active" href="15-organogram.html"><span class="sidebar-icon">&#127968;</span> Organogram</a>
+<a class="sidebar-item" href="#"><span class="sidebar-icon">&#128203;</span> Recommendations</a>
+</nav>
+<div class="sidebar-footer"><div class="sidebar-user"><div class="avatar avatar-teal">SH</div><div class="sidebar-user-info"><div class="sidebar-user-name">Sarah Hassan</div><div class="sidebar-user-role">HR Administrator</div></div></div></div>
+</aside>
+
+<main class="main-content">
+<header class="topbar">
+<div class="topbar-breadcrumb">
+<a href="02-shell-dashboard.html" style="color:#64748B;text-decoration:none">HR Suite</a>
+<span class="topbar-breadcrumb-sep">&#8250;</span>
+<a href="07-appraisal-dashboard.html" style="color:#64748B;text-decoration:none">Performance Appraisal</a>
+<span class="topbar-breadcrumb-sep">&#8250;</span>
+<span class="topbar-breadcrumb-current">Organogram</span>
+</div>
+<div class="topbar-search"><span>&#128269;</span><input type="text" placeholder="Search employees&#8230;" aria-label="Search employees" oninput="searchEmployees(this.value)" /></div>
+<div class="topbar-actions">
+<button class="icon-btn" aria-label="Notifications">&#128276;<span class="badge-dot"></span></button>
+<div class="avatar avatar-teal">SH</div>
+</div>
+</header>
+
+<div class="page-content">
+<div class="page-header">
+<div>
+<div class="page-title">Organogram</div>
+<div class="page-subtitle">Organisation hierarchy from BS4 &#8212; shows who appraises each employee</div>
+</div>
+<div class="page-header-actions">
+<button class="btn btn-secondary" onclick="openAssignModal()">&#128101; Assign Appraisal Manager</button>
+<button class="btn btn-primary" onclick="syncFromBS4()">&#8635; Sync from BS4</button>
+</div>
+</div>
+
+<!-- Stats -->
+<div class="stats-bar">
+<div class="stat-card">
+<div class="stat-icon stat-icon-purple">&#128101;</div>
+<div><div class="stat-value">42</div><div class="stat-label">Total Employees</div></div>
+</div>
+<div class="stat-card">
+<div class="stat-icon stat-icon-teal">&#9989;</div>
+<div><div class="stat-value">28</div><div class="stat-label">Appraisals Completed</div></div>
+</div>
+<div class="stat-card">
+<div class="stat-icon stat-icon-orange">&#9203;</div>
+<div><div class="stat-value">11</div><div class="stat-label">Pending Appraisals</div></div>
+</div>
+<div class="stat-card">
+<div class="stat-icon stat-icon-blue">&#128202;</div>
+<div><div class="stat-value">3</div><div class="stat-label">Not Started</div></div>
+</div>
+</div>
+
+<!-- Toolbar -->
+<div class="org-toolbar">
+<select title="Filter by department" onchange="filterDept(this.value)">
+<option value="">All Departments</option>
+<option value="Engineering">Engineering</option>
+<option value="Design">Design</option>
+<option value="HR">HR</option>
+<option value="Finance">Finance</option>
+<option value="Operations">Operations</option>
+<option value="Sales">Sales</option>
+</select>
+<select title="Filter by appraisal status" onchange="filterStatus(this.value)">
+<option value="">All Appraisal Statuses</option>
+<option value="done">Completed</option>
+<option value="pending">Pending</option>
+<option value="not-started">Not Started</option>
+</select>
+<select title="Filter by manager" onchange="filterManager(this.value)">
+<option value="">All Managers</option>
+<option value="CEO">Tariq Mahmood (CEO)</option>
+<option value="CTO">Bilal Ahmed (CTO)</option>
+<option value="HRD">Sana Qureshi (HR Director)</option>
+<option value="CFO">Imran Khan (CFO)</option>
+<option value="COO">Nadia Farooq (COO)</option>
+</select>
+<div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+<span style="font-size:12px;color:#64748B">View:</span>
+<div class="view-toggle">
+<button class="view-btn active" id="btnTree" onclick="switchView('tree')">&#127968; Tree</button>
+<button class="view-btn" id="btnTable" onclick="switchView('table')">&#9776; Table</button>
+</div>
+</div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+<div class="legend-item"><div class="legend-dot" style="background:#5B21B6"></div> CEO / Executive</div>
+<div class="legend-item"><div class="legend-dot" style="background:#0066CC"></div> Manager / Director</div>
+<div class="legend-item"><div class="legend-dot" style="background:#E2E8F0"></div> Employee</div>
+<div class="legend-item"><div class="appraisal-dot done"></div> Appraisal Done</div>
+<div class="legend-item"><div class="appraisal-dot pending"></div> Appraisal Pending</div>
+<div class="legend-item"><div class="appraisal-dot not-started"></div> Not Started</div>
+<span style="margin-left:8px;font-size:11px;background:#EFF6FF;color:#0066CC;padding:2px 8px;border-radius:4px;border:1px solid #BFDBFE;font-weight:600">from BS4</span>
+</div>
+<!-- ORG TREE VIEW -->
+<div id="orgTreeView" class="org-canvas">
+<div class="org-canvas-inner">
+
+<!-- Level 0: CEO -->
+<div style="display:flex;justify-content:center;margin-bottom:0">
+<div class="org-node">
+<div class="org-node-card ceo" onclick="openEmpPanel('Tariq Mahmood','Chief Executive Officer','Executive','Board of Directors','done','4.9')">
+<div class="avatar avatar-lg avatar-purple" style="margin:0 auto">TM</div>
+<div class="org-node-name">Tariq Mahmood</div>
+<div class="org-node-title">Chief Executive Officer</div>
+<div class="org-node-dept dept-ops">Executive</div>
+<div class="org-node-appraisal"><div class="appraisal-dot done"></div>Appraisal Done<span style="font-size:11px;font-weight:700;color:#5B21B6;margin-left:auto">4.9</span></div>
+<br><span style="font-size:10px;color:#94A3B8">Appraiser: Board of Directors</span>
+</div>
+</div>
+</div>
+
+<!-- Connector CEO → L1 -->
+<div style="display:flex;justify-content:center"><div style="width:2px;height:28px;background:#E2E8F0"></div></div>
+
+<!-- Level 1: C-Suite -->
+<div style="display:flex;justify-content:center;gap:0;position:relative">
+<!-- Horizontal line spanning all L1 nodes -->
+<div style="position:absolute;top:0;left:calc(10% + 90px);right:calc(10% + 90px);height:2px;background:#E2E8F0"></div>
+<!-- Vertical drops to each L1 node -->
+<div style="display:flex;gap:48px;padding-top:0">
+<div class="org-node">
+<div class="org-node-card manager" onclick="openEmpPanel('Bilal Ahmed','Chief Technology Officer','Engineering','Tariq Mahmood','done','4.7')">
+<div class="avatar avatar-lg avatar-blue" style="margin:0 auto">BA</div>
+<div class="org-node-name">Bilal Ahmed</div>
+<div class="org-node-title">Chief Technology Officer</div>
+<div class="org-node-dept dept-eng">Engineering</div>
+<div class="org-node-appraisal"><div class="appraisal-dot done"></div>Appraisal Done<span style="font-size:11px;font-weight:700;color:#5B21B6;margin-left:auto">4.7</span></div>
+<br><span style="font-size:10px;color:#94A3B8">Appraiser: Tariq Mahmood</span>
+</div>
+</div>
+<div class="org-node">
+<div class="org-node-card manager" onclick="openEmpPanel('Sana Qureshi','HR Director','HR','Tariq Mahmood','done','4.5')">
+<div class="avatar avatar-lg avatar-green" style="margin:0 auto">SQ</div>
+<div class="org-node-name">Sana Qureshi</div>
+<div class="org-node-title">HR Director</div>
+<div class="org-node-dept dept-hr">HR</div>
+<div class="org-node-appraisal"><div class="appraisal-dot done"></div>Appraisal Done<span style="font-size:11px;font-weight:700;color:#5B21B6;margin-left:auto">4.5</span></div>
+<br><span style="font-size:10px;color:#94A3B8">Appraiser: Tariq Mahmood</span>
+</div>
+</div>
+<div class="org-node">
+<div class="org-node-card manager" onclick="openEmpPanel('Imran Khan','Chief Financial Officer','Finance','Tariq Mahmood','pending','')">
+<div class="avatar avatar-lg avatar-orange" style="margin:0 auto">IK</div>
+<div class="org-node-name">Imran Khan</div>
+<div class="org-node-title">Chief Financial Officer</div>
+<div class="org-node-dept dept-finance">Finance</div>
+<div class="org-node-appraisal"><div class="appraisal-dot pending"></div>Pending</div>
+<br><span style="font-size:10px;color:#94A3B8">Appraiser: Tariq Mahmood</span>
+</div>
+</div>
+<div class="org-node">
+<div class="org-node-card manager" onclick="openEmpPanel('Nadia Farooq','Chief Operating Officer','Operations','Tariq Mahmood','done','4.6')">
+<div class="avatar avatar-lg avatar-pink" style="margin:0 auto">NF</div>
+<div class="org-node-name">Nadia Farooq</div>
+<div class="org-node-title">Chief Operating Officer</div>
+<div class="org-node-dept dept-ops">Operations</div>
+<div class="org-node-appraisal"><div class="appraisal-dot done"></div>Appraisal Done<span style="font-size:11px;font-weight:700;color:#5B21B6;margin-left:auto">4.6</span></div>
+<br><span style="font-size:10px;color:#94A3B8">Appraiser: Tariq Mahmood</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Connector L1 → L2 -->
+<div style="display:flex;justify-content:center"><div style="width:2px;height:28px;background:#E2E8F0"></div></div>
+
+<!-- Level 2: Managers & Senior Staff -->
+<div style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;padding:0 16px">
+<div class="org-node">
+<div class="org-node-card employee" onclick="openEmpPanel('Ahmed Raza','Senior Engineer','Engineering','Bilal Ahmed','done','4.2')">
+<div class="avatar avatar-lg avatar-blue" style="margin:0 auto">AR</div>
+<div class="org-node-name">Ahmed Raza</div>
+<div class="org-node-title">Senior Engineer</div>
+<div class="org-node-dept dept-eng">Engineering</div>
+<div class="org-node-appraisal"><div class="appraisal-dot done"></div>Appraisal Done<span style="font-size:11px;font-weight:700;color:#5B21B6;margin-left:auto">4.2</span></div>
+<br><span style="font-size:10px;color:#94A3B8">Appraiser: Bilal Ahmed</span>
+</div>
+</div>
+<div class="org-node">
+<div class="org-node-card employee" onclick="openEmpPanel('Fatima Malik','UI Lead','Design','Bilal Ahmed','done','4.4')">
+<div class="avatar avatar-lg avatar-purple" style="margin:0 auto">FM</div>
+<div class="org-node-name">Fatima Malik</div>
+<div class="org-node-title">UI Lead</div>
+<div class="org-node-dept dept-design">Design</div>
+<div class="org-node-appraisal"><div class="appraisal-dot done"></div>Appraisal Done<span style="font-size:11px;font-weight:700;color:#5B21B6;margin-left:auto">4.4</span></div>
+<br><span style="font-size:10px;color:#94A3B8">Appraiser: Bilal Ahmed</span>
+</div>
+</div>
+<div class="org-node">
+<div class="org-node-card employee" onclick="openEmpPanel('Omar Sheikh','Backend Lead','Engineering','Bilal Ahmed','pending','')">
+<div class="avatar avatar-lg avatar-blue" style="margin:0 auto">OS</div>
+<div class="org-node-name">Omar Sheikh</div>
+<div class="org-node-title">Backend Lead</div>
+<div class="org-node-dept dept-eng">Engineering</div>
+<div class="org-node-appraisal"><div class="appraisal-dot pending"></div>Pending</div>
+<br><span style="font-size:10px;color:#94A3B8">Appraiser: Bilal Ahmed</span>
+</div>
+</div>
+<div class="org-node">
+<div class="org-node-card employee" onclick="openEmpPanel('Zara Hussain','UX Designer','Design','Bilal Ahmed','done','4.1')">
+<div class="avatar avatar-lg avatar-teal" style="margin:0 auto">ZH</div>
+<div class="org-node-name">Zara Hussain</div>
+<div class="org-node-title">UX Designer</div>
+<div class="org-node-dept dept-design">Design</div>
+<div class="org-node-appraisal"><div class="appraisal-dot done"></div>Appraisal Done<span style="font-size:11px;font-weight:700;color:#5B21B6;margin-left:auto">4.1</span></div>
+<br><span style="font-size:10px;color:#94A3B8">Appraiser: Bilal Ahmed</span>
+</div>
+</div>
+<div class="org-node">
+<div class="org-node-card employee" onclick="openEmpPanel('Khalid Mahmood','Mobile Dev','Engineering','Bilal Ahmed','done','3.9')">
+<div class="avatar avatar-lg avatar-orange" style="margin:0 auto">KM</div>
+<div class="org-node-name">Khalid Mahmood</div>
+<div class="org-node-title">Mobile Dev</div>
+<div class="org-node-dept dept-eng">Engineering</div>
+<div class="org-node-appraisal"><div class="appraisal-dot done"></div>Appraisal Done<span style="font-size:11px;font-weight:700;color:#5B21B6;margin-left:auto">3.9</span></div>
+<br><span style="font-size:10px;color:#94A3B8">Appraiser: Bilal Ahmed</span>
+</div>
+</div>
+<div class="org-node">
+<div class="org-node-card employee" onclick="openEmpPanel('Nadia Baig','QA Engineer','Engineering','Bilal Ahmed','not-started','')">
+<div class="avatar avatar-lg avatar-teal" style="margin:0 auto">NB</div>
+<div class="org-node-name">Nadia Baig</div>
+<div class="org-node-title">QA Engineer</div>
+<div class="org-node-dept dept-eng">Engineering</div>
+<div class="org-node-appraisal"><div class="appraisal-dot not-started"></div>Not Started</div>
+<br><span style="font-size:10px;color:#94A3B8">Appraiser: Bilal Ahmed</span>
+</div>
+</div>
+<div class="org-node">
+<div class="org-node-card employee" onclick="openEmpPanel('Raza Ali','HR Manager','HR','Sana Qureshi','done','4.3')">
+<div class="avatar avatar-lg avatar-blue" style="margin:0 auto">RA</div>
+<div class="org-node-name">Raza Ali</div>
+<div class="org-node-title">HR Manager</div>
+<div class="org-node-dept dept-hr">HR</div>
+<div class="org-node-appraisal"><div class="appraisal-dot done"></div>Appraisal Done<span style="font-size:11px;font-weight:700;color:#5B21B6;margin-left:auto">4.3</span></div>
+<br><span style="font-size:10px;color:#94A3B8">Appraiser: Sana Qureshi</span>
+</div>
+</div>
+<div class="org-node">
+<div class="org-node-card employee" onclick="openEmpPanel('Sarah Hassan','HR Specialist','HR','Sana Qureshi','pending','')">
+<div class="avatar avatar-lg avatar-teal" style="margin:0 auto">SH</div>
+<div class="org-node-name">Sarah Hassan</div>
+<div class="org-node-title">HR Specialist</div>
+<div class="org-node-dept dept-hr">HR</div>
+<div class="org-node-appraisal"><div class="appraisal-dot pending"></div>Pending</div>
+<br><span style="font-size:10px;color:#94A3B8">Appraiser: Sana Qureshi</span>
+</div>
+</div>
+<div class="org-node">
+<div class="org-node-card employee" onclick="openEmpPanel('Asad Khan','Finance Manager','Finance','Imran Khan','done','4.0')">
+<div class="avatar avatar-lg avatar-orange" style="margin:0 auto">AK</div>
+<div class="org-node-name">Asad Khan</div>
+<div class="org-node-title">Finance Manager</div>
+<div class="org-node-dept dept-finance">Finance</div>
+<div class="org-node-appraisal"><div class="appraisal-dot done"></div>Appraisal Done<span style="font-size:11px;font-weight:700;color:#5B21B6;margin-left:auto">4.0</span></div>
+<br><span style="font-size:10px;color:#94A3B8">Appraiser: Imran Khan</span>
+</div>
+</div>
+<div class="org-node">
+<div class="org-node-card employee" onclick="openEmpPanel('Maria Rehman','Accountant','Finance','Imran Khan','not-started','')">
+<div class="avatar avatar-lg avatar-green" style="margin:0 auto">MR</div>
+<div class="org-node-name">Maria Rehman</div>
+<div class="org-node-title">Accountant</div>
+<div class="org-node-dept dept-finance">Finance</div>
+<div class="org-node-appraisal"><div class="appraisal-dot not-started"></div>Not Started</div>
+<br><span style="font-size:10px;color:#94A3B8">Appraiser: Imran Khan</span>
+</div>
+</div>
+<div class="org-node">
+<div class="org-node-card employee" onclick="openEmpPanel('Hassan Baig','Ops Manager','Operations','Nadia Farooq','done','4.5')">
+<div class="avatar avatar-lg avatar-blue" style="margin:0 auto">HB</div>
+<div class="org-node-name">Hassan Baig</div>
+<div class="org-node-title">Ops Manager</div>
+<div class="org-node-dept dept-ops">Operations</div>
+<div class="org-node-appraisal"><div class="appraisal-dot done"></div>Appraisal Done<span style="font-size:11px;font-weight:700;color:#5B21B6;margin-left:auto">4.5</span></div>
+<br><span style="font-size:10px;color:#94A3B8">Appraiser: Nadia Farooq</span>
+</div>
+</div>
+<div class="org-node">
+<div class="org-node-card employee" onclick="openEmpPanel('Layla Khan','Sales Lead','Sales','Nadia Farooq','pending','')">
+<div class="avatar avatar-lg avatar-pink" style="margin:0 auto">LK</div>
+<div class="org-node-name">Layla Khan</div>
+<div class="org-node-title">Sales Lead</div>
+<div class="org-node-dept dept-sales">Sales</div>
+<div class="org-node-appraisal"><div class="appraisal-dot pending"></div>Pending</div>
+<br><span style="font-size:10px;color:#94A3B8">Appraiser: Nadia Farooq</span>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- TABLE VIEW (hidden by default) -->
+<div id="orgTableView" class="table-card">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #E2E8F0">
+<div style="display:flex;align-items:center;gap:10px;font-size:13px;color:#64748B">
+<span>Showing <strong>42</strong> employees</span>
+<span style="background:#EFF6FF;color:#0066CC;font-size:12px;font-weight:600;padding:2px 8px;border-radius:10px">from BS4</span>
+</div>
+<select title="Sort by" style="border:1px solid #E2E8F0;border-radius:6px;padding:4px 8px;font-size:12px;color:#334155"><option>Sort: Name</option><option>Sort: Department</option><option>Sort: Appraisal Status</option><option>Sort: Score</option></select>
+</div>
+<table>
+<thead>
+<tr>
+<th>Employee</th>
+<th>Department</th>
+<th>Title</th>
+<th>Appraisal Manager <span class="bs4-badge">BS4</span></th>
+<th>Appraisal Status</th>
+<th>Score</th>
+<th style="width:40px"></th>
+</tr>
+</thead>
+<tbody>
+<tr onclick="openEmpPanel('Tariq Mahmood','Chief Executive Officer','Executive','Board of Directors','done','4.9')">
+<td><div class="emp-name-cell"><div class="avatar avatar-purple">TM</div><div><div class="emp-name-text">Tariq Mahmood</div><div style="font-size:11px;color:#64748B">CEO</div></div></div></td>
+<td><span class="org-node-dept dept-ops">Executive</span></td>
+<td>Chief Executive Officer</td>
+<td><div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="width:20px;height:20px;font-size:8px;background:#64748B">BD</div> Board of Directors</div></td>
+<td><span class="appraisal-status-badge status-completed">&#9679; Completed</span></td>
+<td><span class="score-pill score-excellent">4.9</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openEmpPanel('Tariq Mahmood','Chief Executive Officer','Executive','Board of Directors','done','4.9');event.stopPropagation()" title="View details">&#8599;</button></td>
+</tr>
+<tr onclick="openEmpPanel('Bilal Ahmed','Chief Technology Officer','Engineering','Tariq Mahmood','done','4.7')">
+<td><div class="emp-name-cell"><div class="avatar avatar-blue">BA</div><div><div class="emp-name-text">Bilal Ahmed</div><div style="font-size:11px;color:#64748B">CTO</div></div></div></td>
+<td><span class="org-node-dept dept-eng">Engineering</span></td>
+<td>Chief Technology Officer</td>
+<td><div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-purple" style="width:20px;height:20px;font-size:8px">TM</div> Tariq Mahmood</div></td>
+<td><span class="appraisal-status-badge status-completed">&#9679; Completed</span></td>
+<td><span class="score-pill score-excellent">4.7</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openEmpPanel('Bilal Ahmed','Chief Technology Officer','Engineering','Tariq Mahmood','done','4.7');event.stopPropagation()" title="View details">&#8599;</button></td>
+</tr>
+<tr onclick="openEmpPanel('Sana Qureshi','HR Director','HR','Tariq Mahmood','done','4.5')">
+<td><div class="emp-name-cell"><div class="avatar avatar-green">SQ</div><div><div class="emp-name-text">Sana Qureshi</div><div style="font-size:11px;color:#64748B">HR Director</div></div></div></td>
+<td><span class="org-node-dept dept-hr">HR</span></td>
+<td>HR Director</td>
+<td><div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-purple" style="width:20px;height:20px;font-size:8px">TM</div> Tariq Mahmood</div></td>
+<td><span class="appraisal-status-badge status-completed">&#9679; Completed</span></td>
+<td><span class="score-pill score-excellent">4.5</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openEmpPanel('Sana Qureshi','HR Director','HR','Tariq Mahmood','done','4.5');event.stopPropagation()" title="View details">&#8599;</button></td>
+</tr>
+<tr onclick="openEmpPanel('Imran Khan','Chief Financial Officer','Finance','Tariq Mahmood','pending','')">
+<td><div class="emp-name-cell"><div class="avatar avatar-orange">IK</div><div><div class="emp-name-text">Imran Khan</div><div style="font-size:11px;color:#64748B">CFO</div></div></div></td>
+<td><span class="org-node-dept dept-finance">Finance</span></td>
+<td>Chief Financial Officer</td>
+<td><div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-purple" style="width:20px;height:20px;font-size:8px">TM</div> Tariq Mahmood</div></td>
+<td><span class="appraisal-status-badge status-pending">&#9679; Pending</span></td>
+<td><span style="color:#CBD5E1;font-size:12px">&#8212;</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openEmpPanel('Imran Khan','Chief Financial Officer','Finance','Tariq Mahmood','pending','');event.stopPropagation()" title="View details">&#8599;</button></td>
+</tr>
+<tr onclick="openEmpPanel('Nadia Farooq','Chief Operating Officer','Operations','Tariq Mahmood','done','4.6')">
+<td><div class="emp-name-cell"><div class="avatar avatar-pink">NF</div><div><div class="emp-name-text">Nadia Farooq</div><div style="font-size:11px;color:#64748B">COO</div></div></div></td>
+<td><span class="org-node-dept dept-ops">Operations</span></td>
+<td>Chief Operating Officer</td>
+<td><div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-purple" style="width:20px;height:20px;font-size:8px">TM</div> Tariq Mahmood</div></td>
+<td><span class="appraisal-status-badge status-completed">&#9679; Completed</span></td>
+<td><span class="score-pill score-excellent">4.6</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openEmpPanel('Nadia Farooq','Chief Operating Officer','Operations','Tariq Mahmood','done','4.6');event.stopPropagation()" title="View details">&#8599;</button></td>
+</tr>
+<tr onclick="openEmpPanel('Ahmed Raza','Senior Engineer','Engineering','Bilal Ahmed','done','4.2')">
+<td><div class="emp-name-cell"><div class="avatar avatar-blue">AR</div><div><div class="emp-name-text">Ahmed Raza</div><div style="font-size:11px;color:#64748B">Senior Engineer</div></div></div></td>
+<td><span class="org-node-dept dept-eng">Engineering</span></td>
+<td>Senior Engineer</td>
+<td><div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-blue" style="width:20px;height:20px;font-size:8px">BA</div> Bilal Ahmed</div></td>
+<td><span class="appraisal-status-badge status-completed">&#9679; Completed</span></td>
+<td><span class="score-pill score-good">4.2</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openEmpPanel('Ahmed Raza','Senior Engineer','Engineering','Bilal Ahmed','done','4.2');event.stopPropagation()" title="View details">&#8599;</button></td>
+</tr>
+<tr onclick="openEmpPanel('Fatima Malik','UI Lead','Design','Bilal Ahmed','done','4.4')">
+<td><div class="emp-name-cell"><div class="avatar avatar-purple">FM</div><div><div class="emp-name-text">Fatima Malik</div><div style="font-size:11px;color:#64748B">UI Lead</div></div></div></td>
+<td><span class="org-node-dept dept-design">Design</span></td>
+<td>UI Lead</td>
+<td><div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-blue" style="width:20px;height:20px;font-size:8px">BA</div> Bilal Ahmed</div></td>
+<td><span class="appraisal-status-badge status-completed">&#9679; Completed</span></td>
+<td><span class="score-pill score-good">4.4</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openEmpPanel('Fatima Malik','UI Lead','Design','Bilal Ahmed','done','4.4');event.stopPropagation()" title="View details">&#8599;</button></td>
+</tr>
+<tr onclick="openEmpPanel('Omar Sheikh','Backend Lead','Engineering','Bilal Ahmed','pending','')">
+<td><div class="emp-name-cell"><div class="avatar avatar-blue">OS</div><div><div class="emp-name-text">Omar Sheikh</div><div style="font-size:11px;color:#64748B">Backend Lead</div></div></div></td>
+<td><span class="org-node-dept dept-eng">Engineering</span></td>
+<td>Backend Lead</td>
+<td><div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-blue" style="width:20px;height:20px;font-size:8px">BA</div> Bilal Ahmed</div></td>
+<td><span class="appraisal-status-badge status-pending">&#9679; Pending</span></td>
+<td><span style="color:#CBD5E1;font-size:12px">&#8212;</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openEmpPanel('Omar Sheikh','Backend Lead','Engineering','Bilal Ahmed','pending','');event.stopPropagation()" title="View details">&#8599;</button></td>
+</tr>
+<tr onclick="openEmpPanel('Zara Hussain','UX Designer','Design','Bilal Ahmed','done','4.1')">
+<td><div class="emp-name-cell"><div class="avatar avatar-teal">ZH</div><div><div class="emp-name-text">Zara Hussain</div><div style="font-size:11px;color:#64748B">UX Designer</div></div></div></td>
+<td><span class="org-node-dept dept-design">Design</span></td>
+<td>UX Designer</td>
+<td><div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-blue" style="width:20px;height:20px;font-size:8px">BA</div> Bilal Ahmed</div></td>
+<td><span class="appraisal-status-badge status-completed">&#9679; Completed</span></td>
+<td><span class="score-pill score-good">4.1</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openEmpPanel('Zara Hussain','UX Designer','Design','Bilal Ahmed','done','4.1');event.stopPropagation()" title="View details">&#8599;</button></td>
+</tr>
+<tr onclick="openEmpPanel('Khalid Mahmood','Mobile Dev','Engineering','Bilal Ahmed','done','3.9')">
+<td><div class="emp-name-cell"><div class="avatar avatar-orange">KM</div><div><div class="emp-name-text">Khalid Mahmood</div><div style="font-size:11px;color:#64748B">Mobile Dev</div></div></div></td>
+<td><span class="org-node-dept dept-eng">Engineering</span></td>
+<td>Mobile Developer</td>
+<td><div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-blue" style="width:20px;height:20px;font-size:8px">BA</div> Bilal Ahmed</div></td>
+<td><span class="appraisal-status-badge status-completed">&#9679; Completed</span></td>
+<td><span class="score-pill score-average">3.9</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openEmpPanel('Khalid Mahmood','Mobile Dev','Engineering','Bilal Ahmed','done','3.9');event.stopPropagation()" title="View details">&#8599;</button></td>
+</tr>
+<tr onclick="openEmpPanel('Nadia Baig','QA Engineer','Engineering','Bilal Ahmed','not-started','')">
+<td><div class="emp-name-cell"><div class="avatar avatar-teal">NB</div><div><div class="emp-name-text">Nadia Baig</div><div style="font-size:11px;color:#64748B">QA Engineer</div></div></div></td>
+<td><span class="org-node-dept dept-eng">Engineering</span></td>
+<td>QA Engineer</td>
+<td><div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-blue" style="width:20px;height:20px;font-size:8px">BA</div> Bilal Ahmed</div></td>
+<td><span class="appraisal-status-badge status-not-started">&#9679; Not Started</span></td>
+<td><span style="color:#CBD5E1;font-size:12px">&#8212;</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openEmpPanel('Nadia Baig','QA Engineer','Engineering','Bilal Ahmed','not-started','');event.stopPropagation()" title="View details">&#8599;</button></td>
+</tr>
+<tr onclick="openEmpPanel('Raza Ali','HR Manager','HR','Sana Qureshi','done','4.3')">
+<td><div class="emp-name-cell"><div class="avatar avatar-blue">RA</div><div><div class="emp-name-text">Raza Ali</div><div style="font-size:11px;color:#64748B">HR Manager</div></div></div></td>
+<td><span class="org-node-dept dept-hr">HR</span></td>
+<td>HR Manager</td>
+<td><div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-green" style="width:20px;height:20px;font-size:8px">SQ</div> Sana Qureshi</div></td>
+<td><span class="appraisal-status-badge status-completed">&#9679; Completed</span></td>
+<td><span class="score-pill score-good">4.3</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openEmpPanel('Raza Ali','HR Manager','HR','Sana Qureshi','done','4.3');event.stopPropagation()" title="View details">&#8599;</button></td>
+</tr>
+<tr onclick="openEmpPanel('Sarah Hassan','HR Specialist','HR','Sana Qureshi','pending','')">
+<td><div class="emp-name-cell"><div class="avatar avatar-teal">SH</div><div><div class="emp-name-text">Sarah Hassan</div><div style="font-size:11px;color:#64748B">HR Specialist</div></div></div></td>
+<td><span class="org-node-dept dept-hr">HR</span></td>
+<td>HR Specialist</td>
+<td><div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-green" style="width:20px;height:20px;font-size:8px">SQ</div> Sana Qureshi</div></td>
+<td><span class="appraisal-status-badge status-pending">&#9679; Pending</span></td>
+<td><span style="color:#CBD5E1;font-size:12px">&#8212;</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openEmpPanel('Sarah Hassan','HR Specialist','HR','Sana Qureshi','pending','');event.stopPropagation()" title="View details">&#8599;</button></td>
+</tr>
+<tr onclick="openEmpPanel('Asad Khan','Finance Manager','Finance','Imran Khan','done','4.0')">
+<td><div class="emp-name-cell"><div class="avatar avatar-orange">AK</div><div><div class="emp-name-text">Asad Khan</div><div style="font-size:11px;color:#64748B">Finance Manager</div></div></div></td>
+<td><span class="org-node-dept dept-finance">Finance</span></td>
+<td>Finance Manager</td>
+<td><div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-orange" style="width:20px;height:20px;font-size:8px">IK</div> Imran Khan</div></td>
+<td><span class="appraisal-status-badge status-completed">&#9679; Completed</span></td>
+<td><span class="score-pill score-good">4.0</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openEmpPanel('Asad Khan','Finance Manager','Finance','Imran Khan','done','4.0');event.stopPropagation()" title="View details">&#8599;</button></td>
+</tr>
+<tr onclick="openEmpPanel('Maria Rehman','Accountant','Finance','Imran Khan','not-started','')">
+<td><div class="emp-name-cell"><div class="avatar avatar-green">MR</div><div><div class="emp-name-text">Maria Rehman</div><div style="font-size:11px;color:#64748B">Accountant</div></div></div></td>
+<td><span class="org-node-dept dept-finance">Finance</span></td>
+<td>Accountant</td>
+<td><div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-orange" style="width:20px;height:20px;font-size:8px">IK</div> Imran Khan</div></td>
+<td><span class="appraisal-status-badge status-not-started">&#9679; Not Started</span></td>
+<td><span style="color:#CBD5E1;font-size:12px">&#8212;</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openEmpPanel('Maria Rehman','Accountant','Finance','Imran Khan','not-started','');event.stopPropagation()" title="View details">&#8599;</button></td>
+</tr>
+<tr onclick="openEmpPanel('Hassan Baig','Ops Manager','Operations','Nadia Farooq','done','4.5')">
+<td><div class="emp-name-cell"><div class="avatar avatar-blue">HB</div><div><div class="emp-name-text">Hassan Baig</div><div style="font-size:11px;color:#64748B">Ops Manager</div></div></div></td>
+<td><span class="org-node-dept dept-ops">Operations</span></td>
+<td>Operations Manager</td>
+<td><div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-pink" style="width:20px;height:20px;font-size:8px">NF</div> Nadia Farooq</div></td>
+<td><span class="appraisal-status-badge status-completed">&#9679; Completed</span></td>
+<td><span class="score-pill score-excellent">4.5</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openEmpPanel('Hassan Baig','Ops Manager','Operations','Nadia Farooq','done','4.5');event.stopPropagation()" title="View details">&#8599;</button></td>
+</tr>
+<tr onclick="openEmpPanel('Layla Khan','Sales Lead','Sales','Nadia Farooq','pending','')">
+<td><div class="emp-name-cell"><div class="avatar avatar-pink">LK</div><div><div class="emp-name-text">Layla Khan</div><div style="font-size:11px;color:#64748B">Sales Lead</div></div></div></td>
+<td><span class="org-node-dept dept-sales">Sales</span></td>
+<td>Sales Lead</td>
+<td><div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-pink" style="width:20px;height:20px;font-size:8px">NF</div> Nadia Farooq</div></td>
+<td><span class="appraisal-status-badge status-pending">&#9679; Pending</span></td>
+<td><span style="color:#CBD5E1;font-size:12px">&#8212;</span></td>
+<td><button class="btn btn-secondary btn-sm" onclick="openEmpPanel('Layla Khan','Sales Lead','Sales','Nadia Farooq','pending','');event.stopPropagation()" title="View details">&#8599;</button></td>
+</tr>
+</tbody>
+</table>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid #E2E8F0;font-size:13px;color:#64748B">
+<span>Showing 1&#8211;16 of 42 employees</span>
+<div style="display:flex;gap:4px">
+<button style="width:30px;height:30px;border:1px solid #E2E8F0;background:#5B21B6;color:white;border-radius:6px;cursor:pointer;font-size:12px">1</button>
+<button style="width:30px;height:30px;border:1px solid #E2E8F0;background:white;border-radius:6px;cursor:pointer;font-size:12px">2</button>
+<button style="width:30px;height:30px;border:1px solid #E2E8F0;background:white;border-radius:6px;cursor:pointer;font-size:12px">3</button>
+<button style="width:30px;height:30px;border:1px solid #E2E8F0;background:white;border-radius:6px;cursor:pointer;font-size:12px">&#8250;</button>
+</div>
+</div>
+</div>
+
+</div>
+</main>
+</div>
+
+<!-- Employee Detail Panel -->
+<div class="emp-overlay" id="empOverlay" onclick="closeEmpPanel()"></div>
+<div class="emp-panel" id="empPanel">
+<div class="emp-panel-header">
+<div class="avatar avatar-xl avatar-purple" id="panelAvatar">TM</div>
+<div style="flex:1">
+<div style="font-size:18px;font-weight:700;color:#0A1628" id="panelName">Tariq Mahmood</div>
+<div style="font-size:13px;color:#64748B" id="panelTitle">Chief Executive Officer</div>
+<div style="margin-top:4px" id="panelDeptBadge"><span class="org-node-dept dept-ops">Executive</span></div>
+</div>
+<button class="emp-panel-close" onclick="closeEmpPanel()" aria-label="Close panel">&#10005;</button>
+</div>
+<div class="emp-panel-body">
+
+<!-- BS4 source note -->
+<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#EFF6FF;border-radius:8px;margin-bottom:16px;font-size:12px;color:#0066CC">
+<span>&#128101;</span>
+<span>Employee data sourced from <strong>BS4 ERP</strong> via <code>GET /api/v1/bs4/employees</code></span>
+<span class="bs4-badge">Live</span>
+</div>
+
+<!-- Info grid -->
+<div class="emp-info-grid">
+<div class="emp-info-item">
+<div class="emp-info-label">Employee ID</div>
+<div class="emp-info-value" id="panelEmpId">EMP-001</div>
+</div>
+<div class="emp-info-item">
+<div class="emp-info-label">Department</div>
+<div class="emp-info-value" id="panelDept">Executive</div>
+</div>
+<div class="emp-info-item">
+<div class="emp-info-label">Join Date</div>
+<div class="emp-info-value" id="panelJoinDate">Jan 15, 2018</div>
+</div>
+<div class="emp-info-item">
+<div class="emp-info-label">Location</div>
+<div class="emp-info-value">Lahore, PK</div>
+</div>
+</div>
+
+<!-- Appraisal Manager -->
+<div class="section-title">&#128101; Appraisal Manager <span class="bs4-badge">from BS4</span></div>
+<div class="manager-card" id="panelManagerCard">
+<div class="avatar avatar-purple" id="panelManagerAvatar">BD</div>
+<div class="manager-card-info">
+<div class="manager-card-name" id="panelManagerName">Board of Directors</div>
+<div class="manager-card-role" id="panelManagerRole">External Governing Body</div>
+</div>
+<span class="manager-card-badge" id="panelManagerBadge">Appraiser</span>
+</div>
+<button class="btn btn-secondary btn-sm" style="margin-top:8px;width:100%" onclick="openAssignModal()">&#9998; Change Appraisal Manager</button>
+
+<!-- Current Appraisal Status -->
+<div class="section-title" style="margin-top:20px">&#128202; Current Appraisal Status</div>
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#F8FAFC;border-radius:10px;border:1px solid #E2E8F0;margin-bottom:16px">
+<div id="panelStatusDot" class="appraisal-dot done" style="width:10px;height:10px"></div>
+<div style="flex:1">
+<div style="font-size:13px;font-weight:600;color:#1E293B" id="panelStatusText">Appraisal Completed</div>
+<div style="font-size:11px;color:#64748B">Annual Review 2026 &#8212; Q2</div>
+</div>
+<div style="font-size:24px;font-weight:800;color:#5B21B6" id="panelScore">4.9</div>
+</div>
+
+<!-- Appraisal History -->
+<div class="section-title">&#128203; Appraisal History</div>
+<div class="appraisal-history">
+<div class="appraisal-row">
+<div>
+<div class="appraisal-cycle">Annual Review 2026 &#8212; Q2</div>
+<div style="font-size:11px;color:#64748B">Appraiser: Board of Directors</div>
+</div>
+<span class="appraisal-score" id="panelScore1">4.9</span>
+<span class="appraisal-status-badge status-completed">Completed</span>
+</div>
+<div class="appraisal-row">
+<div>
+<div class="appraisal-cycle">Mid-Year Review 2025</div>
+<div style="font-size:11px;color:#64748B">Appraiser: Board of Directors</div>
+</div>
+<span class="appraisal-score">4.8</span>
+<span class="appraisal-status-badge status-completed">Completed</span>
+</div>
+<div class="appraisal-row">
+<div>
+<div class="appraisal-cycle">Annual Review 2025 &#8212; Q4</div>
+<div style="font-size:11px;color:#64748B">Appraiser: Board of Directors</div>
+</div>
+<span class="appraisal-score">4.7</span>
+<span class="appraisal-status-badge status-completed">Completed</span>
+</div>
+<div class="appraisal-row">
+<div>
+<div class="appraisal-cycle">Quarterly Review 2025 &#8212; Q1</div>
+<div style="font-size:11px;color:#64748B">Appraiser: Board of Directors</div>
+</div>
+<span class="appraisal-score">4.6</span>
+<span class="appraisal-status-badge status-completed">Completed</span>
+</div>
+</div>
+
+<!-- Direct Reports -->
+<div class="section-title" style="margin-top:20px">&#128101; Direct Reports</div>
+<div id="panelDirectReports" style="display:flex;flex-wrap:wrap;gap:8px">
+<div style="display:flex;align-items:center;gap:6px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;color:#334155"><div class="avatar" style="width:22px;height:22px;font-size:8px;background:#0066CC">BA</div> Bilal Ahmed</div>
+<div style="display:flex;align-items:center;gap:6px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;color:#334155"><div class="avatar" style="width:22px;height:22px;font-size:8px;background:#059669">SQ</div> Sana Qureshi</div>
+<div style="display:flex;align-items:center;gap:6px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;color:#334155"><div class="avatar" style="width:22px;height:22px;font-size:8px;background:#D97706">IK</div> Imran Khan</div>
+<div style="display:flex;align-items:center;gap:6px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;color:#334155"><div class="avatar" style="width:22px;height:22px;font-size:8px;background:#DB2777">NF</div> Nadia Farooq</div>
+</div>
+
+<div style="display:flex;gap:10px;margin-top:20px">
+<button class="btn btn-primary" style="flex:1" onclick="window.location.href='08-cycles.html'">&#128200; View Appraisal Cycle</button>
+<button class="btn btn-secondary" style="flex:1" onclick="window.location.href='10-feedback.html'">&#128172; View Feedback</button>
+</div>
+
+</div>
+</div>
+
+<!-- Assign Appraisal Manager Modal -->
+<div class="modal-overlay" id="assignModal" onclick="if(event.target===this)closeAssignModal()">
+<div class="modal">
+<div class="modal-header">
+<div class="modal-title">Assign Appraisal Manager</div>
+<button class="modal-close" onclick="closeAssignModal()" aria-label="Close">&#10005;</button>
+</div>
+<div class="modal-body">
+<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#0066CC;display:flex;align-items:center;gap:8px">
+<span>&#128101;</span>
+<span>Manager list is fetched from <strong>BS4 ERP</strong> via <code>GET /api/v1/bs4/employees?role=manager</code></span>
+</div>
+<div class="form-group">
+<label class="form-label">Employee *</label>
+<select class="form-control" title="Select employee" id="assignEmployee">
+<option value="">Select employee&#8230;</option>
+<option>Tariq Mahmood (CEO)</option>
+<option>Bilal Ahmed (CTO)</option>
+<option>Sana Qureshi (HR Director)</option>
+<option>Imran Khan (CFO)</option>
+<option>Nadia Farooq (COO)</option>
+<option>Ahmed Raza (Senior Engineer)</option>
+<option>Fatima Malik (UI Lead)</option>
+<option>Omar Sheikh (Backend Lead)</option>
+<option>Zara Hussain (UX Designer)</option>
+<option>Khalid Mahmood (Mobile Dev)</option>
+<option>Nadia Baig (QA Engineer)</option>
+<option>Raza Ali (HR Manager)</option>
+<option>Sarah Hassan (HR Specialist)</option>
+<option>Asad Khan (Finance Manager)</option>
+<option>Maria Rehman (Accountant)</option>
+<option>Hassan Baig (Ops Manager)</option>
+<option>Layla Khan (Sales Lead)</option>
+</select>
+</div>
+<div class="form-group">
+<label class="form-label">Appraisal Manager (from BS4) *</label>
+<select class="form-control" title="Select appraisal manager from BS4" id="assignManager">
+<option value="">Select manager from BS4&#8230;</option>
+<option>Tariq Mahmood &#8212; CEO (Executive)</option>
+<option>Bilal Ahmed &#8212; CTO (Engineering)</option>
+<option>Sana Qureshi &#8212; HR Director (HR)</option>
+<option>Imran Khan &#8212; CFO (Finance)</option>
+<option>Nadia Farooq &#8212; COO (Operations)</option>
+<option>Raza Ali &#8212; HR Manager (HR)</option>
+<option>Asad Khan &#8212; Finance Manager (Finance)</option>
+<option>Hassan Baig &#8212; Ops Manager (Operations)</option>
+</select>
+<div class="bs4-source-note">&#128101; Managers fetched live from BS4 ERP</div>
+</div>
+<div class="form-group">
+<label class="form-label">Appraisal Cycle</label>
+<select class="form-control" title="Select appraisal cycle">
+<option>Annual Review 2026 &#8212; Q2 (Active)</option>
+<option>Mid-Year Review 2026</option>
+<option>Quarterly Review 2026 &#8212; Q3</option>
+</select>
+</div>
+<div class="form-group">
+<label class="form-label">Effective From</label>
+<input class="form-control" type="date" value="2026-07-30" title="Effective from date" />
+</div>
+<div class="form-group">
+<label class="form-label">Notes</label>
+<textarea class="form-control" rows="2" placeholder="Optional notes about this assignment&#8230;" aria-label="Assignment notes"></textarea>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" onclick="closeAssignModal()">Cancel</button>
+<button class="btn btn-primary" onclick="closeAssignModal()">&#9989; Assign Manager</button>
+</div>
+</div>
+</div>
+
+<script>
+// ── View switching ──
+function switchView(v) {
+  document.getElementById('orgTreeView').style.display = v === 'tree' ? '' : 'none';
+  document.getElementById('orgTableView').style.display = v === 'table' ? '' : 'none';
+  document.getElementById('btnTree').classList.toggle('active', v === 'tree');
+  document.getElementById('btnTable').classList.toggle('active', v === 'table');
+}
+
+// ── Employee detail panel ──
+var empData = {
+  'Tariq Mahmood':   {id:'EMP-001',join:'Jan 15, 2018',dept:'Executive',mgr:'Board of Directors',mgrRole:'External Governing Body',mgrAvatar:'BD',mgrCls:'avatar-purple',status:'done',score:'4.9',reports:['Bilal Ahmed','Sana Qureshi','Imran Khan','Nadia Farooq']},
+  'Bilal Ahmed':     {id:'EMP-002',join:'Mar 10, 2019',dept:'Engineering',mgr:'Tariq Mahmood',mgrRole:'CEO',mgrAvatar:'TM',mgrCls:'avatar-purple',status:'done',score:'4.7',reports:['Ahmed Raza','Fatima Malik','Omar Sheikh','Zara Hussain','Khalid Mahmood','Nadia Baig']},
+  'Sana Qureshi':    {id:'EMP-003',join:'Jun 5, 2019',dept:'HR',mgr:'Tariq Mahmood',mgrRole:'CEO',mgrAvatar:'TM',mgrCls:'avatar-purple',status:'done',score:'4.5',reports:['Raza Ali','Sarah Hassan']},
+  'Imran Khan':      {id:'EMP-004',join:'Sep 1, 2020',dept:'Finance',mgr:'Tariq Mahmood',mgrRole:'CEO',mgrAvatar:'TM',mgrCls:'avatar-purple',status:'pending',score:'',reports:['Asad Khan','Maria Rehman']},
+  'Nadia Farooq':    {id:'EMP-005',join:'Feb 20, 2020',dept:'Operations',mgr:'Tariq Mahmood',mgrRole:'CEO',mgrAvatar:'TM',mgrCls:'avatar-purple',status:'done',score:'4.6',reports:['Hassan Baig','Layla Khan']},
+  'Ahmed Raza':      {id:'EMP-006',join:'Apr 12, 2021',dept:'Engineering',mgr:'Bilal Ahmed',mgrRole:'CTO',mgrAvatar:'BA',mgrCls:'avatar-blue',status:'done',score:'4.2',reports:[]},
+  'Fatima Malik':    {id:'EMP-007',join:'Jul 8, 2021',dept:'Design',mgr:'Bilal Ahmed',mgrRole:'CTO',mgrAvatar:'BA',mgrCls:'avatar-blue',status:'done',score:'4.4',reports:[]},
+  'Omar Sheikh':     {id:'EMP-008',join:'Nov 3, 2021',dept:'Engineering',mgr:'Bilal Ahmed',mgrRole:'CTO',mgrAvatar:'BA',mgrCls:'avatar-blue',status:'pending',score:'',reports:[]},
+  'Zara Hussain':    {id:'EMP-009',join:'Jan 17, 2022',dept:'Design',mgr:'Bilal Ahmed',mgrRole:'CTO',mgrAvatar:'BA',mgrCls:'avatar-blue',status:'done',score:'4.1',reports:[]},
+  'Khalid Mahmood':  {id:'EMP-010',join:'Mar 22, 2022',dept:'Engineering',mgr:'Bilal Ahmed',mgrRole:'CTO',mgrAvatar:'BA',mgrCls:'avatar-blue',status:'done',score:'3.9',reports:[]},
+  'Nadia Baig':      {id:'EMP-011',join:'Aug 9, 2022',dept:'Engineering',mgr:'Bilal Ahmed',mgrRole:'CTO',mgrAvatar:'BA',mgrCls:'avatar-blue',status:'not-started',score:'',reports:[]},
+  'Raza Ali':        {id:'EMP-012',join:'May 14, 2021',dept:'HR',mgr:'Sana Qureshi',mgrRole:'HR Director',mgrAvatar:'SQ',mgrCls:'avatar-green',status:'done',score:'4.3',reports:[]},
+  'Sarah Hassan':    {id:'EMP-013',join:'Oct 30, 2022',dept:'HR',mgr:'Sana Qureshi',mgrRole:'HR Director',mgrAvatar:'SQ',mgrCls:'avatar-green',status:'pending',score:'',reports:[]},
+  'Asad Khan':       {id:'EMP-014',join:'Dec 1, 2020',dept:'Finance',mgr:'Imran Khan',mgrRole:'CFO',mgrAvatar:'IK',mgrCls:'avatar-orange',status:'done',score:'4.0',reports:[]},
+  'Maria Rehman':    {id:'EMP-015',join:'Feb 28, 2023',dept:'Finance',mgr:'Imran Khan',mgrRole:'CFO',mgrAvatar:'IK',mgrCls:'avatar-orange',status:'not-started',score:'',reports:[]},
+  'Hassan Baig':     {id:'EMP-016',join:'Jul 19, 2021',dept:'Operations',mgr:'Nadia Farooq',mgrRole:'COO',mgrAvatar:'NF',mgrCls:'avatar-pink',status:'done',score:'4.5',reports:[]},
+  'Layla Khan':      {id:'EMP-017',join:'Apr 5, 2023',dept:'Sales',mgr:'Nadia Farooq',mgrRole:'COO',mgrAvatar:'NF',mgrCls:'avatar-pink',status:'pending',score:'',reports:[]}
+};
+
+function openEmpPanel(name, title, dept, mgr, status, score) {
+  var d = empData[name] || {id:'EMP-???',join:'N/A',dept:dept,mgr:mgr,mgrRole:'Manager',mgrAvatar:mgr.split(' ').map(function(w){return w[0]}).join('').slice(0,2),mgrCls:'avatar-blue',status:status,score:score,reports:[]};
+  var initials = name.split(' ').map(function(w){return w[0]}).join('').slice(0,2);
+  document.getElementById('panelAvatar').textContent = initials;
+  document.getElementById('panelName').textContent = name;
+  document.getElementById('panelTitle').textContent = title;
+  document.getElementById('panelDept').textContent = d.dept;
+  document.getElementById('panelEmpId').textContent = d.id;
+  document.getElementById('panelJoinDate').textContent = d.join;
+  document.getElementById('panelManagerName').textContent = d.mgr;
+  document.getElementById('panelManagerRole').textContent = d.mgrRole;
+  document.getElementById('panelManagerAvatar').textContent = d.mgrAvatar;
+  document.getElementById('panelManagerAvatar').className = 'avatar ' + d.mgrCls;
+  var statusMap = {'done':'Appraisal Completed','pending':'Appraisal Pending','not-started':'Not Started'};
+  document.getElementById('panelStatusText').textContent = statusMap[d.status] || 'Unknown';
+  document.getElementById('panelStatusDot').className = 'appraisal-dot ' + d.status;
+  document.getElementById('panelScore').textContent = d.score || '—';
+  document.getElementById('panelScore1').textContent = d.score || '—';
+  // Direct reports
+  var rEl = document.getElementById('panelDirectReports');
+  if (d.reports && d.reports.length > 0) {
+    rEl.innerHTML = d.reports.map(function(r) {
+      var ri = r.split(' ').map(function(w){return w[0]}).join('').slice(0,2);
+      return '<div style="display:flex;align-items:center;gap:6px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;color:#334155"><div class="avatar" style="width:22px;height:22px;font-size:8px;background:#0066CC">' + ri + '</div> ' + r + '</div>';
+    }).join('');
+  } else {
+    rEl.innerHTML = '<span style="font-size:12px;color:#94A3B8">No direct reports</span>';
+  }
+  document.getElementById('empPanel').classList.add('open');
+  document.getElementById('empOverlay').classList.add('open');
+}
+
+function closeEmpPanel() {
+  document.getElementById('empPanel').classList.remove('open');
+  document.getElementById('empOverlay').classList.remove('open');
+}
+
+// ── Assign modal ──
+function openAssignModal() {
+  document.getElementById('assignModal').classList.add('open');
+}
+function closeAssignModal() {
+  document.getElementById('assignModal').classList.remove('open');
+}
+
+// ── Sync from BS4 ──
+function syncFromBS4() {
+  var btn = event.target;
+  btn.textContent = '&#8635; Syncing...';
+  btn.disabled = true;
+  setTimeout(function() {
+    btn.innerHTML = '&#8635; Sync from BS4';
+    btn.disabled = false;
+    alert('Organogram synced from BS4 ERP successfully. 42 employees loaded.');
+  }, 1500);
+}
+
+// ── Search ──
+function searchEmployees(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.org-node-card').forEach(function(card) {
+    var name = card.querySelector('.org-node-name');
+    if (!name) return;
+    var match = name.textContent.toLowerCase().includes(q);
+    card.style.opacity = q === '' || match ? '1' : '0.25';
+    card.style.transform = q !== '' && match ? 'scale(1.05)' : '';
+  });
+  document.querySelectorAll('tbody tr').forEach(function(row) {
+    var nameEl = row.querySelector('.emp-name-text');
+    if (!nameEl) return;
+    row.style.display = q === '' || nameEl.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+// ── Filter stubs ──
+function filterDept(v) { console.log('Filter dept:', v); }
+function filterStatus(v) { console.log('Filter status:', v); }
+function filterManager(v) { console.log('Filter manager:', v); }
+</script>
+</body>
+</html>

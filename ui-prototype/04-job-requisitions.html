@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ExpertFlow HR Suite — Job Requisitions</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/design-system.css" />
+  <style>
+    .filter-bar { display:flex; gap:10px; align-items:center; margin-bottom:20px; flex-wrap:wrap; }
+    .filter-select { padding:7px 12px; border:1.5px solid #CBD5E1; border-radius:8px; font-size:13px; font-family:'Inter',sans-serif; color:#334155; background:white; cursor:pointer; outline:none; }
+    .filter-select:focus { border-color:#0066CC; }
+
+    .req-table-row { cursor:pointer; }
+    .req-table-row:hover td { background:#F8FAFC; }
+
+    .approval-steps { display:flex; align-items:center; gap:4px; }
+    .approval-step { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; }
+    .approval-step.done    { background:#D1FAE5; color:#059669; }
+    .approval-step.current { background:#0066CC; color:white; }
+    .approval-step.pending { background:#E2E8F0; color:#94A3B8; }
+    .approval-arrow { color:#CBD5E1; font-size:10px; }
+
+    /* Modal overlay */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:300; align-items:center; justify-content:center; padding:20px; }
+    .modal-overlay.show { display:flex; }
+    .modal { background:white; border-radius:16px; width:100%; max-width:620px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
+    .modal-header { display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid #E2E8F0; }
+    .modal-title { font-size:17px; font-weight:700; color:#0F172A; }
+    .modal-body { padding:24px; }
+    .modal-footer { display:flex; justify-content:flex-end; gap:10px; padding:16px 24px; border-top:1px solid #E2E8F0; background:#F8FAFC; border-radius:0 0 16px 16px; }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="sidebar-logo" href="02-shell-dashboard.html">
+      <div class="ef-logo"><div class="ef-logo-mark">EF</div><div class="ef-logo-text"><div class="ef-logo-name">ExpertFlow</div><div class="ef-logo-product">HR Suite</div></div></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item" href="02-shell-dashboard.html"><span class="sidebar-icon">🏠</span> Dashboard</a>
+      <div class="sidebar-section-label">Modules</div>
+      <a class="sidebar-item active" href="03-recruitment-dashboard.html"><span class="sidebar-icon">👥</span> Recruitment<span class="sidebar-badge">5</span></a>
+      <a class="sidebar-item" href="07-appraisal-dashboard.html"><span class="sidebar-icon">📊</span> Performance Appraisal</a>
+      <a class="sidebar-item" href="11-project-dashboard.html"><span class="sidebar-icon">📋</span> Project Management</a>
+      <div class="sidebar-section-label">Recruitment</div>
+      <a class="sidebar-item" href="03-recruitment-dashboard.html"><span class="sidebar-icon">📈</span> Dashboard</a>
+      <a class="sidebar-item active" href="04-job-requisitions.html"><span class="sidebar-icon">📝</span> Job Requisitions</a>
+      <a class="sidebar-item" href="05-pipeline.html"><span class="sidebar-icon">🔄</span> Pipeline</a>
+      <a class="sidebar-item" href="#"><span class="sidebar-icon">🏢</span> Agencies</a>
+      <a class="sidebar-item" href="06-offer.html"><span class="sidebar-icon">💼</span> Offers</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="avatar avatar-teal">SH</div><div class="sidebar-user-info"><div class="sidebar-user-name">Sarah Hassan</div><div class="sidebar-user-role">HR Administrator</div></div></div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-breadcrumb">
+        <a href="02-shell-dashboard.html" style="color:#64748B;text-decoration:none;">HR Suite</a>
+        <span class="topbar-breadcrumb-sep">›</span>
+        <a href="03-recruitment-dashboard.html" style="color:#64748B;text-decoration:none;">Recruitment</a>
+        <span class="topbar-breadcrumb-sep">›</span>
+        <span class="topbar-breadcrumb-current">Job Requisitions</span>
+      </div>
+      <div class="topbar-search"><span>🔍</span><input type="text" placeholder="Search requisitions…" /></div>
+      <div class="topbar-actions">
+        <button aria-label="Action" class="icon-btn">🔔<span class="badge-dot"></span></button>
+        <div class="avatar avatar-teal">SH</div>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Job Requisitions</div>
+          <div class="page-subtitle">Create and manage hiring requests across all departments</div>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-secondary">📤 Export</button>
+          <button class="btn btn-primary" onclick="document.getElementById('newReqModal').classList.add('show')">+ New Requisition</button>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-bar">
+        <select title="Select option" class="filter-select"><option>All Departments</option><option>Engineering</option><option>Product</option><option>Sales</option><option>Operations</option></select>
+        <select title="Select option" class="filter-select"><option>All Statuses</option><option>Draft</option><option>Pending Approval</option><option>Approved</option><option>Posted</option><option>Closed</option></select>
+        <select title="Select option" class="filter-select"><option>All Locations</option><option>Lahore</option><option>Karachi</option><option>Islamabad</option><option>Remote</option></select>
+        <select title="Select option" class="filter-select"><option>All Priorities</option><option>Urgent</option><option>High</option><option>Normal</option></select>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="btn btn-ghost btn-sm">Clear Filters</button>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <div class="tab active">All <span class="tab-count">24</span></div>
+        <div class="tab">Draft <span class="tab-count">3</span></div>
+        <div class="tab">Pending Approval <span class="tab-count">4</span></div>
+        <div class="tab">Approved <span class="tab-count">2</span></div>
+        <div class="tab">Posted <span class="tab-count">12</span></div>
+        <div class="tab">Closed <span class="tab-count">3</span></div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Job Title</th>
+              <th>Department</th>
+              <th>Location</th>
+              <th>Headcount</th>
+              <th>Priority</th>
+              <th>Approval Status</th>
+              <th>Status</th>
+              <th>Requested By</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="req-table-row" onclick="window.location.href='05-pipeline.html'">
+              <td>
+                <div class="td-primary">Senior Software Engineer</div>
+                <div class="td-secondary">Node.js · PKR 180k–220k</div>
+              </td>
+              <td><span class="badge badge-blue">Engineering</span></td>
+              <td>Lahore / Remote</td>
+              <td style="text-align:center;font-weight:600;">2</td>
+              <td><span class="badge badge-orange">Urgent</span></td>
+              <td>
+                <div class="approval-steps">
+                  <div class="approval-step done" title="HR Manager">✓</div>
+                  <div class="approval-arrow">›</div>
+                  <div class="approval-step done" title="Dept Head">✓</div>
+                  <div class="approval-arrow">›</div>
+                  <div class="approval-step done" title="Finance">✓</div>
+                </div>
+              </td>
+              <td><span class="badge badge-green">Posted</span></td>
+              <td>
+                <div class="td-user">
+                  <div class="avatar avatar-sm" style="background:#5B21B6;">AH</div>
+                  <span>Ali Hassan</span>
+                </div>
+              </td>
+              <td style="color:#64748B;font-size:12px;">12 Jul 2026</td>
+              <td>
+                <div style="display:flex;gap:6px;">
+                  <button class="btn btn-secondary btn-sm">View</button>
+                  <button class="btn btn-ghost btn-sm">⋮</button>
+                </div>
+              </td>
+            </tr>
+            <tr class="req-table-row">
+              <td>
+                <div class="td-primary">UX Designer</div>
+                <div class="td-secondary">Product Team · PKR 120k–150k</div>
+              </td>
+              <td><span class="badge badge-purple">Product</span></td>
+              <td>Karachi</td>
+              <td style="text-align:center;font-weight:600;">1</td>
+              <td><span class="badge badge-orange">High</span></td>
+              <td>
+                <div class="approval-steps">
+                  <div class="approval-step done">✓</div>
+                  <div class="approval-arrow">›</div>
+                  <div class="approval-step current">2</div>
+                  <div class="approval-arrow">›</div>
+                  <div class="approval-step pending">3</div>
+                </div>
+              </td>
+              <td><span class="badge badge-orange">Pending</span></td>
+              <td>
+                <div class="td-user">
+                  <div class="avatar avatar-sm" style="background:#0066CC;">ZA</div>
+                  <span>Zara Ahmed</span>
+                </div>
+              </td>
+              <td style="color:#64748B;font-size:12px;">18 Jul 2026</td>
+              <td>
+                <div style="display:flex;gap:6px;">
+                  <button class="btn btn-primary btn-sm">Approve</button>
+                  <button class="btn btn-ghost btn-sm">⋮</button>
+                </div>
+              </td>
+            </tr>
+            <tr class="req-table-row">
+              <td>
+                <div class="td-primary">Sales Manager — Enterprise</div>
+                <div class="td-secondary">PKR 200k–250k</div>
+              </td>
+              <td><span class="badge badge-teal">Sales</span></td>
+              <td>Islamabad</td>
+              <td style="text-align:center;font-weight:600;">1</td>
+              <td><span class="badge badge-gray">Normal</span></td>
+              <td>
+                <div class="approval-steps">
+                  <div class="approval-step done">✓</div>
+                  <div class="approval-arrow">›</div>
+                  <div class="approval-step done">✓</div>
+                  <div class="approval-arrow">›</div>
+                  <div class="approval-step done">✓</div>
+                </div>
+              </td>
+              <td><span class="badge badge-green">Posted</span></td>
+              <td>
+                <div class="td-user">
+                  <div class="avatar avatar-sm avatar-orange">OM</div>
+                  <span>Omar Malik</span>
+                </div>
+              </td>
+              <td style="color:#64748B;font-size:12px;">22 Jul 2026</td>
+              <td>
+                <div style="display:flex;gap:6px;">
+                  <button class="btn btn-secondary btn-sm">View</button>
+                  <button class="btn btn-ghost btn-sm">⋮</button>
+                </div>
+              </td>
+            </tr>
+            <tr class="req-table-row">
+              <td>
+                <div class="td-primary">DevOps Engineer</div>
+                <div class="td-secondary">Cloud Infrastructure · PKR 160k–200k</div>
+              </td>
+              <td><span class="badge badge-blue">Engineering</span></td>
+              <td>Remote</td>
+              <td style="text-align:center;font-weight:600;">2</td>
+              <td><span class="badge badge-orange">High</span></td>
+              <td>
+                <div class="approval-steps">
+                  <div class="approval-step done">✓</div>
+                  <div class="approval-arrow">›</div>
+                  <div class="approval-step pending">2</div>
+                  <div class="approval-arrow">›</div>
+                  <div class="approval-step pending">3</div>
+                </div>
+              </td>
+              <td><span class="badge badge-gray">Draft</span></td>
+              <td>
+                <div class="td-user">
+                  <div class="avatar avatar-sm" style="background:#059669;">FK</div>
+                  <span>Faisal Khan</span>
+                </div>
+              </td>
+              <td style="color:#64748B;font-size:12px;">25 Jul 2026</td>
+              <td>
+                <div style="display:flex;gap:6px;">
+                  <button class="btn btn-primary btn-sm">Submit</button>
+                  <button class="btn btn-ghost btn-sm">⋮</button>
+                </div>
+              </td>
+            </tr>
+            <tr class="req-table-row">
+              <td>
+                <div class="td-primary">Product Manager</div>
+                <div class="td-secondary">PKR 200k–240k</div>
+              </td>
+              <td><span class="badge badge-purple">Product</span></td>
+              <td>Lahore</td>
+              <td style="text-align:center;font-weight:600;">1</td>
+              <td><span class="badge badge-gray">Normal</span></td>
+              <td>
+                <div class="approval-steps">
+                  <div class="approval-step done">✓</div>
+                  <div class="approval-arrow">›</div>
+                  <div class="approval-step done">✓</div>
+                  <div class="approval-arrow">›</div>
+                  <div class="approval-step done">✓</div>
+                </div>
+              </td>
+              <td><span class="badge badge-green">Posted</span></td>
+              <td>
+                <div class="td-user">
+                  <div class="avatar avatar-sm avatar-purple">NR</div>
+                  <span>Nadia Rauf</span>
+                </div>
+              </td>
+              <td style="color:#64748B;font-size:12px;">28 Jul 2026</td>
+              <td>
+                <div style="display:flex;gap:6px;">
+                  <button class="btn btn-secondary btn-sm">View</button>
+                  <button class="btn btn-ghost btn-sm">⋮</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;font-size:13px;color:#64748B;">
+        <span>Showing 5 of 24 requisitions</span>
+        <div style="display:flex;gap:4px;">
+          <button class="btn btn-secondary btn-sm">← Prev</button>
+          <button class="btn btn-primary btn-sm">1</button>
+          <button class="btn btn-secondary btn-sm">2</button>
+          <button class="btn btn-secondary btn-sm">3</button>
+          <button class="btn btn-secondary btn-sm">Next →</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- New Requisition Modal -->
+<div class="modal-overlay" id="newReqModal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">New Job Requisition</div>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('newReqModal').classList.remove('show')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Job Title <span class="req">*</span></label>
+          <input class="form-control" type="text" placeholder="e.g. Senior Software Engineer" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Department <span class="req">*</span></label>
+          <select title="Select option" class="form-control"><option>Select department…</option><option>Engineering</option><option>Product</option><option>Sales</option><option>Operations</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Location</label>
+          <select title="Select option" class="form-control"><option>Lahore</option><option>Karachi</option><option>Islamabad</option><option>Remote</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Headcount <span class="req">*</span></label>
+          <input aria-label="Input field" class="form-control" type="number" value="1" min="1" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Salary Band Min (PKR)</label>
+          <input class="form-control" type="text" placeholder="e.g. 150,000" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Salary Band Max (PKR)</label>
+          <input class="form-control" type="text" placeholder="e.g. 200,000" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Priority</label>
+          <select title="Select option" class="form-control"><option>Normal</option><option>High</option><option>Urgent</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Target Start Date</label>
+          <input aria-label="Input field" class="form-control" type="date" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Job Description</label>
+        <textarea class="form-control" rows="4" placeholder="Describe the role, responsibilities, and requirements…"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Required Competencies</label>
+        <input class="form-control" type="text" placeholder="e.g. Node.js, PostgreSQL, REST APIs (comma separated)" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Posting Channels</label>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input aria-label="Input field" type="checkbox" checked /> Internal Portal</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input aria-label="Input field" type="checkbox" checked /> LinkedIn</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input aria-label="Input field" type="checkbox" /> Indeed</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input aria-label="Input field" type="checkbox" /> Rozee.pk</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input aria-label="Input field" type="checkbox" /> Agency Portal</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('newReqModal').classList.remove('show')">Cancel</button>
+      <button class="btn btn-ghost">Save as Draft</button>
+      <button class="btn btn-primary" onclick="document.getElementById('newReqModal').classList.remove('show')">Submit for Approval</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

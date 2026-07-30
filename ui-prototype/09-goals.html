@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ExpertFlow HR Suite — Goals</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/design-system.css" />
+  <style>
+    .goal-card {
+      background:white; border:1px solid #E2E8F0; border-radius:12px;
+      padding:18px 20px; margin-bottom:12px;
+      box-shadow:0 1px 3px rgba(0,0,0,0.05);
+      transition:box-shadow 0.15s;
+    }
+    .goal-card:hover { box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+    .goal-card-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:10px; }
+    .goal-title { font-size:14px; font-weight:600; color:#0F172A; }
+    .goal-desc  { font-size:12px; color:#64748B; margin-top:3px; line-height:1.5; }
+    .goal-meta  { display:flex; gap:16px; margin-top:10px; flex-wrap:wrap; }
+    .goal-meta-item { font-size:11px; color:#64748B; display:flex; align-items:center; gap:4px; }
+    .goal-progress-row { display:flex; align-items:center; gap:10px; margin-top:12px; }
+    .goal-progress-label { font-size:11px; color:#64748B; width:80px; flex-shrink:0; }
+    .goal-progress-bar { flex:1; height:6px; background:#E2E8F0; border-radius:99px; overflow:hidden; }
+    .goal-progress-fill { height:100%; border-radius:99px; background:#5B21B6; }
+    .goal-progress-pct { font-size:11px; font-weight:600; color:#0F172A; width:32px; text-align:right; }
+    .goal-footer { display:flex; align-items:center; justify-content:space-between; margin-top:12px; padding-top:10px; border-top:1px solid #F1F5F9; }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="sidebar-logo" href="02-shell-dashboard.html">
+      <div class="ef-logo"><div class="ef-logo-mark">EF</div><div class="ef-logo-text"><div class="ef-logo-name">ExpertFlow</div><div class="ef-logo-product">HR Suite</div></div></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item" href="02-shell-dashboard.html"><span class="sidebar-icon">🏠</span> Dashboard</a>
+      <div class="sidebar-section-label">Modules</div>
+      <a class="sidebar-item" href="03-recruitment-dashboard.html"><span class="sidebar-icon">👥</span> Recruitment</a>
+      <a class="sidebar-item active" href="07-appraisal-dashboard.html"><span class="sidebar-icon">📊</span> Performance Appraisal<span class="sidebar-badge orange">3</span></a>
+      <a class="sidebar-item" href="11-project-dashboard.html"><span class="sidebar-icon">📋</span> Project Management</a>
+      <div class="sidebar-section-label">Appraisal</div>
+      <a class="sidebar-item" href="07-appraisal-dashboard.html"><span class="sidebar-icon">📈</span> Dashboard</a>
+      <a class="sidebar-item" href="08-cycles.html"><span class="sidebar-icon">🔄</span> Review Cycles</a>
+      <a class="sidebar-item active" href="09-goals.html"><span class="sidebar-icon">🎯</span> Goals</a>
+      <a class="sidebar-item" href="10-feedback.html"><span class="sidebar-icon">💬</span> Feedback</a>
+      <a class="sidebar-item" href="15-organogram.html"><span class="sidebar-icon">🏢</span> Organogram</a>
+      <a class="sidebar-item" href="#"><span class="sidebar-icon">📋</span> Recommendations</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="avatar avatar-teal">SH</div><div class="sidebar-user-info"><div class="sidebar-user-name">Sarah Hassan</div><div class="sidebar-user-role">HR Administrator</div></div></div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-breadcrumb">
+        <a href="02-shell-dashboard.html" style="color:#64748B;text-decoration:none;">HR Suite</a>
+        <span class="topbar-breadcrumb-sep">›</span>
+        <a href="07-appraisal-dashboard.html" style="color:#64748B;text-decoration:none;">Appraisal</a>
+        <span class="topbar-breadcrumb-sep">›</span>
+        <span class="topbar-breadcrumb-current">Goals</span>
+      </div>
+      <div class="topbar-search"><span>🔍</span><input type="text" placeholder="Search goals, employees…" /></div>
+      <div class="topbar-actions">
+        <button aria-label="Action" class="icon-btn">🔔<span class="badge-dot"></span></button>
+        <div class="avatar avatar-teal">SH</div>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Goals</div>
+          <div class="page-subtitle">Q3 2026 cycle · Track and approve employee goals</div>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-secondary">📊 Export</button>
+          <button class="btn btn-purple">+ Add Goal</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;">
+        <div class="stat-card">
+          <div class="stat-card-header"><div class="stat-icon stat-icon-purple">🎯</div></div>
+          <div class="stat-value">847</div><div class="stat-label">Total Goals (Q3)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-header"><div class="stat-icon stat-icon-green">✅</div><span class="stat-trend up">↑ 68%</span></div>
+          <div class="stat-value">576</div><div class="stat-label">On Track / Achieved</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-header"><div class="stat-icon stat-icon-orange">⏳</div></div>
+          <div class="stat-value">4</div><div class="stat-label">Pending Approval</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-header"><div class="stat-icon stat-icon-red">⚠️</div></div>
+          <div class="stat-value">48</div><div class="stat-label">At Risk / Behind</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;">
+        <div>
+          <!-- Filter + Tabs -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+            <select style="padding:7px 12px;border:1.5px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;color:#334155;background:white;cursor:pointer;outline:none;" title="Filter by employee">
+              <option>All Employees</option><option>Engineering</option><option>Product</option><option>Sales</option>
+            </select>
+            <select style="padding:7px 12px;border:1.5px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;color:#334155;background:white;cursor:pointer;outline:none;" title="Filter by status">
+              <option>All Statuses</option><option>On Track</option><option>At Risk</option><option>Achieved</option><option>Pending Approval</option>
+            </select>
+          </div>
+
+          <div class="tabs" style="margin-bottom:16px;">
+            <div class="tab active">All Goals <span class="tab-count">847</span></div>
+            <div class="tab">Pending Approval <span class="tab-count">4</span></div>
+            <div class="tab">At Risk <span class="tab-count">48</span></div>
+            <div class="tab">Achieved <span class="tab-count">312</span></div>
+          </div>
+
+          <!-- Goal: Pending Approval -->
+          <div class="goal-card" style="border-left:4px solid #D97706;">
+            <div class="goal-card-header">
+              <div>
+                <div class="goal-title">Reduce API response time by 40%</div>
+                <div class="goal-desc">Optimize database queries and implement caching layer for core endpoints</div>
+              </div>
+              <span class="badge badge-orange">Pending Approval</span>
+            </div>
+            <div class="goal-meta">
+              <div class="goal-meta-item"><div class="avatar avatar-sm" style="background:#0066CC;">BK</div> Bilal Khan</div>
+              <div class="goal-meta-item">🏢 Engineering</div>
+              <div class="goal-meta-item">📅 Due: 31 Aug 2026</div>
+              <div class="goal-meta-item">⚖️ Weight: 25%</div>
+            </div>
+            <div class="goal-progress-row">
+              <div class="goal-progress-label">Progress</div>
+              <div class="goal-progress-bar"><div class="goal-progress-fill" style="width:60%;"></div></div>
+              <div class="goal-progress-pct">60%</div>
+            </div>
+            <div class="goal-footer">
+              <div style="font-size:11px;color:#64748B;">KPI: Response time ≤ 200ms · Current: 280ms</div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-success btn-sm">✓ Approve</button>
+                <button class="btn btn-secondary btn-sm">Request Changes</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Goal: On Track -->
+          <div class="goal-card" style="border-left:4px solid #059669;">
+            <div class="goal-card-header">
+              <div>
+                <div class="goal-title">Launch CX Platform v3 Beta</div>
+                <div class="goal-desc">Deliver beta release with core features to 5 pilot customers</div>
+              </div>
+              <span class="badge badge-green">On Track</span>
+            </div>
+            <div class="goal-meta">
+              <div class="goal-meta-item"><div class="avatar avatar-sm avatar-purple">MR</div> Maria Rehman</div>
+              <div class="goal-meta-item">🏢 Product</div>
+              <div class="goal-meta-item">📅 Due: 15 Aug 2026</div>
+              <div class="goal-meta-item">⚖️ Weight: 40%</div>
+            </div>
+            <div class="goal-progress-row">
+              <div class="goal-progress-label">Progress</div>
+              <div class="goal-progress-bar"><div class="goal-progress-fill" style="width:85%;background:#059669;"></div></div>
+              <div class="goal-progress-pct">85%</div>
+            </div>
+            <div class="goal-footer">
+              <div style="font-size:11px;color:#64748B;">KPI: 5 pilot customers onboarded · Current: 4</div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-secondary btn-sm">View Details</button>
+                <button class="btn btn-ghost btn-sm">⋮</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Goal: At Risk -->
+          <div class="goal-card" style="border-left:4px solid #DC2626;">
+            <div class="goal-card-header">
+              <div>
+                <div class="goal-title">Achieve 120% of Q3 Sales Target</div>
+                <div class="goal-desc">Close enterprise deals worth PKR 15M in Q3</div>
+              </div>
+              <span class="badge badge-red">At Risk</span>
+            </div>
+            <div class="goal-meta">
+              <div class="goal-meta-item"><div class="avatar avatar-sm avatar-orange">OM</div> Omar Malik</div>
+              <div class="goal-meta-item">🏢 Sales</div>
+              <div class="goal-meta-item">📅 Due: 30 Sep 2026</div>
+              <div class="goal-meta-item">⚖️ Weight: 50%</div>
+            </div>
+            <div class="goal-progress-row">
+              <div class="goal-progress-label">Progress</div>
+              <div class="goal-progress-bar"><div class="goal-progress-fill" style="width:42%;background:#DC2626;"></div></div>
+              <div class="goal-progress-pct">42%</div>
+            </div>
+            <div class="goal-footer">
+              <div style="font-size:11px;color:#DC2626;">⚠️ KPI: PKR 15M · Current: PKR 6.3M · 58% gap</div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-secondary btn-sm">Add Note</button>
+                <button class="btn btn-ghost btn-sm">⋮</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Goal: Achieved -->
+          <div class="goal-card" style="border-left:4px solid #059669;opacity:0.85;">
+            <div class="goal-card-header">
+              <div>
+                <div class="goal-title">Complete AWS Solutions Architect Certification</div>
+                <div class="goal-desc">Obtain AWS SAA-C03 certification by end of Q2</div>
+              </div>
+              <span class="badge badge-green">Achieved ✓</span>
+            </div>
+            <div class="goal-meta">
+              <div class="goal-meta-item"><div class="avatar avatar-sm avatar-teal">SA</div> Sana Aslam</div>
+              <div class="goal-meta-item">🏢 Engineering</div>
+              <div class="goal-meta-item">📅 Completed: 28 Jun 2026</div>
+              <div class="goal-meta-item">⚖️ Weight: 20%</div>
+            </div>
+            <div class="goal-progress-row">
+              <div class="goal-progress-label">Progress</div>
+              <div class="goal-progress-bar"><div class="goal-progress-fill" style="width:100%;background:#059669;"></div></div>
+              <div class="goal-progress-pct">100%</div>
+            </div>
+            <div class="goal-footer">
+              <div style="font-size:11px;color:#059669;">✓ Certificate uploaded · Verified by manager</div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-secondary btn-sm">View Evidence</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel: Goal Summary -->
+        <div>
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header"><div class="card-title">Goal Achievement Rate</div></div>
+            <div style="text-align:center;padding:16px 0;">
+              <div style="font-size:48px;font-weight:800;color:#5B21B6;">68%</div>
+              <div style="font-size:13px;color:#64748B;margin-top:4px;">Goals on track or achieved</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;">
+                <div style="display:flex;align-items:center;gap:6px;"><div style="width:10px;height:10px;border-radius:2px;background:#059669;"></div>Achieved</div>
+                <span style="font-weight:600;">312 (37%)</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;">
+                <div style="display:flex;align-items:center;gap:6px;"><div style="width:10px;height:10px;border-radius:2px;background:#5B21B6;"></div>On Track</div>
+                <span style="font-weight:600;">264 (31%)</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;">
+                <div style="display:flex;align-items:center;gap:6px;"><div style="width:10px;height:10px;border-radius:2px;background:#D97706;"></div>Pending Approval</div>
+                <span style="font-weight:600;">4 (0.5%)</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;">
+                <div style="display:flex;align-items:center;gap:6px;"><div style="width:10px;height:10px;border-radius:2px;background:#DC2626;"></div>At Risk / Behind</div>
+                <span style="font-weight:600;">48 (5.7%)</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;">
+                <div style="display:flex;align-items:center;gap:6px;"><div style="width:10px;height:10px;border-radius:2px;background:#94A3B8;"></div>Not Started</div>
+                <span style="font-weight:600;">219 (26%)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">Pending Approvals</div><span class="badge badge-orange">4</span></div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;align-items:center;gap:10px;padding:8px;background:#FEF3C7;border-radius:8px;cursor:pointer;">
+                <div class="avatar avatar-sm" style="background:#0066CC;">BK</div>
+                <div style="flex:1;">
+                  <div style="font-size:12px;font-weight:600;color:#0F172A;">Bilal Khan</div>
+                  <div style="font-size:11px;color:#64748B;">Reduce API response time</div>
+                </div>
+                <button class="btn btn-success btn-sm">✓</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:8px;background:#FEF3C7;border-radius:8px;cursor:pointer;">
+                <div class="avatar avatar-sm avatar-purple">NR</div>
+                <div style="flex:1;">
+                  <div style="font-size:12px;font-weight:600;color:#0F172A;">Nadia Rauf</div>
+                  <div style="font-size:11px;color:#64748B;">Launch mobile app v2</div>
+                </div>
+                <button class="btn btn-success btn-sm">✓</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:8px;background:#FEF3C7;border-radius:8px;cursor:pointer;">
+                <div class="avatar avatar-sm avatar-green">IH</div>
+                <div style="flex:1;">
+                  <div style="font-size:12px;font-weight:600;color:#0F172A;">Imran Hussain</div>
+                  <div style="font-size:11px;color:#64748B;">Process automation</div>
+                </div>
+                <button class="btn btn-success btn-sm">✓</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:8px;background:#FEF3C7;border-radius:8px;cursor:pointer;">
+                <div class="avatar avatar-sm avatar-orange">KA</div>
+                <div style="flex:1;">
+                  <div style="font-size:12px;font-weight:600;color:#0F172A;">Kamran Ali</div>
+                  <div style="font-size:11px;color:#64748B;">Security audit completion</div>
+                </div>
+                <button class="btn btn-success btn-sm">✓</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

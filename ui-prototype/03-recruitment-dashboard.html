@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ExpertFlow HR Suite — Recruitment</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/design-system.css" />
+  <style>
+    .funnel-bar { display:flex; gap:0; margin-bottom:24px; border-radius:10px; overflow:hidden; height:48px; }
+    .funnel-seg { display:flex; align-items:center; justify-content:center; flex-direction:column; font-size:11px; font-weight:600; color:white; cursor:pointer; transition:opacity 0.15s; }
+    .funnel-seg:hover { opacity:0.85; }
+    .funnel-seg span { font-size:16px; font-weight:700; }
+
+    .job-card {
+      background:white; border:1px solid #E2E8F0; border-radius:12px;
+      padding:18px 20px; margin-bottom:12px;
+      display:flex; align-items:center; gap:16px;
+      cursor:pointer; transition:all 0.15s;
+      box-shadow:0 1px 3px rgba(0,0,0,0.05);
+    }
+    .job-card:hover { box-shadow:0 4px 12px rgba(0,0,0,0.1); transform:translateY(-1px); }
+    .job-dept-icon { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+    .job-info { flex:1; }
+    .job-title { font-size:14px; font-weight:600; color:#0F172A; }
+    .job-meta  { font-size:12px; color:#64748B; margin-top:2px; display:flex; gap:12px; }
+    .job-stats { display:flex; gap:20px; }
+    .job-stat-val { font-size:18px; font-weight:700; color:#0F172A; text-align:center; }
+    .job-stat-lbl { font-size:10px; color:#64748B; text-align:center; }
+    .job-actions { display:flex; gap:8px; }
+
+    .ai-badge {
+      display:inline-flex; align-items:center; gap:5px;
+      background:linear-gradient(135deg,#EBF4FF,#EDE9FE);
+      border:1px solid #C7D2FE; border-radius:99px;
+      padding:3px 10px; font-size:11px; font-weight:600; color:#4338CA;
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="sidebar-logo" href="02-shell-dashboard.html">
+      <div class="ef-logo">
+        <div class="ef-logo-mark">EF</div>
+        <div class="ef-logo-text"><div class="ef-logo-name">ExpertFlow</div><div class="ef-logo-product">HR Suite</div></div>
+      </div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item" href="02-shell-dashboard.html"><span class="sidebar-icon">🏠</span> Dashboard</a>
+      <div class="sidebar-section-label">Modules</div>
+      <a class="sidebar-item active" href="03-recruitment-dashboard.html"><span class="sidebar-icon">👥</span> Recruitment<span class="sidebar-badge">5</span></a>
+      <a class="sidebar-item" href="07-appraisal-dashboard.html"><span class="sidebar-icon">📊</span> Performance Appraisal<span class="sidebar-badge orange">3</span></a>
+      <a class="sidebar-item" href="11-project-dashboard.html"><span class="sidebar-icon">📋</span> Project Management<span class="sidebar-badge green">2</span></a>
+      <div class="sidebar-section-label">Recruitment</div>
+      <a class="sidebar-item" href="03-recruitment-dashboard.html"><span class="sidebar-icon">📈</span> Dashboard</a>
+      <a class="sidebar-item" href="04-job-requisitions.html"><span class="sidebar-icon">📝</span> Job Requisitions</a>
+      <a class="sidebar-item" href="05-pipeline.html"><span class="sidebar-icon">🔄</span> Pipeline</a>
+      <a class="sidebar-item" href="#"><span class="sidebar-icon">🏢</span> Agencies</a>
+      <a class="sidebar-item" href="06-offer.html"><span class="sidebar-icon">💼</span> Offers</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="avatar avatar-teal">SH</div>
+        <div class="sidebar-user-info"><div class="sidebar-user-name">Sarah Hassan</div><div class="sidebar-user-role">HR Administrator</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-breadcrumb">
+        <a href="02-shell-dashboard.html" style="color:#64748B;text-decoration:none;">HR Suite</a>
+        <span class="topbar-breadcrumb-sep">›</span>
+        <span class="topbar-breadcrumb-current">Recruitment</span>
+      </div>
+      <div class="topbar-search"><span>🔍</span><input type="text" placeholder="Search jobs, candidates…" /></div>
+      <div class="topbar-actions">
+        <button aria-label="Action" class="icon-btn">🔔<span class="badge-dot"></span></button>
+        <div class="avatar avatar-teal">SH</div>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Recruitment</div>
+          <div class="page-subtitle">Manage open positions, track candidates, and coordinate hiring across ExpertFlow</div>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-secondary">📥 Import Candidates</button>
+          <button class="btn btn-primary" onclick="window.location.href='04-job-requisitions.html'">+ New Requisition</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stat-grid" style="grid-template-columns:repeat(5,1fr);">
+        <div class="stat-card">
+          <div class="stat-card-header"><div class="stat-icon stat-icon-blue">📋</div><span class="stat-trend neutral">18 active</span></div>
+          <div class="stat-value">24</div><div class="stat-label">Total Open Jobs</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-header"><div class="stat-icon stat-icon-orange">👤</div><span class="stat-trend up">↑ 12 this week</span></div>
+          <div class="stat-value">142</div><div class="stat-label">Active Candidates</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-header"><div class="stat-icon stat-icon-purple">🎯</div><span class="stat-trend up">↑ 8 scheduled</span></div>
+          <div class="stat-value">31</div><div class="stat-label">Interviews This Week</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-header"><div class="stat-icon stat-icon-green">💼</div><span class="stat-trend neutral">2 accepted</span></div>
+          <div class="stat-value">5</div><div class="stat-label">Pending Offers</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-header"><div class="stat-icon stat-icon-teal">⏱️</div><span class="stat-trend down">↓ 2d faster</span></div>
+          <div class="stat-value">18d</div><div class="stat-label">Avg. Time to Hire</div>
+        </div>
+      </div>
+
+      <!-- Funnel -->
+      <div class="card" style="margin-bottom:24px;">
+        <div class="card-header">
+          <div><div class="card-title">Hiring Funnel — All Active Positions</div><div class="card-subtitle">Current pipeline snapshot</div></div>
+          <div class="ai-badge">✨ AI Screening Active</div>
+        </div>
+        <div class="funnel-bar">
+          <div class="funnel-seg" style="background:#0066CC;flex:3;"><span>142</span>Applied</div>
+          <div class="funnel-seg" style="background:#0052A3;flex:2.2;"><span>89</span>AI Screened</div>
+          <div class="funnel-seg" style="background:#003D7A;flex:1.6;"><span>54</span>Shortlisted</div>
+          <div class="funnel-seg" style="background:#00A3A3;flex:1.1;"><span>31</span>Interviewed</div>
+          <div class="funnel-seg" style="background:#059669;flex:0.6;"><span>12</span>Offered</div>
+          <div class="funnel-seg" style="background:#047857;flex:0.4;"><span>7</span>Hired</div>
+        </div>
+        <div style="display:flex;gap:24px;font-size:12px;color:#64748B;">
+          <span>📊 Conversion: Applied→Hired <strong style="color:#0F172A;">4.9%</strong></span>
+          <span>🤖 AI Accuracy: <strong style="color:#0F172A;">87%</strong></span>
+          <span>⏱️ Avg. Stage Duration: <strong style="color:#0F172A;">3.2 days</strong></span>
+          <span>🏢 Agency Submissions: <strong style="color:#0F172A;">38 (27%)</strong></span>
+        </div>
+      </div>
+
+      <!-- Tabs + Job List -->
+      <div class="tabs">
+        <div class="tab active">All Jobs <span class="tab-count">24</span></div>
+        <div class="tab">Engineering <span class="tab-count">9</span></div>
+        <div class="tab">Product <span class="tab-count">4</span></div>
+        <div class="tab">Sales <span class="tab-count">5</span></div>
+        <div class="tab">Operations <span class="tab-count">6</span></div>
+      </div>
+
+      <!-- Job Cards -->
+      <div class="job-card" onclick="window.location.href='05-pipeline.html'">
+        <div class="job-dept-icon" style="background:#EBF4FF;">💻</div>
+        <div class="job-info">
+          <div class="job-title">Senior Software Engineer — Node.js</div>
+          <div class="job-meta">
+            <span>🏢 Engineering</span>
+            <span>📍 Lahore / Remote</span>
+            <span>💰 PKR 180k–220k</span>
+            <span>📅 Posted 12 Jul</span>
+          </div>
+        </div>
+        <div class="job-stats">
+          <div><div class="job-stat-val">28</div><div class="job-stat-lbl">Applied</div></div>
+          <div><div class="job-stat-val">14</div><div class="job-stat-lbl">Screened</div></div>
+          <div><div class="job-stat-val">6</div><div class="job-stat-lbl">Interview</div></div>
+        </div>
+        <span class="badge badge-green">Active</span>
+        <div class="job-actions">
+          <button class="btn btn-secondary btn-sm">View Pipeline</button>
+          <button class="btn btn-ghost btn-sm">⋮</button>
+        </div>
+      </div>
+
+      <div class="job-card" onclick="window.location.href='05-pipeline.html'">
+        <div class="job-dept-icon" style="background:#EDE9FE;">🎨</div>
+        <div class="job-info">
+          <div class="job-title">UX Designer — Product Team</div>
+          <div class="job-meta">
+            <span>🏢 Product</span>
+            <span>📍 Karachi</span>
+            <span>💰 PKR 120k–150k</span>
+            <span>📅 Posted 18 Jul</span>
+          </div>
+        </div>
+        <div class="job-stats">
+          <div><div class="job-stat-val">19</div><div class="job-stat-lbl">Applied</div></div>
+          <div><div class="job-stat-val">11</div><div class="job-stat-lbl">Screened</div></div>
+          <div><div class="job-stat-val">4</div><div class="job-stat-lbl">Interview</div></div>
+        </div>
+        <span class="badge badge-orange">Urgent</span>
+        <div class="job-actions">
+          <button class="btn btn-secondary btn-sm">View Pipeline</button>
+          <button class="btn btn-ghost btn-sm">⋮</button>
+        </div>
+      </div>
+
+      <div class="job-card">
+        <div class="job-dept-icon" style="background:#CCFBF1;">📈</div>
+        <div class="job-info">
+          <div class="job-title">Sales Manager — Enterprise</div>
+          <div class="job-meta">
+            <span>🏢 Sales</span>
+            <span>📍 Islamabad</span>
+            <span>💰 PKR 200k–250k</span>
+            <span>📅 Posted 22 Jul</span>
+          </div>
+        </div>
+        <div class="job-stats">
+          <div><div class="job-stat-val">34</div><div class="job-stat-lbl">Applied</div></div>
+          <div><div class="job-stat-val">22</div><div class="job-stat-lbl">Screened</div></div>
+          <div><div class="job-stat-val">8</div><div class="job-stat-lbl">Interview</div></div>
+        </div>
+        <span class="badge badge-green">Active</span>
+        <div class="job-actions">
+          <button class="btn btn-secondary btn-sm">View Pipeline</button>
+          <button class="btn btn-ghost btn-sm">⋮</button>
+        </div>
+      </div>
+
+      <div class="job-card">
+        <div class="job-dept-icon" style="background:#FEF3C7;">⚙️</div>
+        <div class="job-info">
+          <div class="job-title">DevOps Engineer — Cloud Infrastructure</div>
+          <div class="job-meta">
+            <span>🏢 Engineering</span>
+            <span>📍 Remote</span>
+            <span>💰 PKR 160k–200k</span>
+            <span>📅 Posted 25 Jul</span>
+          </div>
+        </div>
+        <div class="job-stats">
+          <div><div class="job-stat-val">12</div><div class="job-stat-lbl">Applied</div></div>
+          <div><div class="job-stat-val">7</div><div class="job-stat-lbl">Screened</div></div>
+          <div><div class="job-stat-val">3</div><div class="job-stat-lbl">Interview</div></div>
+        </div>
+        <span class="badge badge-blue">Draft</span>
+        <div class="job-actions">
+          <button class="btn btn-primary btn-sm">Approve & Post</button>
+          <button class="btn btn-ghost btn-sm">⋮</button>
+        </div>
+      </div>
+
+      <div style="text-align:center;margin-top:16px;">
+        <button class="btn btn-ghost">View all 24 positions →</button>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

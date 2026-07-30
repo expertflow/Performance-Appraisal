@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ExpertFlow HR Suite — Offer Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/design-system.css" />
+  <style>
+    .offer-card {
+      background:white; border:1px solid #E2E8F0; border-radius:12px;
+      padding:20px 24px; margin-bottom:14px;
+      display:flex; align-items:center; gap:20px;
+      box-shadow:0 1px 3px rgba(0,0,0,0.05);
+      cursor:pointer; transition:all 0.15s;
+    }
+    .offer-card:hover { box-shadow:0 6px 16px rgba(0,0,0,0.1); transform:translateY(-1px); }
+    .offer-candidate { display:flex; align-items:center; gap:12px; flex:1; }
+    .offer-details { display:flex; gap:24px; }
+    .offer-detail { text-align:center; }
+    .offer-detail-val { font-size:15px; font-weight:700; color:#0F172A; }
+    .offer-detail-lbl { font-size:10px; color:#64748B; margin-top:1px; }
+    .offer-timeline { display:flex; align-items:center; gap:6px; font-size:11px; color:#64748B; }
+    .offer-timeline-dot { width:8px; height:8px; border-radius:50%; }
+
+    .offer-letter-preview {
+      background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px;
+      padding:24px; font-size:13px; line-height:1.8; color:#334155;
+    }
+    .offer-letter-header { text-align:center; margin-bottom:20px; }
+    .offer-letter-logo { font-size:22px; font-weight:800; color:#0066CC; margin-bottom:4px; }
+    .offer-letter-sub { font-size:11px; color:#64748B; }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="sidebar-logo" href="02-shell-dashboard.html">
+      <div class="ef-logo"><div class="ef-logo-mark">EF</div><div class="ef-logo-text"><div class="ef-logo-name">ExpertFlow</div><div class="ef-logo-product">HR Suite</div></div></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Overview</div>
+      <a class="sidebar-item" href="02-shell-dashboard.html"><span class="sidebar-icon">🏠</span> Dashboard</a>
+      <div class="sidebar-section-label">Modules</div>
+      <a class="sidebar-item active" href="03-recruitment-dashboard.html"><span class="sidebar-icon">👥</span> Recruitment<span class="sidebar-badge">5</span></a>
+      <a class="sidebar-item" href="07-appraisal-dashboard.html"><span class="sidebar-icon">📊</span> Performance Appraisal</a>
+      <a class="sidebar-item" href="11-project-dashboard.html"><span class="sidebar-icon">📋</span> Project Management</a>
+      <div class="sidebar-section-label">Recruitment</div>
+      <a class="sidebar-item" href="03-recruitment-dashboard.html"><span class="sidebar-icon">📈</span> Dashboard</a>
+      <a class="sidebar-item" href="04-job-requisitions.html"><span class="sidebar-icon">📝</span> Job Requisitions</a>
+      <a class="sidebar-item" href="05-pipeline.html"><span class="sidebar-icon">🔄</span> Pipeline</a>
+      <a class="sidebar-item" href="#"><span class="sidebar-icon">🏢</span> Agencies</a>
+      <a class="sidebar-item active" href="06-offer.html"><span class="sidebar-icon">💼</span> Offers</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="avatar avatar-teal">SH</div><div class="sidebar-user-info"><div class="sidebar-user-name">Sarah Hassan</div><div class="sidebar-user-role">HR Administrator</div></div></div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-breadcrumb">
+        <a href="02-shell-dashboard.html" style="color:#64748B;text-decoration:none;">HR Suite</a>
+        <span class="topbar-breadcrumb-sep">›</span>
+        <a href="03-recruitment-dashboard.html" style="color:#64748B;text-decoration:none;">Recruitment</a>
+        <span class="topbar-breadcrumb-sep">›</span>
+        <span class="topbar-breadcrumb-current">Offer Management</span>
+      </div>
+      <div class="topbar-search"><span>🔍</span><input type="text" placeholder="Search offers…" /></div>
+      <div class="topbar-actions">
+        <button aria-label="Action" class="icon-btn">🔔<span class="badge-dot"></span></button>
+        <div class="avatar avatar-teal">SH</div>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Offer Management</div>
+          <div class="page-subtitle">Track, approve, and send offer letters to candidates</div>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-secondary">📄 Templates</button>
+          <button class="btn btn-primary">+ Create Offer</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;">
+        <div class="stat-card">
+          <div class="stat-card-header"><div class="stat-icon stat-icon-orange">📋</div></div>
+          <div class="stat-value">5</div><div class="stat-label">Pending Approval</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-header"><div class="stat-icon stat-icon-blue">📤</div></div>
+          <div class="stat-value">3</div><div class="stat-label">Sent to Candidates</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-header"><div class="stat-icon stat-icon-green">✅</div></div>
+          <div class="stat-value">7</div><div class="stat-label">Accepted This Month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-header"><div class="stat-icon stat-icon-red">❌</div></div>
+          <div class="stat-value">2</div><div class="stat-label">Declined</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 400px;gap:20px;">
+
+        <!-- Offer List -->
+        <div>
+          <div class="tabs" style="margin-bottom:16px;">
+            <div class="tab active">All <span class="tab-count">12</span></div>
+            <div class="tab">Pending Approval <span class="tab-count">5</span></div>
+            <div class="tab">Sent <span class="tab-count">3</span></div>
+            <div class="tab">Accepted <span class="tab-count">7</span></div>
+            <div class="tab">Declined <span class="tab-count">2</span></div>
+          </div>
+
+          <!-- Offer: Pending Approval -->
+          <div class="offer-card">
+            <div class="offer-candidate">
+              <div class="avatar avatar-lg avatar-orange">TH</div>
+              <div>
+                <div style="font-size:14px;font-weight:700;color:#0F172A;">Tariq Hussain</div>
+                <div style="font-size:12px;color:#64748B;">Senior Software Engineer · Engineering</div>
+                <div style="margin-top:4px;"><span class="badge badge-orange">Pending Approval</span></div>
+              </div>
+            </div>
+            <div class="offer-details">
+              <div class="offer-detail">
+                <div class="offer-detail-val">PKR 195k</div>
+                <div class="offer-detail-lbl">Monthly Salary</div>
+              </div>
+              <div class="offer-detail">
+                <div class="offer-detail-val">1 Sep</div>
+                <div class="offer-detail-lbl">Start Date</div>
+              </div>
+              <div class="offer-detail">
+                <div class="offer-detail-val">2 days</div>
+                <div class="offer-detail-lbl">Awaiting</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-success btn-sm">✓ Approve</button>
+              <button class="btn btn-secondary btn-sm">Edit</button>
+              <button class="btn btn-ghost btn-sm">⋮</button>
+            </div>
+          </div>
+
+          <!-- Offer: Sent -->
+          <div class="offer-card">
+            <div class="offer-candidate">
+              <div class="avatar avatar-lg" style="background:#0066CC;">ZA</div>
+              <div>
+                <div style="font-size:14px;font-weight:700;color:#0F172A;">Zara Ahmed</div>
+                <div style="font-size:12px;color:#64748B;">Product Manager · Product</div>
+                <div style="margin-top:4px;"><span class="badge badge-blue">Sent · Awaiting Response</span></div>
+              </div>
+            </div>
+            <div class="offer-details">
+              <div class="offer-detail">
+                <div class="offer-detail-val">PKR 210k</div>
+                <div class="offer-detail-lbl">Monthly Salary</div>
+              </div>
+              <div class="offer-detail">
+                <div class="offer-detail-val">15 Aug</div>
+                <div class="offer-detail-lbl">Start Date</div>
+              </div>
+              <div class="offer-detail">
+                <div class="offer-detail-val">3 days</div>
+                <div class="offer-detail-lbl">Since Sent</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-secondary btn-sm">📧 Resend</button>
+              <button class="btn btn-ghost btn-sm">⋮</button>
+            </div>
+          </div>
+
+          <!-- Offer: Accepted -->
+          <div class="offer-card" style="opacity:0.85;">
+            <div class="offer-candidate">
+              <div class="avatar avatar-lg avatar-green">NI</div>
+              <div>
+                <div style="font-size:14px;font-weight:700;color:#0F172A;">Noman Iqbal</div>
+                <div style="font-size:12px;color:#64748B;">Senior Software Engineer · Engineering</div>
+                <div style="margin-top:4px;"><span class="badge badge-green">Accepted · BS4 Synced ✓</span></div>
+              </div>
+            </div>
+            <div class="offer-details">
+              <div class="offer-detail">
+                <div class="offer-detail-val">PKR 185k</div>
+                <div class="offer-detail-lbl">Monthly Salary</div>
+              </div>
+              <div class="offer-detail">
+                <div class="offer-detail-val">1 Sep</div>
+                <div class="offer-detail-lbl">Start Date</div>
+              </div>
+              <div class="offer-detail">
+                <div class="offer-detail-val">10 Jul</div>
+                <div class="offer-detail-lbl">Accepted On</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-secondary btn-sm">View Onboarding</button>
+              <button class="btn btn-ghost btn-sm">⋮</button>
+            </div>
+          </div>
+
+          <!-- Offer: Declined -->
+          <div class="offer-card" style="opacity:0.7;">
+            <div class="offer-candidate">
+              <div class="avatar avatar-lg avatar-red">MK</div>
+              <div>
+                <div style="font-size:14px;font-weight:700;color:#0F172A;">Maryam Khan</div>
+                <div style="font-size:12px;color:#64748B;">UX Designer · Product</div>
+                <div style="margin-top:4px;"><span class="badge badge-red">Declined</span></div>
+              </div>
+            </div>
+            <div class="offer-details">
+              <div class="offer-detail">
+                <div class="offer-detail-val">PKR 130k</div>
+                <div class="offer-detail-lbl">Offered</div>
+              </div>
+              <div class="offer-detail">
+                <div class="offer-detail-val">Counter</div>
+                <div class="offer-detail-lbl">PKR 155k</div>
+              </div>
+              <div class="offer-detail">
+                <div class="offer-detail-val">25 Jul</div>
+                <div class="offer-detail-lbl">Declined On</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-primary btn-sm">Counter Offer</button>
+              <button class="btn btn-ghost btn-sm">⋮</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Offer Letter Preview -->
+        <div>
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header">
+              <div class="card-title">Offer Letter Preview</div>
+              <div style="display:flex;gap:6px;">
+                <button class="btn btn-secondary btn-sm">📄 PDF</button>
+                <button class="btn btn-primary btn-sm">📤 Send</button>
+              </div>
+            </div>
+            <div class="offer-letter-preview">
+              <div class="offer-letter-header">
+                <div class="offer-letter-logo">ExpertFlow</div>
+                <div class="offer-letter-sub">Offer of Employment</div>
+              </div>
+              <p><strong>30 July 2026</strong></p>
+              <br/>
+              <p>Dear <strong>Tariq Hussain</strong>,</p>
+              <br/>
+              <p>We are pleased to offer you the position of <strong>Senior Software Engineer</strong> at ExpertFlow, reporting to the Engineering Manager.</p>
+              <br/>
+              <p><strong>Compensation:</strong> PKR 195,000 per month</p>
+              <p><strong>Start Date:</strong> 1 September 2026</p>
+              <p><strong>Location:</strong> Lahore / Remote</p>
+              <p><strong>Employment Type:</strong> Full-time, Permanent</p>
+              <br/>
+              <p>This offer is contingent upon successful completion of background verification. Please confirm your acceptance by <strong>5 August 2026</strong>.</p>
+              <br/>
+              <p>We look forward to welcoming you to the ExpertFlow team.</p>
+              <br/>
+              <p>Warm regards,<br/><strong>Sarah Hassan</strong><br/>HR Administrator, ExpertFlow</p>
+            </div>
+          </div>
+
+          <!-- BS4 Onboarding Checklist -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">BS4 Onboarding Checklist</div>
+              <span class="badge badge-orange">Pending Hire</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;gap:10px;font-size:13px;">
+                <span style="color:#059669;">✓</span>
+                <span style="color:#64748B;text-decoration:line-through;">Core fields pushed to BS4</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;font-size:13px;">
+                <span style="color:#D97706;">○</span>
+                <span>Bank account details</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;font-size:13px;">
+                <span style="color:#D97706;">○</span>
+                <span>CNIC / document upload</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;font-size:13px;">
+                <span style="color:#D97706;">○</span>
+                <span>Benefits enrollment</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;font-size:13px;">
+                <span style="color:#D97706;">○</span>
+                <span>System access provisioning</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;font-size:13px;">
+                <span style="color:#D97706;">○</span>
+                <span>Equipment assignment</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>
