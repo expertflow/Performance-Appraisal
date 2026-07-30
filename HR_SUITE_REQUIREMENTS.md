@@ -1,8 +1,10 @@
 # HR & Project Management Suite — Complete Requirements Document
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Date:** 2026-07-30  
 **Status:** Requirements Gathered — Ready for PRD  
+
+> **v1.1 changes:** Single PostgreSQL database (schema-per-module), single Angular app with feature modules, Google SSO, Notification & Workflow Service moved to Phase 1–2, Express API Gateway, GCS file storage with ClamAV scanning, security & compliance section added, data model gaps resolved, reporting scoped to per-module.
 
 ---
 
@@ -17,9 +19,11 @@
 7. [Module 3: Project & Task Management](#7-module-3-project--task-management)
 8. [BS4 ERP Integration](#8-bs4-erp-integration)
 9. [Notifications & Workflow Engine](#9-notifications--workflow-engine)
-10. [Reporting & Analytics](#10-reporting--analytics)
-11. [Project Structure](#11-project-structure)
-12. [Next Steps](#12-next-steps)
+10. [Security & Compliance](#10-security--compliance)
+11. [Reporting & Analytics](#11-reporting--analytics)
+12. [Project Structure](#12-project-structure)
+13. [Next Steps](#13-next-steps)
+14. [Confirmed Decisions — Master Reference](#14-confirmed-decisions--master-reference)
 
 ---
 
@@ -35,8 +39,9 @@ This document defines the requirements for a new **HR & Project Management Suite
 
 ### Key Principles
 
-- Each module is **fully independent** — separate frontend, backend, and database
-- All three modules share a **single SSO layer** for seamless user experience
+- Each module is **independent** — separate backend service and separate database schema; one shared Angular frontend with lazy-loaded feature modules
+- **Single PostgreSQL database** (`hr_suite_db`) with **schema-per-module** for isolation
+- All three modules share a **single SSO layer** (Google OAuth + JWT) for seamless user experience
 - Integration with **BS4 ERP** is via secured REST APIs (JSON over HTTPS)
 - Integration with **existing Directus ERP** for time entry sync (Project module)
 - Deployed on **GCP** using existing infrastructure
@@ -47,13 +52,16 @@ This document defines the requirements for a new **HR & Project Management Suite
 
 | Layer | Technology | Notes |
 |---|---|---|
-| **Frontend** | Angular + TypeScript + CSS | Separate Angular app per module, shared shell |
-| **Backend** | Node.js + Express.js | Separate microservice per module |
-| **Database** | PostgreSQL | Separate database per module |
+| **Frontend** | Angular (latest) + TypeScript + CSS | **One** Angular app; lazy-loaded feature modules per HR module |
+| **Backend** | Node.js + Express.js | Separate service per module |
+| **API Gateway** | Express-based gateway service | JWT validation, rate limiting, request routing (see 3.3) |
+| **Database** | PostgreSQL — **single database** `hr_suite_db` | Schema-per-module: `auth`, `common`, `recruitment`, `appraisal`, `project`, `notification` |
 | **API Protocol** | REST — JSON over HTTP/HTTPS | All internal and external APIs |
 | **AI Provider** | Pluggable adapter | OpenAI / Google Gemini / Kimi — configurable |
-| **Deployment** | GCP | Cloud Run or GKE, existing GCP infrastructure |
-| **Auth** | JWT (access + refresh tokens) | Issued by central Auth Service |
+| **Deployment** | GCP | Cloud Run + Cloud SQL, existing GCP infrastructure |
+| **Auth** | Google OAuth 2.0 + JWT (access + refresh) | Issued by central Auth Service; Google is the identity provider |
+| **File Storage** | Google Cloud Storage (GCS) | Downloads served through the web app with authz checks |
+| **Antivirus** | ClamAV (`clamd`) | Open-source AV engine, runs as a container; scans all uploads |
 | **Email** | SMTP / SendGrid | Notification service |
 | **Real-time** | WebSocket / SSE | In-app notifications |
 
@@ -65,53 +73,61 @@ This document defines the requirements for a new **HR & Project Management Suite
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    FRONTEND — Angular + TypeScript               │
+│              FRONTEND — Single Angular App + TypeScript          │
+│   Lazy-loaded feature modules, one deployable application:       │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
 │  │  Recruitment │  │  Appraisal   │  │  Project/Task Mgmt   │  │
-│  │     SPA      │  │     SPA      │  │         SPA          │  │
+│  │   module     │  │   module     │  │       module         │  │
 │  └──────────────┘  └──────────────┘  └──────────────────────┘  │
-│                  ┌─────────────────────┐                         │
-│                  │  Shared Auth Shell  │                         │
-│                  │  SSO + Navigation   │                         │
-│                  └─────────────────────┘                         │
+│   Core: Google SSO login, token mgmt, guards, shared UI lib     │
 └─────────────────────────────────────────────────────────────────┘
                               │ HTTPS
                     ┌─────────▼──────────┐
-                    │    API Gateway     │
+                    │    API Gateway     │  :8080
                     │  JWT Validation    │
                     │  Rate Limiting     │
                     │  Request Routing   │
                     └─────────┬──────────┘
                               │
-        ┌─────────────────────┼─────────────────────┐
-        │                     │                     │
-┌───────▼──────┐   ┌──────────▼──────┐   ┌─────────▼───────┐
-│ Recruitment  │   │   Appraisal     │   │  Project/Task   │
-│   Service    │   │    Service      │   │    Service      │
-│  :3001       │   │    :3002        │   │    :3003        │
-└───────┬──────┘   └──────────┬──────┘   └─────────┬───────┘
-        │                     │                     │
-┌───────▼──────┐   ┌──────────▼──────┐   ┌─────────▼───────┐
-│recruitment_db│   │  appraisal_db   │   │   project_db    │
-│ (PostgreSQL) │   │  (PostgreSQL)   │   │  (PostgreSQL)   │
-└──────────────┘   └─────────────────┘   └─────────────────┘
+        ┌──────────┬──────────┼──────────┬──────────────────┐
+        │          │          │          │                  │
+┌───────▼──────┐ ┌─▼───────────┐ ┌───────▼──────┐ ┌─────────▼────────┐
+│ Recruitment  │ │  Appraisal  │ │ Project/Task │ │ Notification &   │
+│   Service    │ │   Service   │ │   Service    │ │ Workflow Service │
+│  :3001       │ │   :3002     │ │   :3003      │ │     :3004        │
+└───────┬──────┘ └─────┬───────┘ └───────┬──────┘ └─────────┬────────┘
+        │              │                 │                  │
+        └──────────────┴────────┬────────┴──────────────────┘
+                                │
+              ┌─────────────────▼──────────────────┐
+              │      hr_suite_db (PostgreSQL)       │
+              │  Schemas: auth, common,             │
+              │  recruitment, appraisal,            │
+              │  project, notification              │
+              └────────────────────────────────────┘
 
 Additional Services:
-  Auth Service      :3000  →  auth_db (PostgreSQL)
-  Notification Svc  :3004  →  Email (SMTP/SendGrid) + WebSocket
-  AI Service        :3005  →  OpenAI / Gemini / Kimi (pluggable)
+  Auth Service      :3000  →  auth schema (Google SSO, JWT, user/role store)
+  AI Service        :3005  →  OpenAI / Gemini / Kimi (pluggable, stateless)
+  ClamAV (clamd)    :3310  →  Container; scans uploaded files before GCS persist
 ```
+
+**Schema isolation rule:** each service connects with a DB role granting access **only** to its own schema, plus read access to the `common` schema. Cross-schema joins in application code are not allowed; cross-module data flows through service APIs.
 
 ### 3.2 External Integrations
 
 ```
 New App Services ←──── HTTPS/JSON ────→ BS4 ERP
-  - Recruitment Service  →  Push new hire core fields
-  - Appraisal Service    →  Pull employee + org data
-  - Project Service      →  Pull employee + cost centers
+  - Auth Service       →  Pull user profile + roles (on login, with cache fallback)
+  - Recruitment Service→  Push new hire core fields
+  - Appraisal Service  →  Pull employee + org data
+  - Project Service    →  Pull employee + cost centers
+
+Nightly Sync Job ←──── HTTPS/JSON ────→ BS4 ERP
+  - Delta-sync employee master + org hierarchy into common.employee_snapshot
 
 Project Service ←──── HTTPS/JSON ────→ Directus ERP
-  - Push approved time entries for payroll/billing sync
+  - Push approved time entries for payroll/billing sync (idempotent, see 7.5.4)
 
 Recruitment Service ←── HTTPS/JSON ──→ Job Boards
   - LinkedIn, Indeed, Rozee.pk (configurable)
@@ -120,16 +136,29 @@ AI Service ←──────── HTTPS/JSON ─────→ AI Provider
   - OpenAI / Google Gemini / Kimi (pluggable adapter pattern)
 ```
 
+### 3.3 API Gateway Decision
+
+The API Gateway is a **lightweight Express-based gateway service** (`api-gateway`, port 8080) built with the same stack the team already uses:
+
+- **JWT validation** — verifies access tokens before forwarding (shared middleware)
+- **RBAC pre-check** — coarse role checks at the edge; fine-grained checks remain in services
+- **Rate limiting** — `express-rate-limit` per user/IP
+- **Request routing** — path-based proxying (`/api/recruitment/*` → :3001, etc.)
+- **Request logging** — correlation ID per request, forwarded to all services
+
+**Rejected alternatives:** Apigee (license cost disproportionate for an internal suite), Kong (extra infra to operate), GCP API Gateway (OpenAPI spec maintenance overhead, limited flexibility for WebSocket routes). Revisit if the suite is ever exposed to external high-traffic consumers.
+
 ---
 
 ## 4. Authentication & SSO
 
 ### 4.1 Strategy
 
+- **Google OAuth 2.0 is the identity provider** — users authenticate with their company Google account, the same identity used by BS4/Directus
 - **Single Auth Service** issues JWT tokens valid across all 3 modules
-- **BS4 ERP** is the source of truth for user identity
-- Auth service syncs user profile and roles from BS4 on every login
-- Angular **shared shell** handles token storage, refresh, and module routing
+- **BS4 ERP remains the source of truth for profile, roles, and org data** — but NOT for authentication
+- **BS4 downtime does not block login:** authentication is Google-side; profile/roles fall back to the local `common.employee_snapshot` cache (nightly delta sync, see 8.5)
+- Angular **core module** handles token storage, refresh, and route guards per feature module
 - **RBAC** (Role-Based Access Control) enforced at API Gateway and service level
 
 ### 4.2 JWT Token Payload
@@ -151,20 +180,25 @@ AI Service ←──────── HTTPS/JSON ─────→ AI Provider
 ### 4.3 Login Flow
 
 ```
-1. User submits credentials to Angular shell
-2. Angular POSTs to Auth Service /auth/login
-3. Auth Service validates credentials against BS4 API
-4. BS4 returns user profile + roles
-5. Auth Service issues JWT (access token 15min + refresh token 7d)
-6. Angular stores tokens, decodes module permissions
-7. User is routed to permitted modules
-8. All subsequent API calls include: Authorization: Bearer {access_token}
+1. User clicks "Sign in with Google" in the Angular app
+2. Google OAuth consent flow returns a Google ID token
+3. Angular POSTs the ID token to Auth Service /auth/google
+4. Auth Service verifies the ID token with Google (signature + audience + hosted domain)
+5. Auth Service loads or creates the local user_account record
+6. Profile + roles synced from BS4 if reachable; otherwise read from
+   common.employee_snapshot cache (stale cache is acceptable for login)
+7. Auth Service issues JWT (access token 15min + refresh token 7d)
+8. Angular stores tokens, decodes module permissions
+9. User is routed to permitted feature modules
+10. All subsequent API calls include: Authorization: Bearer {access_token}
 ```
+
+**Consequence:** if BS4 is down, users still log in and work normally; only fresh profile/role changes are delayed until the next successful sync.
 
 ### 4.4 Token Refresh
 
 - Access token expires every **15 minutes**
-- Refresh token valid for **7 days**
+- Refresh token valid for **7 days**, stored hashed in `auth.refresh_token`, rotated on each use
 - Angular interceptor auto-refreshes silently before expiry
 - On refresh token expiry, user is redirected to login
 
@@ -212,6 +246,7 @@ A full Applicant Tracking System (ATS) supporting internal postings, external jo
 - Provides reasoning summary for each score
 - AI suggestions are **advisory only** — HR/HM makes final shortlist decision
 - Pluggable AI provider: OpenAI / Google Gemini / Kimi
+- Compliance guardrails apply (see 10.5)
 
 #### 5.4.4 Multi-Stage Interview Pipeline
 
@@ -249,46 +284,64 @@ Stage 4: Final/Panel Round  → Scorecard: Leadership, Panel consensus
 - Automated checklist notification to HR for remaining BS4 steps
 - Items: bank details, documents upload, benefits enrollment, system access provisioning
 
-### 5.5 Recruitment Data Model
+### 5.5 Recruitment Data Model (schema: `recruitment`)
 
 ```
 job_requisition
-  id, title, department_id (BS4), location, headcount, salary_band_min,
-  salary_band_max, job_description, required_competencies (jsonb),
-  status, created_by, approved_by, created_at
+  id, title, department_id (BS4), legal_entity_id, location, headcount,
+  salary_band_min, salary_band_max, job_description,
+  required_competencies (jsonb), status, created_by, approved_by,
+  created_at, updated_at
 
 job_posting
   id, requisition_id, channel (internal/linkedin/indeed/rozee/agency),
-  posted_at, closes_at, status, external_posting_id
+  posted_at, closes_at, status, external_posting_id, created_at, updated_at
+
+candidate
+  id, first_name, last_name, email, phone, resume_document_id
+  (→ common.document), linkedin_url, created_at, updated_at
 
 application
   id, posting_id, candidate_id, agency_id (nullable), source,
-  status, ai_score, ai_reasoning, submitted_at
-
-candidate
-  id, first_name, last_name, email, phone, resume_url,
-  linkedin_url, created_at
+  status, ai_score, ai_reasoning, submitted_at, updated_at
 
 agency
   id, name, contact_name, contact_email, contract_start, contract_end,
-  fee_percentage, status
+  fee_percentage, status, created_at, updated_at
+
+stage_template
+  id, name, role_level, stages (jsonb — ordered list of stage defs with
+  scorecard competencies + weights), is_active, created_at, updated_at
 
 interview_stage
   id, application_id, stage_template_id, stage_order, scheduled_at,
-  status, overall_score
+  status, overall_score, created_at, updated_at
+
+interview_panel
+  id, interview_stage_id, interviewer_id, created_at
 
 scorecard
   id, interview_stage_id, interviewer_id, competency, rating (1-5),
-  weight, comments, submitted_at
+  weight, comments, submitted_at, created_at, updated_at
 
 offer
   id, application_id, salary, designation, joining_date, status,
-  generated_at, sent_at, responded_at, candidate_response
+  generated_at, sent_at, responded_at, candidate_response,
+  created_at, updated_at
+
+ai_screening_log
+  id, application_id, provider (openai/gemini/kimi), model,
+  prompt_hash, score, reasoning, pii_redacted (bool), created_at
 
 employee_handoff
   id, offer_id, bs4_push_status, bs4_employee_id, pushed_at,
-  onboarding_notification_sent_at
+  onboarding_notification_sent_at, created_at, updated_at
 ```
+
+**Notes:**
+- `stage_template` and `interview_panel` back the configurable pipeline and panel support in 5.4.4 (previously missing).
+- `ai_screening_log` feeds the AI Screening Accuracy metric (11.1) and bias audits (10.5).
+- Resume files live in GCS; `common.document` holds metadata + virus scan status (see 10.4).
 
 ---
 
@@ -341,15 +394,15 @@ A 360° feedback system with configurable review cycles (quarterly, mid-year, an
 #### 6.4.2 Feedback Collection
 - System auto-generates feedback requests based on cycle type
 - Employees nominate peers/subordinates (manager approves nominations)
-- Anonymous feedback option for peer/subordinate responses
+- Anonymous feedback option for peer/subordinate responses — **enforced at schema level** (see 10.3)
 - Deadline reminders via notification service
 - Feedback locked after submission
 
 #### 6.4.3 Scoring & Calibration
 - Weighted scoring: self (10%), peers (20%), subordinates (20%), manager (50%)
-- Configurable weights per organization/department
+- Configurable weights per organization/department (stored in `scoring_weight_config`)
 - Calibration session: HR + managers review score distribution
-- Bell curve / forced distribution view for calibration
+- Bell curve / forced distribution view for calibration (minimum cohort size applies, see 10.3)
 - Final calibrated score recorded
 
 #### 6.4.4 Increment & Promotion Recommendations
@@ -368,36 +421,60 @@ A 360° feedback system with configurable review cycles (quarterly, mid-year, an
 
 **No auto-push to BS4** — recommendations are generated as reports for HR to act on manually.
 
-### 6.6 Appraisal Data Model
+### 6.6 Appraisal Data Model (schema: `appraisal`)
 
 ```
 appraisal_cycle
   id, name, type (quarterly/midyear/annual), start_date, end_date,
-  status, created_by, created_at
+  status, created_by, created_at, updated_at
 
 employee_cycle
   id, cycle_id, employee_id (BS4), status, final_score,
-  calibrated_score, recommendation_generated
+  calibrated_score, recommendation_generated, created_at, updated_at
+
+competency_framework
+  id, name, description, role_level, department_id (nullable),
+  weight, is_active, created_at, updated_at
 
 goal
-  id, employee_cycle_id, title, description, kpi_metric,
-  target_value, actual_value, weight, status
+  id, employee_cycle_id, competency_id (nullable → competency_framework),
+  title, description, kpi_metric, target_value, actual_value, weight,
+  status, created_at, updated_at
+
+scoring_weight_config
+  id, department_id (nullable = org-wide default), cycle_type,
+  self_pct, peer_pct, subordinate_pct, manager_pct,
+  created_at, updated_at
 
 feedback_request
   id, employee_cycle_id, reviewer_id, reviewer_type
-  (self/manager/peer/subordinate/skip), status, due_date, is_anonymous
+  (self/manager/peer/subordinate/skip), status, due_date,
+  is_anonymous, created_at, updated_at
 
 feedback_response
   id, feedback_request_id, competency, rating (1-5), comments,
   submitted_at
+  -- NON-anonymous responses only (self, manager, skip-level)
+
+anonymous_feedback_response
+  id, employee_cycle_id, reviewer_type (peer/subordinate), competency,
+  rating (1-5), comments, submitted_at
+  -- NO reviewer_id, NO feedback_request_id: anonymity is schema-enforced
 
 calibration
-  id, cycle_id, department_id, facilitated_by, held_at, notes
+  id, cycle_id, department_id, facilitated_by, held_at, notes,
+  created_at, updated_at
 
 recommendation
   id, employee_cycle_id, final_score, score_trend, suggested_increment_pct,
-  suggested_designation_change, generated_at, reviewed_by_hr
+  suggested_designation_change, generated_at, reviewed_by_hr,
+  created_at, updated_at
 ```
+
+**Notes:**
+- `competency_framework` is now a real table — it was referenced by goals and scorecards but had no home.
+- `scoring_weight_config` makes the 6.4.3 weights configurable per department as required.
+- `anonymous_feedback_response` has **no reviewer linkage by design** — see 10.3.
 
 ---
 
@@ -447,26 +524,26 @@ A comprehensive project and task management system supporting client-billable pr
 - Task fields: title, description, assignee(s), priority, due date, estimated hours, status, tags
 - Subtask support (one level deep)
 - Task dependencies (finish-to-start, start-to-start)
-- File attachments per task
+- File attachments per task (stored in GCS, scanned by ClamAV — see 10.4)
 - Comment thread per task with @mentions
 
 #### 7.5.3 Resource Management
-- Assign employees (pulled from BS4) to projects and tasks
+- Assign employees (from `common.employee_snapshot`, synced from BS4) to projects and tasks
 - Resource utilization view: hours allocated vs. available per employee
 - Capacity planning: see team availability across projects
 
-#### 7.5.4 Time Tracking
+#### 7.5.4 Time Tracking & Directus Sync
 
 **Dual system strategy:**
 
 ```
 Employee logs hours in new module against specific tasks
          ↓
-Time entry stored in project_db (PostgreSQL)
+Time entry stored in project.time_entry (PostgreSQL)
          ↓
 Manager approves time entries
          ↓
-Approved entries sync to Directus ERP via secured API
+Approved entries sync to Directus ERP via secured API (idempotent)
          ↓
 Directus ERP processes for payroll / client billing
 ```
@@ -477,51 +554,69 @@ Directus ERP processes for payroll / client billing
 - Approved entries sync to Directus ERP (scheduled nightly or event-driven on approval)
 - Sync status tracked per entry (pending / synced / failed)
 
+**Sync integrity rules (required):**
+- **Idempotency:** every time entry gets a unique `idempotency_key` (UUID) at creation. The key is sent with every sync attempt; Directus deduplicates on it, so retries never create duplicates.
+- **Edit-after-sync:** an entry in `approved + synced` state is **locked**. Corrections are made as a **reversal entry** (negative-hours adjustment referencing the original), which syncs as a new entry. Payroll always sees an append-only ledger.
+- **Reconciliation:** a daily job flags entries in `approved` state with `directus_sync_status != synced` older than 2 days; flagged entries appear on the Project dashboard (see 11.3) and trigger an admin alert.
+
 ### 7.6 BS4 Integration
 
-**Pulls from BS4:**
+**Pulls from BS4 (via `common.employee_snapshot` cache + on-demand fallback):**
 - Employee master (for resource assignment)
 - Org structure (for project team hierarchy)
 - Cost centers (for internal project cost allocation)
 - Client data (if maintained in BS4)
 
 **Pushes to Directus ERP:**
-- Approved time entries (employee_id, task_id, project_id, hours, date, billable flag)
+- Approved time entries (employee_id, task_id, project_id, hours, date, billable flag, idempotency_key)
 
-### 7.7 Project/Task Data Model
+### 7.7 Project/Task Data Model (schema: `project`)
 
 ```
 project
   id, name, type (client/internal/operational), client_id (nullable),
-  start_date, end_date, budget_hours, budget_amount, status,
-  health_status, cost_center_id (BS4), created_by, created_at
+  legal_entity_id, start_date, end_date, budget_hours, budget_amount,
+  status, health_status, cost_center_id (BS4), created_by,
+  created_at, updated_at
 
 milestone
-  id, project_id, name, target_date, completed_at, status
+  id, project_id, name, target_date, completed_at, status,
+  created_at, updated_at
 
 task
   id, project_id, milestone_id (nullable), parent_task_id (nullable),
   title, description, assignee_id (BS4 employee), priority,
   due_date, estimated_hours, actual_hours, status, tags (jsonb),
-  created_by, created_at
+  created_by, created_at, updated_at
 
 task_dependency
-  id, task_id, depends_on_task_id, dependency_type
+  id, task_id, depends_on_task_id, dependency_type, created_at
 
 time_entry
   id, task_id, employee_id (BS4), date, hours, description,
   is_billable, status (draft/submitted/approved/rejected),
-  approved_by, approved_at, directus_sync_status, directus_sync_at
+  approved_by, approved_at, idempotency_key (uuid, unique),
+  reversal_of_id (nullable → time_entry), directus_sync_status,
+  directus_sync_at, created_at, updated_at
+
+directus_sync_log
+  id, time_entry_id, idempotency_key, attempt_count, last_attempt_at,
+  status (pending/synced/failed/dead_letter), error_message, created_at
 
 task_comment
-  id, task_id, author_id, body, mentions (jsonb), created_at
+  id, task_id, author_id, body, mentions (jsonb), created_at, updated_at
 
 task_attachment
-  id, task_id, filename, file_url, uploaded_by, uploaded_at
+  id, task_id, document_id (→ common.document), uploaded_by, created_at
 
 client
-  id, name, contact_name, contact_email, bs4_client_id (nullable)
+  id, name, contact_name, contact_email, bs4_client_id (nullable),
+  created_at, updated_at
 ```
+
+**Notes:**
+- `directus_sync_log` + `idempotency_key` implement the retry/DLQ/reconciliation behavior (7.5.4, 8.4).
+- Attachments reference `common.document` (GCS metadata + scan status) instead of a raw URL.
 
 ---
 
@@ -551,7 +646,7 @@ JSON Response → New App Service
 
 ### 8.2 Authentication
 
-- API Key per service (Recruitment, Appraisal, Project)
+- API Key per service (Auth, Recruitment, Appraisal, Project)
 - Keys stored in **GCP Secret Manager** — never hardcoded
 - Keys rotated periodically (quarterly minimum)
 - Each key has defined scopes (read-only vs. read-write)
@@ -562,11 +657,11 @@ JSON Response → New App Service
 
 | Endpoint | Data | Consumer |
 |---|---|---|
-| `GET /employees` | Employee master list | All modules |
-| `GET /employees/{id}` | Single employee detail | All modules |
-| `GET /org-hierarchy` | Reporting lines tree | Appraisal, Project |
-| `GET /departments` | Department list | All modules |
-| `GET /cost-centers` | Cost center list | Project |
+| `GET /employees` | Employee master list | Nightly sync → `common.employee_snapshot` |
+| `GET /employees/{id}` | Single employee detail | All services (cache fallback) |
+| `GET /org-hierarchy` | Reporting lines tree | Appraisal, Project (via snapshot) |
+| `GET /departments` | Department list | All modules (via snapshot) |
+| `GET /cost-centers` | Cost center list | Project (via snapshot) |
 | `GET /salary-bands` | Salary band definitions | Appraisal |
 | `GET /legal-entities` | Legal entity list | Recruitment |
 
@@ -581,18 +676,36 @@ JSON Response → New App Service
 
 | Endpoint | Data | Producer |
 |---|---|---|
-| `POST /time-entries/bulk` | Approved time entries | Project |
+| `POST /time-entries/bulk` | Approved time entries + idempotency keys | Project |
 
 ### 8.4 Error Handling
 
 - Retry logic: 3 attempts with exponential backoff for transient failures
-- Dead letter queue for failed sync operations
+- **Idempotency keys on all mutating outbound calls** (time entries, new-hire push) — retries are always safe
+- Dead letter queue for failed sync operations (`directus_sync_log` status = `dead_letter`)
 - Alert notification to admin on repeated failures
 - All integration calls logged with request/response for audit
+
+### 8.5 Employee Snapshot (Resilience Cache)
+
+To remove BS4 as a runtime single point of failure:
+
+```
+common.employee_snapshot
+  bs4_employee_id (PK), full_name, email, designation, department_id,
+  reporting_to, legal_entity_id, cost_center_id, status,
+  synced_at
+```
+
+- **Nightly delta sync job** (Cloud Scheduler → Auth Service) pulls changed employees, departments, cost centers, and org hierarchy from BS4
+- Services read employee/org data from the snapshot; on-demand BS4 pull only as fallback for records missing or stale (> 24h)
+- Login never depends on BS4 availability (see 4.3)
 
 ---
 
 ## 9. Notifications & Workflow Engine
+
+The **Notification & Workflow Service** (:3004, schema `notification`) owns all notification delivery **and** approval workflow state. Module services call it via REST — no module implements its own approval plumbing.
 
 ### 9.1 Notification Channels
 
@@ -601,25 +714,27 @@ JSON Response → New App Service
 | **In-App** | WebSocket / SSE (real-time) | Task assignments, approvals pending, feedback requests, mentions |
 | **Email** | SMTP / SendGrid | Interview invites, offer letters, appraisal cycle start, deadline reminders |
 
+> Cloud Run note: the service runs with `min-instances = 1` so WebSocket/SSE connections are not dropped by scale-to-zero.
+
 ### 9.2 Approval Routing Engine
 
-The workflow engine resolves approvers dynamically from BS4 org hierarchy:
+The workflow engine resolves approvers dynamically from the org hierarchy (`common.employee_snapshot`):
 
 ```
-Trigger Event
+Trigger Event (from any module service)
     ↓
-Workflow Rule Engine
+Workflow Rule Engine (Notification & Workflow Service)
     ↓
-Resolve Approvers (from BS4 org hierarchy)
+Resolve Approvers (org hierarchy from common.employee_snapshot)
     ↓
-Create Approval Task in DB
+Create Approval Task in notification.approval_task
     ↓
 Notify Approver (Email + In-App)
     ↓
 Approver Decision:
-  ├── Approve → Next stage or complete
+  ├── Approve → Next stage or complete (callback to originating module)
   ├── Reject  → Notify requester with comments
-  └── Timeout → Escalate to skip-level approver
+  └── Timeout → Escalate to skip-level approver (timeout per workflow_rule)
 ```
 
 ### 9.3 Approval Workflows Per Module
@@ -642,17 +757,104 @@ Approver Decision:
 
 ### 9.4 Notification Templates
 
-All notification templates are configurable by HR Admin:
+All notification templates are configurable by HR Admin (stored in `notification.notification_template`):
 - Subject line
 - Body (HTML email / plain text in-app)
 - Dynamic variables: `{{employee_name}}`, `{{job_title}}`, `{{deadline}}`, etc.
 - Multi-language support (configurable)
 
+### 9.5 Notification & Workflow Data Model (schema: `notification`)
+
+```
+notification_template
+  id, module, event_type, channel (email/in_app), language,
+  subject, body, variables (jsonb), is_active, created_at, updated_at
+
+notification
+  id, recipient_id, template_id (nullable), channel, payload (jsonb),
+  status (pending/sent/failed/read), sent_at, read_at, created_at
+
+workflow_rule
+  id, module, trigger_event, step_order, approver_resolution
+  (department_head/skip_level/finance/hr_director/specific_role),
+  condition (jsonb, e.g. {"salary_above_band": true}),
+  timeout_hours, escalate_to, is_active, created_at, updated_at
+
+approval_task
+  id, module, entity_type, entity_id, workflow_rule_id, step_order,
+  approver_id, status (pending/approved/rejected/escalated/expired),
+  due_at, decided_at, decision_comments, created_at, updated_at
+```
+
 ---
 
-## 10. Reporting & Analytics
+## 10. Security & Compliance
 
-### 10.1 Recruitment Dashboard
+### 10.1 Audit Trail
+
+HR data changes must be fully auditable. Requirements:
+
+- Every mutating API call is logged: actor, action, entity, before/after values, timestamp, correlation ID
+- **Explicitly audited events:** score/rating changes, calibration adjustments, offer creation/approval/modification, salary recommendation views and edits, time entry approvals and reversals, file downloads of resumes/attachments
+- Audit log is append-only, retained per company policy (minimum 7 years for payroll-adjacent records), queryable by HR Admin
+- Implementation: shared `audit_log` middleware writing to an append-only table per schema (or a single `common.audit_log`)
+
+### 10.2 PII & Data Protection
+
+- Resumes, appraisal data, and salary recommendations are classified **sensitive PII**
+- Data retention policy defined per record type (e.g., rejected-candidate resumes purged after 12 months unless consent extended)
+- Access to salary-band and recommendation data restricted to HR Admin role only (enforced at service level, not just UI)
+- Verify obligations under applicable data-protection law (operations indicated in Pakistan; GDPR if any EU candidates/employees are processed)
+- Database encryption at rest (Cloud SQL default) and TLS in transit everywhere
+
+### 10.3 Anonymous Feedback Integrity
+
+- Anonymous peer/subordinate responses are stored in `appraisal.anonymous_feedback_response` with **no reviewer identity column and no link to `feedback_request`** — anonymity is enforced by the schema, not by hiding columns in the UI
+- Results are only shown to the reviewed employee in aggregated form (minimum 2 responses per reviewer type; otherwise withheld as "insufficient responses")
+- Calibration bell-curve views require a minimum cohort size (e.g., 8 employees) to prevent reverse-engineering individual scores
+
+### 10.4 File Storage & Malware Scanning
+
+- All uploaded files (resumes, task attachments, offer letters) stored in **GCS**; metadata in `common.document`:
+
+```
+common.document
+  id, module, owner_entity_type, owner_entity_id, filename,
+  content_type, size_bytes, storage_path (GCS), scan_status
+  (pending/clean/infected), scan_engine, scanned_at,
+  uploaded_by, created_at, updated_at
+```
+
+- **ClamAV** (`clamd`) runs as a container in the compose/Cloud Run environment; every upload is scanned before `scan_status = clean`
+- `infected` files are quarantined (GCS bucket with no access bindings), uploader and admin are notified, file is never served
+- Downloads go **through the web application only**: service validates the user's permission, then issues a short-lived GCS signed URL. No public GCS URLs anywhere.
+
+### 10.5 AI Screening Guardrails
+
+- AI scores are **advisory only**; the UI never allows auto-rejection on AI score alone
+- **PII redaction option** (configurable per provider): name/email/phone stripped from resume text before sending to the AI provider; `ai_screening_log.pii_redacted` records which mode was used
+- Use provider API tiers with **no training on customer data** / zero-retention; a data-processing agreement per enabled provider is required before production use
+- **Bias monitoring:** quarterly report from `ai_screening_log` vs. actual shortlist/hire outcomes, checking for adverse impact across source channels and demographics where lawfully recorded
+- `ai_screening_log` keeps provider, model, prompt hash, score, and reasoning for every call — full auditability of AI decisions
+
+### 10.6 Availability, Backup & DR
+
+| Area | Target |
+|---|---|
+| Database backups | Cloud SQL automated daily backups + point-in-time recovery (PITR) |
+| RPO | ≤ 24 hours (PITR window) |
+| RTO | ≤ 4 hours (redeploy Cloud Run services + restore Cloud SQL) |
+| Service availability | Cloud Run multi-instance; notification service min-instances = 1 |
+| Secrets | GCP Secret Manager only; quarterly rotation |
+| Dependency failure | BS4 down → login unaffected (Google SSO + snapshot cache); Directus down → sync queues and retries, no data loss |
+
+---
+
+## 11. Reporting & Analytics
+
+**Decision: reporting is independent per module.** Each dashboard queries only its own schema — no cross-module queries. If cross-module executive reports are needed later, introduce a separate reporting store (nightly ETL) as its own phase; it is **out of scope** for the initial build.
+
+### 11.1 Recruitment Dashboard
 
 | Metric | Description |
 |---|---|
@@ -661,20 +863,20 @@ All notification templates are configurable by HR Admin:
 | Time-to-Hire | Average days from requisition to offer acceptance |
 | Source Effectiveness | Hire rate by channel (internal/LinkedIn/Indeed/agency) |
 | Agency Performance | Submissions, shortlists, hires, cost per hire per agency |
-| AI Screening Accuracy | AI score vs. final hire decision correlation |
+| AI Screening Accuracy | AI score vs. final hire decision correlation (from `ai_screening_log`) |
 
-### 10.2 Performance Appraisal Dashboard
+### 11.2 Performance Appraisal Dashboard
 
 | Metric | Description |
 |---|---|
 | Review Completion Rate | % of employees with completed reviews by department |
-| Score Distribution | Bell curve / histogram of final scores |
+| Score Distribution | Bell curve / histogram of final scores (min cohort size, see 10.3) |
 | Goal Achievement Rate | % of goals met/exceeded vs. missed |
 | 360° Participation Rate | % of feedback requests responded to |
 | Increment Pipeline | Employees by recommended increment band |
 | Score Trend | Year-over-year score movement per employee/department |
 
-### 10.3 Project & Task Management Dashboard
+### 11.3 Project & Task Management Dashboard
 
 | Metric | Description |
 |---|---|
@@ -683,83 +885,47 @@ All notification templates are configurable by HR Admin:
 | Burn Rate | Hours logged vs. estimated per project |
 | Milestone Completion | On-time vs. delayed milestones |
 | Billable vs. Non-Billable | Hours breakdown by project type |
-| Time Entry Sync Status | Pending / synced / failed entries to Directus ERP |
-
-### 10.4 Cross-Module Executive Reports
-
-| Report | Data Sources |
-|---|---|
-| **Employee Lifecycle** | Recruitment (hire date, source) + Appraisal (scores) + Project (utilization) |
-| **Department Health** | Headcount growth + appraisal scores + project delivery rate |
-| **Cost Analysis** | Recruitment cost + salary increments + billable hours revenue |
-| **Workforce Planning** | Open positions + attrition risk (low appraisal scores) + capacity |
+| Time Entry Sync Status | Pending / synced / failed entries to Directus ERP, incl. reconciliation flags (> 2 days unsynced) |
 
 ---
 
-## 11. Project Structure
+## 12. Project Structure
 
 ```
 hr-suite/
 ├── frontend/
-│   ├── shell/                    ← Angular SSO shell app (shared auth + navigation)
-│   │   ├── src/
-│   │   │   ├── app/
-│   │   │   │   ├── auth/         ← Login, token management, guards
-│   │   │   │   ├── shell/        ← App shell, module routing
-│   │   │   │   └── shared/       ← Shared components, pipes, directives
-│   │   │   └── environments/
-│   │   └── package.json
-│   │
-│   ├── recruitment/              ← Recruitment Angular app
-│   │   ├── src/app/
-│   │   │   ├── job-requisitions/
-│   │   │   ├── job-postings/
-│   │   │   ├── applications/
-│   │   │   ├── interviews/
-│   │   │   ├── offers/
-│   │   │   ├── agencies/
-│   │   │   └── reports/
-│   │   └── package.json
-│   │
-│   ├── appraisal/                ← Performance Appraisal Angular app
-│   │   ├── src/app/
-│   │   │   ├── cycles/
-│   │   │   ├── goals/
-│   │   │   ├── feedback/
-│   │   │   ├── calibration/
-│   │   │   ├── recommendations/
-│   │   │   └── reports/
-│   │   └── package.json
-│   │
-│   ├── project-mgmt/             ← Project/Task Management Angular app
-│   │   ├── src/app/
-│   │   │   ├── projects/
-│   │   │   ├── tasks/
-│   │   │   ├── kanban/
-│   │   │   ├── gantt/
-│   │   │   ├── time-tracking/
-│   │   │   ├── resources/
-│   │   │   └── reports/
-│   │   └── package.json
-│   │
-│   └── shared-lib/               ← Angular library: shared models, services, UI components
-│       ├── src/lib/
-│       │   ├── models/           ← TypeScript interfaces
-│       │   ├── services/         ← HTTP client services
-│       │   ├── components/       ← Shared UI components
-│       │   └── interceptors/     ← JWT interceptor, error handler
+│   └── hr-suite-app/              ← ONE Angular app (latest Angular + TypeScript)
+│       ├── src/
+│       │   ├── app/
+│       │   │   ├── core/          ← Google SSO login, token mgmt, guards, interceptors
+│       │   │   ├── shared/        ← Shared models, UI components, pipes, directives
+│       │   │   └── features/
+│       │   │       ├── recruitment/    ← lazy-loaded: requisitions, postings,
+│       │   │       │                   applications, interviews, offers, agencies, reports
+│       │   │       ├── appraisal/      ← lazy-loaded: cycles, goals, feedback,
+│       │   │       │                   calibration, recommendations, reports
+│       │   │       └── project-mgmt/   ← lazy-loaded: projects, tasks, kanban,
+│       │   │                           gantt, time-tracking, resources, reports
+│       │   └── environments/
 │       └── package.json
 │
 ├── backend/
-│   ├── auth-service/             ← Node.js + Express — JWT, SSO, BS4 user sync
+│   ├── api-gateway/              ← Express — routing, JWT validation, rate limiting :8080
+│   │   ├── src/
+│   │   │   ├── routes/
+│   │   │   └── proxy/
+│   │   └── package.json
+│   │
+│   ├── auth-service/             ← Express — Google SSO verify, JWT issue/refresh, :3000
 │   │   ├── src/
 │   │   │   ├── routes/
 │   │   │   ├── middleware/
 │   │   │   ├── services/
+│   │   │   ├── jobs/             ← Nightly BS4 employee snapshot delta sync
 │   │   │   └── bs4-client/
 │   │   └── package.json
 │   │
-│   ├── recruitment-service/      ← Node.js + Express — ATS, pipeline, offers
+│   ├── recruitment-service/      ← Express — ATS, pipeline, offers :3001
 │   │   ├── src/
 │   │   │   ├── routes/
 │   │   │   ├── controllers/
@@ -768,7 +934,7 @@ hr-suite/
 │   │   │   └── integrations/     ← Job board adapters
 │   │   └── package.json
 │   │
-│   ├── appraisal-service/        ← Node.js + Express — 360°, cycles, calibration
+│   ├── appraisal-service/        ← Express — 360°, cycles, calibration :3002
 │   │   ├── src/
 │   │   │   ├── routes/
 │   │   │   ├── controllers/
@@ -776,26 +942,27 @@ hr-suite/
 │   │   │   └── models/
 │   │   └── package.json
 │   │
-│   ├── project-service/          ← Node.js + Express — projects, tasks, time entries
+│   ├── project-service/          ← Express — projects, tasks, time entries :3003
 │   │   ├── src/
 │   │   │   ├── routes/
 │   │   │   ├── controllers/
 │   │   │   ├── services/
 │   │   │   ├── models/
-│   │   │   └── sync/             ← Directus ERP sync
+│   │   │   └── sync/             ← Directus ERP sync (idempotent + reconciliation)
 │   │   └── package.json
 │   │
-│   ├── notification-service/     ← Node.js + Express — email + in-app notifications
+│   ├── notification-service/     ← Express — notifications + WORKFLOW ENGINE :3004
 │   │   ├── src/
 │   │   │   ├── routes/
 │   │   │   ├── templates/        ← Email HTML templates
 │   │   │   ├── services/
 │   │   │   │   ├── email.service.ts
-│   │   │   │   └── websocket.service.ts
+│   │   │   │   ├── websocket.service.ts
+│   │   │   │   └── workflow.service.ts   ← Approval routing engine
 │   │   │   └── models/
 │   │   └── package.json
 │   │
-│   ├── ai-service/               ← Node.js + Express — pluggable AI provider adapter
+│   ├── ai-service/               ← Express — pluggable AI provider adapter :3005
 │   │   ├── src/
 │   │   │   ├── routes/
 │   │   │   ├── adapters/
@@ -803,71 +970,74 @@ hr-suite/
 │   │   │   │   ├── gemini.adapter.ts
 │   │   │   │   └── kimi.adapter.ts
 │   │   │   └── services/
-│   │   │       └── resume-screener.service.ts
+│   │   │       ├── resume-screener.service.ts
+│   │   │       └── pii-redactor.service.ts
 │   │   └── package.json
 │   │
-│   └── shared/                   ← Shared backend utilities
-│       ├── middleware/
-│       │   ├── auth.middleware.ts ← JWT validation
-│       │   ├── rbac.middleware.ts ← Role-based access control
+│   └── shared/                   ← npm workspaces internal package (versioned —
+│       ├── middleware/               changes require version bump + all services
+│       │   ├── auth.middleware.ts    upgrade in the same sprint; no drift)
+│       │   ├── rbac.middleware.ts
+│       │   ├── audit.middleware.ts
 │       │   └── logger.middleware.ts
 │       ├── bs4-client/           ← BS4 ERP HTTP client with retry logic
-│       ├── directus-client/      ← Directus ERP HTTP client
+│       ├── directus-client/      ← Directus ERP HTTP client (idempotency keys)
 │       └── utils/
 │
-├── database/
-│   ├── recruitment/
-│   │   ├── migrations/           ← Numbered SQL migration files
-│   │   └── seeds/                ← Test/demo data
-│   ├── appraisal/
-│   │   ├── migrations/
-│   │   └── seeds/
-│   ├── project/
-│   │   ├── migrations/
-│   │   └── seeds/
-│   └── auth/
-│       ├── migrations/
-│       └── seeds/
+├── database/                     ← ONE database: hr_suite_db
+│   ├── migrations/
+│   │   ├── auth/                 ← Numbered SQL files per schema
+│   │   ├── common/               ← employee_snapshot, document, audit_log
+│   │   ├── recruitment/
+│   │   ├── appraisal/
+│   │   ├── project/
+│   │   └── notification/
+│   └── seeds/
 │
 └── infrastructure/
     ├── gcp/
-    │   ├── cloud-run/            ← Cloud Run service definitions per service
-    │   ├── cloud-sql/            ← Cloud SQL PostgreSQL instance configs
+    │   ├── cloud-run/            ← Service definitions per service
+    │   ├── cloud-sql/            ← ONE Cloud SQL PostgreSQL instance config
     │   └── secret-manager/       ← GCP Secret Manager key references
     └── docker/
+        ├── Dockerfile.gateway
         ├── Dockerfile.auth
         ├── Dockerfile.recruitment
         ├── Dockerfile.appraisal
         ├── Dockerfile.project
         ├── Dockerfile.notification
         ├── Dockerfile.ai
-        └── docker-compose.yml    ← Local development environment
+        └── docker-compose.yml    ← Local dev: all services + postgres + clamd
 ```
 
 ---
 
-## 12. Next Steps
+## 13. Next Steps
 
 ### Phase 1 — Foundation (Weeks 1–4)
 - [ ] Finalize BS4 API contract with BS4 team (endpoint specs, auth tokens, rate limits)
-- [ ] Set up GCP project, Cloud SQL instances (4 PostgreSQL DBs), Secret Manager
-- [ ] Scaffold monorepo structure with Angular workspace + Node.js services
-- [ ] Implement Auth Service + JWT SSO + Angular shared shell
-- [ ] Database migrations for all 4 databases
+- [ ] **Submit LinkedIn/Indeed partner API applications and verify Rozee.pk API availability** — approval can take weeks; integration ships in Phase 5 but the paperwork starts now
+- [ ] Set up GCP project, **one** Cloud SQL PostgreSQL instance, Secret Manager
+- [ ] Scaffold monorepo: Angular app + Node.js services (npm workspaces)
+- [ ] Implement Auth Service (Google SSO + JWT + refresh) and Angular core module (login, guards, interceptors)
+- [ ] Implement **minimal Notification & Workflow Service** (email channel, templates, approval_task/workflow_rule, approval callbacks) — required by every later phase
+- [ ] Database migrations for all schemas (`auth`, `common`, `recruitment`, `appraisal`, `project`, `notification`)
+- [ ] Nightly BS4 employee snapshot sync job
+- [ ] GCS buckets + ClamAV (clamd) container with upload-scan pipeline
 
 ### Phase 2 — Recruitment Module (Weeks 5–12)
 - [ ] Job Requisition + Approval workflow
 - [ ] Job Posting (internal + agency portal)
-- [ ] Candidate application intake
-- [ ] AI resume screening integration (pluggable adapter)
+- [ ] Candidate application intake (with resume upload → scan → GCS)
+- [ ] AI resume screening integration (pluggable adapter + PII redaction)
 - [ ] Multi-stage interview pipeline + scorecards
 - [ ] Offer management + BS4 hire push
 - [ ] Recruitment dashboard
 
 ### Phase 3 — Performance Appraisal Module (Weeks 13–20)
 - [ ] Appraisal cycle management
-- [ ] Goal setting + approval
-- [ ] 360° feedback collection (all reviewer types)
+- [ ] Competency framework + goal setting + approval
+- [ ] 360° feedback collection (all reviewer types, schema-enforced anonymity)
 - [ ] Scoring + calibration
 - [ ] Increment/promotion recommendation reports
 - [ ] Appraisal dashboard
@@ -877,47 +1047,49 @@ hr-suite/
 - [ ] Task management (all CRUD)
 - [ ] Kanban, Gantt, List, Calendar views
 - [ ] Time tracking + manager approval
-- [ ] Directus ERP time entry sync
+- [ ] Directus ERP time entry sync (idempotent + reconciliation report)
 - [ ] Resource utilization view
 - [ ] Project dashboard
 
 ### Phase 5 — Cross-Cutting & Launch (Weeks 31–36)
-- [ ] Notification service (email + in-app WebSocket)
-- [ ] Approval routing engine (all modules)
-- [ ] Cross-module executive reporting
-- [ ] External job board integrations (LinkedIn, Indeed, Rozee.pk)
-- [ ] Performance testing + security audit
+- [ ] In-app notification channel (WebSocket/SSE) on the existing Notification & Workflow Service
+- [ ] External job board integrations (LinkedIn, Indeed, Rozee.pk) — using Phase 1 API approvals
+- [ ] Security audit (incl. audit-trail verification) + performance testing
+- [ ] Backup/DR restore drill
 - [ ] UAT with HR team, hiring managers, and pilot users
 - [ ] Production deployment on GCP
 
 ---
 
-## 13. Confirmed Decisions — Master Reference
+## 14. Confirmed Decisions — Master Reference
 
 | Category | Decision |
 |---|---|
-| **Frontend** | Angular + TypeScript + CSS |
-| **Backend** | Node.js + Express.js (microservices per module) |
-| **Database** | PostgreSQL (separate DB per module) |
+| **Frontend** | One Angular app (latest) + TypeScript + CSS; lazy-loaded feature modules per HR module |
+| **Backend** | Node.js + Express.js (service per module + API gateway + auth + notification/workflow + AI) |
+| **API Gateway** | Express-based gateway service (JWT validation, rate limiting, routing) |
+| **Database** | **Single PostgreSQL database** `hr_suite_db`, schema-per-module (`auth`, `common`, `recruitment`, `appraisal`, `project`, `notification`) |
 | **API Protocol** | JSON over HTTP/HTTPS (REST) |
-| **AI Provider** | Pluggable adapter — OpenAI / Google Gemini / Kimi |
-| **Auth** | JWT-based SSO, single token across all 3 modules, BS4 user sync |
-| **Notifications** | Email (SMTP/SendGrid) + In-App (WebSocket/SSE) |
-| **Workflows** | Approval routing engine with BS4 org hierarchy for approver resolution |
-| **Reporting** | Per-module dashboards + cross-module executive reporting |
-| **Deployment** | GCP (Cloud Run + Cloud SQL) |
+| **AI Provider** | Pluggable adapter — OpenAI / Google Gemini / Kimi; advisory-only with PII redaction + bias monitoring |
+| **Auth** | Google OAuth 2.0 (same identity as BS4/Directus) + JWT SSO; BS4 profile/role sync with snapshot cache — login works when BS4 is down |
+| **File Storage** | GCS; downloads via web app with authz + signed URLs; ClamAV scan on every upload |
+| **Notifications** | Email (SMTP/SendGrid) + In-App (WebSocket/SSE); built in Phase 1–2 (minimal), in-app channel completed in Phase 5 |
+| **Workflows** | Approval routing engine owned by Notification & Workflow Service; approver resolution from org hierarchy snapshot |
+| **Reporting** | Independent per-module dashboards; no cross-module queries in initial build |
+| **Deployment** | GCP (Cloud Run + one Cloud SQL instance) |
 | **Recruitment — Sourcing** | Internal + External boards (LinkedIn/Indeed/Rozee) + Agencies |
 | **Recruitment — Roles** | HR Admin, Hiring Manager, Candidate, Agency |
 | **Recruitment — BS4 Hire** | Auto-push core fields + HR onboarding notification |
 | **Recruitment — Pipeline** | Advanced structured + AI resume screening + weighted scorecards |
 | **Appraisal — Methodology** | 360° feedback + Quarterly / Mid-Year / Annual cycles |
+| **Appraisal — Anonymity** | Schema-enforced (no reviewer linkage for anonymous responses) |
 | **Appraisal — BS4 Push** | Partial — recommendations only, HR applies manually in BS4 |
 | **Project — Types** | Client + Internal + Operational tasks |
-| **Project — Time Tracking** | Dual system — new module + nightly sync to Directus ERP |
+| **Project — Time Tracking** | Dual system — new module + idempotent sync to Directus ERP; locked after sync, corrections via reversal entries |
 | **Project — Views** | Kanban + Gantt + List + Calendar (user-switchable) |
 
 ---
 
-*Document maintained by: Engineering Team*
-*Last updated: 2026-07-30*
+*Document maintained by: Engineering Team*  
+*Last updated: 2026-07-30*  
 *Next review: After BS4 API contract finalization*
