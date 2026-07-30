@@ -1,10 +1,12 @@
 # HR & Project Management Suite — Complete Requirements Document
 
-**Version:** 1.1  
+**Version:** 1.2  
 **Date:** 2026-07-30  
 **Status:** Requirements Gathered — Ready for PRD  
 
-> **v1.1 changes:** Single PostgreSQL database (schema-per-module), single Angular app with feature modules, Google SSO, Notification & Workflow Service moved to Phase 1–2, Express API Gateway, GCS file storage with ClamAV scanning, security & compliance section added, data model gaps resolved, reporting scoped to per-module.
+> **v1.2 changes:** Separate external-user portal with its own Google OAuth track (candidates, agencies, clients — no access to company data); cloud-agnostic deployment (no hard GCP dependency); timezone & localization rule added (store UTC, display in user's auto-detected local timezone); REST API versioning convention (`/api/v1/...`); GDPR right-to-erasure process; one-time initial employee/org backfill added to Phase 1; time entry simplified to manual entry (no start/stop timer).
+>
+> **v1.1 changes:** Single PostgreSQL database (schema-per-module), single Angular app with feature modules, Google SSO, Notification & Workflow Service moved to Phase 1–2, Express API Gateway, object-storage file storage with ClamAV scanning, security & compliance section added, data model gaps resolved, reporting scoped to per-module.
 
 ---
 
@@ -44,7 +46,7 @@ This document defines the requirements for a new **HR & Project Management Suite
 - All three modules share a **single SSO layer** (Google OAuth + JWT) for seamless user experience
 - Integration with **BS4 ERP** is via secured REST APIs (JSON over HTTPS)
 - Integration with **existing Directus ERP** for time entry sync (Project module)
-- Deployed on **GCP** using existing infrastructure
+- **Cloud-agnostic deployment** — packaged as Docker containers; runs on any suitable cloud (managed PostgreSQL, S3-compatible object storage, container runtime, secrets manager). No hard dependency on a single provider.
 
 ---
 
@@ -58,9 +60,9 @@ This document defines the requirements for a new **HR & Project Management Suite
 | **Database** | PostgreSQL — **single database** `hr_suite_db` | Schema-per-module: `auth`, `common`, `recruitment`, `appraisal`, `project`, `notification` |
 | **API Protocol** | REST — JSON over HTTP/HTTPS | All internal and external APIs |
 | **AI Provider** | Pluggable adapter | OpenAI / Google Gemini / Kimi — configurable |
-| **Deployment** | GCP | Cloud Run + Cloud SQL, existing GCP infrastructure |
-| **Auth** | Google OAuth 2.0 + JWT (access + refresh) | Issued by central Auth Service; Google is the identity provider |
-| **File Storage** | Google Cloud Storage (GCS) | Downloads served through the web app with authz checks |
+| **Deployment** | Cloud-agnostic (containers) | Docker containers on any suitable cloud — managed container runtime (Cloud Run / ECS / AKS / Kubernetes); not tied to one provider |
+| **Auth** | Google OAuth 2.0 + JWT (access + refresh) | Two OAuth apps: **internal** (company workspace domain) + **external** (public Google accounts); issued by central Auth Service (see 4.5) |
+| **File Storage** | S3-compatible object storage | GCS / Amazon S3 / Azure Blob — any S3-compatible bucket; downloads served through the web app with authz checks |
 | **Antivirus** | ClamAV (`clamd`) | Open-source AV engine, runs as a container; scans all uploads |
 | **Email** | SMTP / SendGrid | Notification service |
 | **Real-time** | WebSocket / SSE | In-app notifications |
@@ -109,8 +111,10 @@ This document defines the requirements for a new **HR & Project Management Suite
 Additional Services:
   Auth Service      :3000  →  auth schema (Google SSO, JWT, user/role store)
   AI Service        :3005  →  OpenAI / Gemini / Kimi (pluggable, stateless)
-  ClamAV (clamd)    :3310  →  Container; scans uploaded files before GCS persist
+  ClamAV (clamd)    :3310  →  Container; scans uploaded files before object-storage persist
 ```
+
+> **Two frontends:** the diagram above shows the **internal** Angular app used by staff. External users (candidates, agencies, clients) use a **separate `external-portal-app`** with its own Google OAuth app; it reaches the same gateway but carries `audience: "external"` tokens and can only touch its own records (see 4.5).
 
 **Schema isolation rule:** each service connects with a DB role granting access **only** to its own schema, plus read access to the `common` schema. Cross-schema joins in application code are not allowed; cross-module data flows through service APIs.
 
@@ -146,7 +150,22 @@ The API Gateway is a **lightweight Express-based gateway service** (`api-gateway
 - **Request routing** — path-based proxying (`/api/recruitment/*` → :3001, etc.)
 - **Request logging** — correlation ID per request, forwarded to all services
 
-**Rejected alternatives:** Apigee (license cost disproportionate for an internal suite), Kong (extra infra to operate), GCP API Gateway (OpenAPI spec maintenance overhead, limited flexibility for WebSocket routes). Revisit if the suite is ever exposed to external high-traffic consumers.
+**Rejected alternatives:** Apigee (license cost disproportionate for an internal suite), Kong (extra infra to operate), managed cloud API gateways (OpenAPI spec maintenance overhead, limited flexibility for WebSocket routes). Revisit if the suite is ever exposed to external high-traffic consumers.
+
+### 3.4 API Versioning
+
+- All REST endpoints are versioned via a URL path prefix: `/api/v1/recruitment/*`, `/api/v1/appraisal/*`, etc.
+- External-facing contracts (BS4 ERP, Directus ERP) are pinned to an explicit version so an upstream change never silently breaks a consumer.
+- The versioned internal `shared/` package (see 12) forces all services onto the same middleware version in a sprint; the `v1` URL prefix insulates external clients from that internal churn.
+- Breaking changes ship under a new prefix (`/api/v2/...`) with the prior version kept alive until all consumers migrate.
+
+### 3.5 Localization & Timezone
+
+- **All timestamps are stored in the database as UTC.** No local-time values are ever persisted.
+- **Display is in the user's local timezone**, auto-detected from the browser/system on each session. A user logging in from Pakistan sees times in PKT (GMT+5); a user elsewhere sees their own local time — no manual timezone setting required.
+- **Time entries** are recorded against the **user's local calendar day** at entry time; the stored UTC instant plus the captured timezone offset lets payroll/billing resolve the correct business day unambiguously.
+- Appraisal cycle dates, interview schedules, and deadlines follow the same rule: stored UTC, rendered local.
+- The captured locale also drives multi-language notification template selection (see 9.4).
 
 ---
 
@@ -154,8 +173,10 @@ The API Gateway is a **lightweight Express-based gateway service** (`api-gateway
 
 ### 4.1 Strategy
 
-- **Google OAuth 2.0 is the identity provider** — users authenticate with their company Google account, the same identity used by BS4/Directus
-- **Single Auth Service** issues JWT tokens valid across all 3 modules
+- **Google OAuth 2.0 is the identity provider for two separate user populations** (see 4.5):
+  - **Internal staff** — authenticate with their **company Google Workspace account** (hosted-domain restricted), the same identity used by BS4/Directus
+  - **External users** (candidates, agencies, clients) — authenticate with **any personal Google account** via a **separate OAuth app and separate portal**, with **no access to company data**
+- **Single Auth Service** issues JWT tokens valid across the modules each population is entitled to
 - **BS4 ERP remains the source of truth for profile, roles, and org data** — but NOT for authentication
 - **BS4 downtime does not block login:** authentication is Google-side; profile/roles fall back to the local `common.employee_snapshot` cache (nightly delta sync, see 8.5)
 - Angular **core module** handles token storage, refresh, and route guards per feature module
@@ -202,6 +223,47 @@ The API Gateway is a **lightweight Express-based gateway service** (`api-gateway
 - Angular interceptor auto-refreshes silently before expiry
 - On refresh token expiry, user is redirected to login
 
+### 4.5 External User Portal & Auth Track
+
+Candidates, recruitment agencies, and clients are **external** — they have no company Google Workspace account and must never reach internal HR data. They are served by a **separate portal and a separate authentication track**.
+
+**Separation model:**
+
+| Aspect | Internal staff | External users |
+|---|---|---|
+| Portal | Main HR Suite app (all feature modules per role) | Dedicated external portal (apply/track, agency submissions, client status only) |
+| Google OAuth app | Company Workspace, **hosted-domain restricted** | Separate OAuth app, **any Google account** allowed |
+| Identity store | `auth.user_account` (linked to `common.employee_snapshot`) | `auth.external_account` (**no BS4/snapshot linkage**) |
+| JWT payload | Full (roles, modules, `bs4EmployeeId`, `legalEntity`, `department`) | Minimal (see below) |
+| Data visibility | Per-role company data | **Only their own** applications/submissions/projects — enforced at service level, not just UI |
+
+**External JWT payload** (no company attributes):
+
+```json
+{
+  "userId": "uuid",
+  "email": "candidate@gmail.com",
+  "audience": "external",
+  "roles": ["candidate"],          // or "agency", "client"
+  "scopeIds": ["application:uuid"], // records this user may touch
+  "iat": 1234567890,
+  "exp": 1234567890
+}
+```
+
+**Enforcement rules:**
+- The API Gateway rejects any `audience: "external"` token on internal routes and vice-versa — the two populations cannot cross the boundary even with a valid token.
+- External accounts carry **no `bs4EmployeeId`, `legalEntity`, or `department`**; services that resolve org/snapshot data reject external tokens outright.
+- Agency and client accounts are **provisioned/invited** by HR/PM (they cannot self-register into a company relationship); a candidate self-registers but is scoped only to their own applications.
+
+```
+auth.external_account
+  id, email, google_sub, account_type (candidate/agency/client),
+  linked_entity_type, linked_entity_id (→ recruitment.agency /
+  recruitment.candidate / project.client), status, invited_by,
+  created_at, updated_at
+```
+
 ---
 
 ## 5. Module 1: Recruitment
@@ -216,8 +278,8 @@ A full Applicant Tracking System (ATS) supporting internal postings, external jo
 |---|---|
 | **HR Admin** | Full system — job requisitions, pipeline management, offers, reporting, agency management |
 | **Hiring Manager** | Department-scoped — raise requisitions, shortlist candidates, interview feedback, offer approval |
-| **Candidate** | Self-service portal — apply, upload documents, track application status |
-| **Recruitment Agency** | Agency portal — submit candidates against open requisitions, track submission status |
+| **Candidate** | **External portal** (see 4.5) — apply, upload documents, track own application status only |
+| **Recruitment Agency** | **External portal** (see 4.5) — submit candidates against open requisitions, track own submission status only |
 
 ### 5.3 Sourcing Channels
 
@@ -341,7 +403,7 @@ employee_handoff
 **Notes:**
 - `stage_template` and `interview_panel` back the configurable pipeline and panel support in 5.4.4 (previously missing).
 - `ai_screening_log` feeds the AI Screening Accuracy metric (11.1) and bias audits (10.5).
-- Resume files live in GCS; `common.document` holds metadata + virus scan status (see 10.4).
+- Resume files live in object storage; `common.document` holds metadata + virus scan status (see 10.4).
 
 ---
 
@@ -491,7 +553,7 @@ A comprehensive project and task management system supporting client-billable pr
 | **Admin** | Full system — all projects, resource management, reporting |
 | **Project Manager** | Assigned projects — full project control, resource assignment, reporting |
 | **Team Member** | Assigned tasks — task updates, time logging, comments |
-| **Client** | Client portal (optional) — view project status and milestones only |
+| **Client** | **External portal** (optional, see 4.5) — view own project status and milestones only |
 
 ### 7.3 Project Types
 
@@ -524,7 +586,7 @@ A comprehensive project and task management system supporting client-billable pr
 - Task fields: title, description, assignee(s), priority, due date, estimated hours, status, tags
 - Subtask support (one level deep)
 - Task dependencies (finish-to-start, start-to-start)
-- File attachments per task (stored in GCS, scanned by ClamAV — see 10.4)
+- File attachments per task (stored in object storage, scanned by ClamAV — see 10.4)
 - Comment thread per task with @mentions
 
 #### 7.5.3 Resource Management
@@ -548,7 +610,7 @@ Approved entries sync to Directus ERP via secured API (idempotent)
 Directus ERP processes for payroll / client billing
 ```
 
-- Employees log time directly against tasks (start/stop timer or manual entry)
+- Employees log time directly against tasks via **manual entry** (date + hours + description); no start/stop timer — the user records the entry in whatever way suits them
 - Daily/weekly timesheet view
 - Manager approval workflow for time entries
 - Approved entries sync to Directus ERP (scheduled nightly or event-driven on approval)
@@ -616,7 +678,7 @@ client
 
 **Notes:**
 - `directus_sync_log` + `idempotency_key` implement the retry/DLQ/reconciliation behavior (7.5.4, 8.4).
-- Attachments reference `common.document` (GCS metadata + scan status) instead of a raw URL.
+- Attachments reference `common.document` (object-storage metadata + scan status) instead of a raw URL.
 
 ---
 
@@ -647,7 +709,7 @@ JSON Response → New App Service
 ### 8.2 Authentication
 
 - API Key per service (Auth, Recruitment, Appraisal, Project)
-- Keys stored in **GCP Secret Manager** — never hardcoded
+- Keys stored in the **cloud provider's secrets manager** (GCP Secret Manager / AWS Secrets Manager / Azure Key Vault / HashiCorp Vault) — never hardcoded
 - Keys rotated periodically (quarterly minimum)
 - Each key has defined scopes (read-only vs. read-write)
 
@@ -697,7 +759,8 @@ common.employee_snapshot
   synced_at
 ```
 
-- **Nightly delta sync job** (Cloud Scheduler → Auth Service) pulls changed employees, departments, cost centers, and org hierarchy from BS4
+- **One-time initial backfill** (Phase 1): a full pull of all employees, departments, cost centers, and org hierarchy from BS4 seeds `common.employee_snapshot` before any module goes live. The nightly delta job only maintains it thereafter.
+- **Nightly delta sync job** (a scheduled cron runner → Auth Service) pulls changed employees, departments, cost centers, and org hierarchy from BS4
 - Services read employee/org data from the snapshot; on-demand BS4 pull only as fallback for records missing or stale (> 24h)
 - Login never depends on BS4 availability (see 4.3)
 
@@ -714,7 +777,7 @@ The **Notification & Workflow Service** (:3004, schema `notification`) owns all 
 | **In-App** | WebSocket / SSE (real-time) | Task assignments, approvals pending, feedback requests, mentions |
 | **Email** | SMTP / SendGrid | Interview invites, offer letters, appraisal cycle start, deadline reminders |
 
-> Cloud Run note: the service runs with `min-instances = 1` so WebSocket/SSE connections are not dropped by scale-to-zero.
+> Deployment note: the service keeps **≥ 1 warm instance** (no scale-to-zero) so WebSocket/SSE connections are not dropped.
 
 ### 9.2 Approval Routing Engine
 
@@ -805,7 +868,7 @@ HR data changes must be fully auditable. Requirements:
 - Data retention policy defined per record type (e.g., rejected-candidate resumes purged after 12 months unless consent extended)
 - Access to salary-band and recommendation data restricted to HR Admin role only (enforced at service level, not just UI)
 - Verify obligations under applicable data-protection law (operations indicated in Pakistan; GDPR if any EU candidates/employees are processed)
-- Database encryption at rest (Cloud SQL default) and TLS in transit everywhere
+- Database encryption at rest (managed PostgreSQL default on any provider) and TLS in transit everywhere
 
 ### 10.3 Anonymous Feedback Integrity
 
@@ -815,19 +878,19 @@ HR data changes must be fully auditable. Requirements:
 
 ### 10.4 File Storage & Malware Scanning
 
-- All uploaded files (resumes, task attachments, offer letters) stored in **GCS**; metadata in `common.document`:
+- All uploaded files (resumes, task attachments, offer letters) stored in **S3-compatible object storage**; metadata in `common.document`:
 
 ```
 common.document
   id, module, owner_entity_type, owner_entity_id, filename,
-  content_type, size_bytes, storage_path (GCS), scan_status
+  content_type, size_bytes, storage_path (bucket key), scan_status
   (pending/clean/infected), scan_engine, scanned_at,
   uploaded_by, created_at, updated_at
 ```
 
-- **ClamAV** (`clamd`) runs as a container in the compose/Cloud Run environment; every upload is scanned before `scan_status = clean`
-- `infected` files are quarantined (GCS bucket with no access bindings), uploader and admin are notified, file is never served
-- Downloads go **through the web application only**: service validates the user's permission, then issues a short-lived GCS signed URL. No public GCS URLs anywhere.
+- **ClamAV** (`clamd`) runs as a container in the compose/container environment; every upload is scanned before `scan_status = clean`
+- `infected` files are quarantined (a bucket with no public access bindings), uploader and admin are notified, file is never served
+- Downloads go **through the web application only**: service validates the user's permission, then issues a short-lived **pre-signed URL**. No publicly readable object URLs anywhere.
 
 ### 10.5 AI Screening Guardrails
 
@@ -841,12 +904,22 @@ common.document
 
 | Area | Target |
 |---|---|
-| Database backups | Cloud SQL automated daily backups + point-in-time recovery (PITR) |
+| Database backups | Managed PostgreSQL automated daily backups + point-in-time recovery (PITR) |
 | RPO | ≤ 24 hours (PITR window) |
-| RTO | ≤ 4 hours (redeploy Cloud Run services + restore Cloud SQL) |
-| Service availability | Cloud Run multi-instance; notification service min-instances = 1 |
-| Secrets | GCP Secret Manager only; quarterly rotation |
+| RTO | ≤ 4 hours (redeploy containers + restore managed PostgreSQL) |
+| Service availability | Multi-instance container runtime; notification service keeps ≥ 1 warm instance for WebSocket/SSE |
+| Secrets | Cloud secrets manager only; quarterly rotation |
 | Dependency failure | BS4 down → login unaffected (Google SSO + snapshot cache); Directus down → sync queues and retries, no data loss |
+
+### 10.7 Right to Erasure (GDPR)
+
+Where a data subject (typically a candidate or external user) exercises the right to erasure:
+
+- A **single erasure workflow**, triggered by HR Admin, locates all records for the subject across every schema (`recruitment`, `common.document`, external `auth.external_account`, etc.) and the object-storage files, using the subject's identity keys.
+- Personal data is **deleted or irreversibly anonymized** (name/email/phone/resume removed; a non-identifying tombstone kept only where a foreign key must survive).
+- Object-storage files (resumes, attachments) are deleted from the bucket; the `common.document` row is anonymized.
+- **The append-only `audit_log` is exempt** — it retains the *fact* that an action occurred (actor, action, timestamp) under legitimate-interest/legal-obligation grounds, but PII payloads in before/after snapshots are redacted so the audit trail cannot be used to reconstruct erased data.
+- Every erasure is itself an audited event (who requested, who executed, when, what scope).
 
 ---
 
@@ -894,19 +967,24 @@ common.document
 ```
 hr-suite/
 ├── frontend/
-│   └── hr-suite-app/              ← ONE Angular app (latest Angular + TypeScript)
-│       ├── src/
-│       │   ├── app/
-│       │   │   ├── core/          ← Google SSO login, token mgmt, guards, interceptors
-│       │   │   ├── shared/        ← Shared models, UI components, pipes, directives
-│       │   │   └── features/
-│       │   │       ├── recruitment/    ← lazy-loaded: requisitions, postings,
-│       │   │       │                   applications, interviews, offers, agencies, reports
-│       │   │       ├── appraisal/      ← lazy-loaded: cycles, goals, feedback,
-│       │   │       │                   calibration, recommendations, reports
-│       │   │       └── project-mgmt/   ← lazy-loaded: projects, tasks, kanban,
-│       │   │                           gantt, time-tracking, resources, reports
-│       │   └── environments/
+│   ├── hr-suite-app/              ← INTERNAL Angular app (latest Angular + TypeScript)
+│   │   ├── src/
+│   │   │   ├── app/
+│   │   │   │   ├── core/          ← Internal Google SSO login, token mgmt, guards, interceptors
+│   │   │   │   ├── shared/        ← Shared models, UI components, pipes, directives
+│   │   │   │   └── features/
+│   │   │   │       ├── recruitment/    ← lazy-loaded: requisitions, postings,
+│   │   │   │       │                   applications, interviews, offers, agencies, reports
+│   │   │   │       ├── appraisal/      ← lazy-loaded: cycles, goals, feedback,
+│   │   │   │       │                   calibration, recommendations, reports
+│   │   │   │       └── project-mgmt/   ← lazy-loaded: projects, tasks, kanban,
+│   │   │   │                           gantt, time-tracking, resources, reports
+│   │   │   └── environments/
+│   │   └── package.json
+│   │
+│   └── external-portal-app/       ← SEPARATE Angular app for external users (see 4.5)
+│       ├── src/app/               ← External Google OAuth login; candidate apply/track,
+│       │                            agency submissions, client status — NO company data
 │       └── package.json
 │
 ├── backend/
@@ -995,10 +1073,10 @@ hr-suite/
 │   └── seeds/
 │
 └── infrastructure/
-    ├── gcp/
-    │   ├── cloud-run/            ← Service definitions per service
-    │   ├── cloud-sql/            ← ONE Cloud SQL PostgreSQL instance config
-    │   └── secret-manager/       ← GCP Secret Manager key references
+    ├── deploy/                  ← Cloud-agnostic IaC (per target: Cloud Run / ECS / AKS / k8s)
+    │   ├── runtime/             ← Container service definitions per service
+    │   ├── database/            ← ONE managed PostgreSQL instance config
+    │   └── secrets/             ← Secrets-manager key references (provider-neutral)
     └── docker/
         ├── Dockerfile.gateway
         ├── Dockerfile.auth
@@ -1017,18 +1095,18 @@ hr-suite/
 ### Phase 1 — Foundation (Weeks 1–4)
 - [ ] Finalize BS4 API contract with BS4 team (endpoint specs, auth tokens, rate limits)
 - [ ] **Submit LinkedIn/Indeed partner API applications and verify Rozee.pk API availability** — approval can take weeks; integration ships in Phase 5 but the paperwork starts now
-- [ ] Set up GCP project, **one** Cloud SQL PostgreSQL instance, Secret Manager
+- [ ] Provision cloud infra on the chosen provider: container runtime, **one** managed PostgreSQL instance, secrets manager, object-storage buckets
 - [ ] Scaffold monorepo: Angular app + Node.js services (npm workspaces)
-- [ ] Implement Auth Service (Google SSO + JWT + refresh) and Angular core module (login, guards, interceptors)
+- [ ] Implement Auth Service (Google SSO + JWT + refresh) with **both auth tracks** — internal (hosted-domain) and external portal (public Google, `auth.external_account`, see 4.5) — and Angular core module (login, guards, interceptors)
 - [ ] Implement **minimal Notification & Workflow Service** (email channel, templates, approval_task/workflow_rule, approval callbacks) — required by every later phase
 - [ ] Database migrations for all schemas (`auth`, `common`, `recruitment`, `appraisal`, `project`, `notification`)
-- [ ] Nightly BS4 employee snapshot sync job
-- [ ] GCS buckets + ClamAV (clamd) container with upload-scan pipeline
+- [ ] **One-time initial BS4 backfill** of employee/org/cost-center data into `common.employee_snapshot`, then the nightly delta sync job
+- [ ] Object-storage buckets + ClamAV (clamd) container with upload-scan pipeline
 
 ### Phase 2 — Recruitment Module (Weeks 5–12)
 - [ ] Job Requisition + Approval workflow
 - [ ] Job Posting (internal + agency portal)
-- [ ] Candidate application intake (with resume upload → scan → GCS)
+- [ ] Candidate application intake via external portal (with resume upload → scan → object storage)
 - [ ] AI resume screening integration (pluggable adapter + PII redaction)
 - [ ] Multi-stage interview pipeline + scorecards
 - [ ] Offer management + BS4 hire push
@@ -1057,7 +1135,7 @@ hr-suite/
 - [ ] Security audit (incl. audit-trail verification) + performance testing
 - [ ] Backup/DR restore drill
 - [ ] UAT with HR team, hiring managers, and pilot users
-- [ ] Production deployment on GCP
+- [ ] Production deployment on the selected cloud
 
 ---
 
@@ -1069,14 +1147,17 @@ hr-suite/
 | **Backend** | Node.js + Express.js (service per module + API gateway + auth + notification/workflow + AI) |
 | **API Gateway** | Express-based gateway service (JWT validation, rate limiting, routing) |
 | **Database** | **Single PostgreSQL database** `hr_suite_db`, schema-per-module (`auth`, `common`, `recruitment`, `appraisal`, `project`, `notification`) |
-| **API Protocol** | JSON over HTTP/HTTPS (REST) |
+| **API Protocol** | JSON over HTTP/HTTPS (REST); URL-path versioning (`/api/v1/...`) |
 | **AI Provider** | Pluggable adapter — OpenAI / Google Gemini / Kimi; advisory-only with PII redaction + bias monitoring |
-| **Auth** | Google OAuth 2.0 (same identity as BS4/Directus) + JWT SSO; BS4 profile/role sync with snapshot cache — login works when BS4 is down |
-| **File Storage** | GCS; downloads via web app with authz + signed URLs; ClamAV scan on every upload |
+| **Auth — Internal** | Google OAuth 2.0 (company Workspace, same identity as BS4/Directus) + JWT SSO; BS4 profile/role sync with snapshot cache — login works when BS4 is down |
+| **Auth — External** | Separate portal + separate Google OAuth app (any Google account) for candidates/agencies/clients; `auth.external_account`, minimal JWT, **no company data access** (see 4.5) |
+| **Timezone** | Store all timestamps UTC; display in user's auto-detected local timezone; time entries recorded against user's local calendar day (see 3.5) |
+| **File Storage** | S3-compatible object storage (GCS/S3/Azure Blob); downloads via web app with authz + pre-signed URLs; ClamAV scan on every upload |
 | **Notifications** | Email (SMTP/SendGrid) + In-App (WebSocket/SSE); built in Phase 1–2 (minimal), in-app channel completed in Phase 5 |
 | **Workflows** | Approval routing engine owned by Notification & Workflow Service; approver resolution from org hierarchy snapshot |
 | **Reporting** | Independent per-module dashboards; no cross-module queries in initial build |
-| **Deployment** | GCP (Cloud Run + one Cloud SQL instance) |
+| **Deployment** | **Cloud-agnostic** — Docker containers on any suitable cloud (managed container runtime + one managed PostgreSQL + object storage + secrets manager) |
+| **Compliance** | Append-only audit trail; GDPR right-to-erasure workflow across schemas + object storage (audit log exempt/redacted, see 10.7) |
 | **Recruitment — Sourcing** | Internal + External boards (LinkedIn/Indeed/Rozee) + Agencies |
 | **Recruitment — Roles** | HR Admin, Hiring Manager, Candidate, Agency |
 | **Recruitment — BS4 Hire** | Auto-push core fields + HR onboarding notification |
