@@ -1,0 +1,94 @@
+<div class="page-header">
+  <div>
+    <h1>Appraisal Cycles</h1>
+    <p>Manage performance review cycles and phases</p>
+  </div>
+  <div class="flex gap-2">
+    <button class="btn btn-secondary btn-sm">Export</button>
+    <button class="btn btn-primary btn-sm">+ New Cycle</button>
+  </div>
+</div>
+
+<!-- Phase Timeline -->
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-header">
+    <h3>Current Cycle Phases</h3>
+    <span class="badge badge-blue">2025 Mid-Year Review</span>
+  </div>
+  <div class="phase-timeline">
+    @for (phase of phases; track phase.label; let i = $index) {
+      <div class="phase-step" [class.active]="i === 2" [class.done]="i < 2">
+        <div class="phase-icon">{{ phase.icon }}</div>
+        <div class="phase-label">{{ phase.label }}</div>
+        @if (i < phases.length - 1) {
+          <div class="phase-connector" [class.done]="i < 2"></div>
+        }
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  @for (tab of tabs; track tab) {
+    <button class="tab" [class.active]="activeTab === tab" (click)="setTab(tab)">{{ tab }}</button>
+  }
+</div>
+
+<!-- Cycles Table -->
+<div class="card" style="padding:0;">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Cycle</th>
+          <th>Type</th>
+          <th>Period</th>
+          <th>Phase</th>
+          <th>Completion</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (cycle of cycles; track cycle.id) {
+          <tr style="cursor:pointer;">
+            <td>
+              <div style="font-weight:600;font-size:13px;">{{ cycle.name }}</div>
+              <div style="font-size:11px;color:var(--color-text-secondary);">{{ cycle.id }} · Review: {{ cycle.startDate }} – {{ cycle.endDate }}</div>
+            </td>
+            <td>
+              <span class="badge badge-gray">{{ cycle.type }}</span>
+            </td>
+            <td style="font-size:12px;color:var(--color-text-secondary);">{{ cycle.period }}</td>
+            <td>
+              <span class="badge" [class]="cycle.phaseClass">{{ cycle.phase }}</span>
+            </td>
+            <td>
+              @if (cycle.totalEmployees > 0) {
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div class="progress-bar-wrap" style="width:80px;">
+                    <div class="progress-bar"
+                         [style.width.%]="cycle.pct"
+                         [style.background]="cycle.pct === 100 ? '#059669' : '#0066CC'"></div>
+                  </div>
+                  <span style="font-size:12px;font-weight:600;">{{ cycle.pct }}%</span>
+                  <span style="font-size:11px;color:var(--color-text-secondary);">{{ cycle.completed }}/{{ cycle.totalEmployees }}</span>
+                </div>
+              } @else {
+                <span style="font-size:12px;color:var(--color-text-muted);">Not started</span>
+              }
+            </td>
+            <td>
+              <div style="display:flex;gap:6px;">
+                <button class="btn btn-secondary btn-sm">View</button>
+                @if (cycle.phase !== 'Signed' && cycle.phase !== 'Finalized') {
+                  <button class="btn btn-secondary btn-sm">Edit</button>
+                }
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

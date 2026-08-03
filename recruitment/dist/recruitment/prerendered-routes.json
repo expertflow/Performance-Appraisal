@@ -1,0 +1,9 @@
+{
+  "routes": {
+    "/": {},
+    "/dashboard": {},
+    "/offer": {},
+    "/pipeline": {},
+    "/requisitions": {}
+  }
+}

@@ -1,0 +1,109 @@
+<div class="page-header">
+  <div>
+    <h1>Job Requisitions</h1>
+    <p>Manage and track all open hiring requests</p>
+  </div>
+  <div class="flex gap-2">
+    <button class="btn btn-secondary btn-sm">Export</button>
+    <button class="btn btn-primary btn-sm">+ New Requisition</button>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+  <input class="form-control" style="width:240px;" placeholder="🔍 Search requisitions..." />
+  <select class="form-control" style="width:160px;">
+    <option>All Departments</option>
+    <option>Engineering</option>
+    <option>Product</option>
+    <option>Design</option>
+    <option>Operations</option>
+  </select>
+  <select class="form-control" style="width:140px;">
+    <option>All Locations</option>
+    <option>Lahore</option>
+    <option>Karachi</option>
+    <option>Islamabad</option>
+  </select>
+  <select class="form-control" style="width:140px;">
+    <option>All Priorities</option>
+    <option>Urgent</option>
+    <option>High</option>
+    <option>Normal</option>
+  </select>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  @for (tab of tabs; track tab) {
+    <button class="tab" [class.active]="activeTab === tab" (click)="setTab(tab)">{{ tab }}</button>
+  }
+</div>
+
+<!-- Table -->
+<div class="card" style="padding:0;">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Requisition</th>
+          <th>Approval Status</th>
+          <th>Hiring Manager</th>
+          <th>Priority / Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (req of requisitions; track req.id) {
+          <tr class="req-row" [routerLink]="['/recruitment/pipeline']" style="cursor:pointer;">
+            <td>
+              <div style="font-weight:600;font-size:13px;">{{ req.title }}</div>
+              <div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px;">
+                {{ req.id }} · {{ req.dept }} · {{ req.location }} · {{ req.type }} · {{ req.headcount }} HC
+              </div>
+              <div style="font-size:11px;color:var(--color-text-muted);margin-top:1px;">Posted {{ req.posted }}</div>
+            </td>
+            <td>
+              <div class="approval-steps">
+                @for (step of req.approvalSteps; track step.label) {
+                  <div class="approval-step" [class.done]="step.done" [class.pending]="!step.done">
+                    <span class="step-icon">{{ step.done ? '✓' : '○' }}</span>
+                    <span>{{ step.label }}</span>
+                  </div>
+                }
+              </div>
+            </td>
+            <td>
+              <div class="td-user">
+                <div class="user-avatar-sm">{{ req.hiringManagerInitial }}</div>
+                <span>{{ req.hiringManager }}</span>
+              </div>
+            </td>
+            <td>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <span class="badge" [class]="req.priorityClass">{{ req.priority }}</span>
+                <span class="badge" [class]="req.statusClass">{{ req.status }}</span>
+              </div>
+            </td>
+            <td>
+              <div style="display:flex;gap:6px;">
+                <button class="btn btn-secondary btn-sm" (click)="$event.stopPropagation()">Edit</button>
+                <button class="btn btn-secondary btn-sm" (click)="$event.stopPropagation()">View</button>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;font-size:13px;color:var(--color-text-secondary);border-top:1px solid var(--color-border);">
+    <span>Showing 5 of 41 requisitions</span>
+    <div style="display:flex;gap:4px;">
+      <button class="btn btn-secondary btn-sm">← Prev</button>
+      <button class="btn btn-primary btn-sm">1</button>
+      <button class="btn btn-secondary btn-sm">2</button>
+      <button class="btn btn-secondary btn-sm">3</button>
+      <button class="btn btn-secondary btn-sm">Next →</button>
+    </div>
+  </div>
+</div>

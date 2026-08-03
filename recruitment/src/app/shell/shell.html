@@ -1,0 +1,61 @@
+<div class="app-shell">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">EF</div>
+      <div class="logo-text">
+        <span class="logo-title">Recruitment</span>
+        <span class="logo-sub">ExpertFlow</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Recruitment</div>
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📊</span>
+        <span>Dashboard</span>
+      </a>
+      <a routerLink="/requisitions" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📋</span>
+        <span>Job Requisitions</span>
+      </a>
+      <a routerLink="/pipeline" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🔄</span>
+        <span>Pipeline</span>
+      </a>
+      <a routerLink="/offer" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📝</span>
+        <span>Offer Management</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar">A</div>
+        <div class="user-info">
+          <span class="user-name">Andreas</span>
+          <span class="user-role">HR Manager</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-breadcrumb">
+        <span class="breadcrumb-app">Recruitment</span>
+        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-page">{{ currentPage }}</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-icon" title="Notifications">🔔</button>
+        <button class="btn btn-icon" title="Settings">⚙️</button>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <router-outlet />
+    </div>
+  </main>
+</div>

@@ -1,0 +1,87 @@
+<div class="page-header">
+  <div>
+    <h1>Goals</h1>
+    <p>Track employee goals and progress for the current cycle</p>
+  </div>
+  <div class="flex gap-2">
+    <button class="btn btn-secondary btn-sm">Export</button>
+    <button class="btn btn-primary btn-sm">+ Add Goal</button>
+  </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="stat-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px;">
+  <div class="stat-card">
+    <div class="stat-label">Total Goals</div>
+    <div class="stat-value">{{ goals.length }}</div>
+    <div class="stat-sub">Current cycle</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">On Track</div>
+    <div class="stat-value" style="color:var(--color-green);">3</div>
+    <div class="stat-sub">50% of goals</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">At Risk / Overdue</div>
+    <div class="stat-value" style="color:var(--color-orange);">2</div>
+    <div class="stat-sub">Need attention</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Completed</div>
+    <div class="stat-value" style="color:var(--color-teal);">1</div>
+    <div class="stat-sub">17% completion rate</div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="flex gap-2 mb-3" style="flex-wrap:wrap;">
+  <div class="tabs" style="margin-bottom:0;">
+    @for (tab of tabs; track tab) {
+      <button class="tab" [class.active]="activeTab === tab" (click)="setTab(tab)">{{ tab }}</button>
+    }
+  </div>
+  <div style="margin-left:auto;display:flex;gap:8px;">
+    @for (filter of filters; track filter) {
+      <button class="filter-chip" [class.active]="activeFilter === filter" (click)="setFilter(filter)">{{ filter }}</button>
+    }
+  </div>
+</div>
+
+<!-- Goals List -->
+<div class="goals-list">
+  @for (goal of goals; track goal.id) {
+    <div class="goal-card" [class.overdue]="goal.status === 'Overdue'" [class.completed]="goal.status === 'Completed'">
+      <div class="goal-header">
+        <div class="goal-employee">
+          <div class="emp-avatar" [class]="'avatar-' + goal.color">{{ goal.initials }}</div>
+          <div>
+            <div class="emp-name">{{ goal.employee }}</div>
+            <div class="emp-dept">{{ goal.dept }} · {{ goal.category }}</div>
+          </div>
+        </div>
+        <div class="goal-meta">
+          <span class="badge" [class]="goal.statusClass">{{ goal.status }}</span>
+          <span style="font-size:11px;color:var(--color-text-muted);">Due {{ goal.dueDate }}</span>
+        </div>
+      </div>
+
+      <div class="goal-title">{{ goal.title }}</div>
+      <div class="goal-desc">{{ goal.description }}</div>
+
+      <div class="goal-progress">
+        <div class="progress-bar-wrap" style="flex:1;">
+          <div class="progress-bar" [style.width.%]="goal.progress" [style.background]="getProgressColor(goal.progress)"></div>
+        </div>
+        <span class="progress-pct" [style.color]="getProgressColor(goal.progress)">{{ goal.progress }}%</span>
+      </div>
+
+      <div class="goal-footer">
+        <span style="font-size:11px;color:var(--color-text-muted);">{{ goal.id }}</span>
+        <div class="flex gap-2">
+          <button class="btn btn-secondary btn-sm">Update Progress</button>
+          <button class="btn btn-secondary btn-sm">View Details</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,65 @@
+version: '3.9'
+
+# ── Production docker-compose ─────────────────────────────────────────────
+# Usage: docker-compose -f docker-compose.prod.yml up -d --build
+# Set all secrets via environment variables or a .env.prod file.
+# Frontend served on port 80/443 via nginx.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hr_suite_db_prod
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # No port exposure in prod — only accessible within Docker network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hr_suite_backend_prod
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DIRECTUS_URL: ${DIRECTUS_URL}
+      DIRECTUS_TOKEN: ${DIRECTUS_TOKEN}
+      APP_URL: ${APP_URL}
+      CORS_ORIGIN: ${APP_URL}
+    # No port exposure — nginx proxies to backend
+
+  frontend:
+    build:
+      context: ./hr-suite
+      dockerfile: Dockerfile
+    container_name: hr_suite_frontend_prod
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Mount SSL certs when available
+      - ./ssl:/etc/nginx/ssl:ro
+
+volumes:
+  postgres_data_prod:

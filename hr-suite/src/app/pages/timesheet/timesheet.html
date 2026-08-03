@@ -1,0 +1,231 @@
+<div class="page-header">
+  <div>
+    <h1>Timesheet</h1>
+    <p>Log and manage time entries — synced with Directus ERP</p>
+  </div>
+  <div class="flex gap-2">
+    <button class="btn btn-secondary" (click)="triggerSync()" title="Trigger manual sync">🔄 Sync Now</button>
+    <button class="btn btn-primary" (click)="openModal()">+ New Time Entry</button>
+  </div>
+</div>
+
+<!-- Alerts -->
+@if (success) {
+  <div class="alert alert-success mb-3">{{ success }}</div>
+}
+@if (error && !showModal) {
+  <div class="alert alert-error mb-3">{{ error }}</div>
+}
+
+<!-- Filters -->
+<div class="filter-bar">
+  <div class="form-group" style="flex:1; min-width:160px;">
+    <select class="form-control" title="Filter by project" [(ngModel)]="filterProjectId" (change)="loadTimeEntries()">
+      <option value="">All Projects</option>
+      @for (p of projects; track p.id) {
+        <option [value]="p.id">{{ p.name }}</option>
+      }
+    </select>
+  </div>
+  <div class="form-group" style="flex:1; min-width:160px;">
+    <select class="form-control" title="Filter by employee" [(ngModel)]="filterEmployeeId" (change)="loadTimeEntries()">
+      <option value="">All Employees</option>
+      @for (e of employees; track e.id) {
+        <option [value]="e.id">{{ e.first_name }} {{ e.last_name }}</option>
+      }
+    </select>
+  </div>
+  <div class="form-group">
+    <input type="date" class="form-control" [(ngModel)]="filterDateFrom" (change)="loadTimeEntries()" placeholder="From">
+  </div>
+  <div class="form-group">
+    <input type="date" class="form-control" [(ngModel)]="filterDateTo" (change)="loadTimeEntries()" placeholder="To">
+  </div>
+</div>
+
+<!-- Table -->
+<div class="card">
+  @if (loading) {
+    <div class="flex items-center gap-2" style="padding: 20px 0;">
+      <div class="spinner"></div>
+      <span class="text-muted">Loading time entries…</span>
+    </div>
+  } @else if (timeEntries.length === 0) {
+    <div style="text-align:center; padding: 40px 0; color: var(--color-text-muted);">
+      <div style="font-size: 32px; margin-bottom: 8px;">⏱️</div>
+      <p>No time entries found.</p>
+      <button class="btn btn-primary" style="margin-top: 12px;" (click)="openModal()">+ Log Your First Entry</button>
+    </div>
+  } @else {
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Project</th>
+            <th>Description</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Hours</th>
+            <th>Status</th>
+            <th>Sync</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (entry of timeEntries; track entry.id) {
+            <tr>
+              <td>{{ getEmployeeName(entry.employee_id) }}</td>
+              <td>{{ getProjectName(entry.project_id) }}</td>
+              <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                {{ entry.description || '—' }}
+              </td>
+              <td>{{ entry.start_datetime | date:'dd MMM, HH:mm' }}</td>
+              <td>{{ entry.end_datetime | date:'dd MMM, HH:mm' }}</td>
+              <td><strong>{{ formatHours(entry.hours_worked) }}</strong></td>
+              <td>
+                <span class="badge" [class]="entry.status === 'approved' ? 'badge-green' : entry.status === 'rejected' ? 'badge-red' : 'badge-orange'">
+                  {{ entry.status }}
+                </span>
+              </td>
+              <td>
+                <span class="badge" [class]="getSyncBadge(entry.directus_sync_status)">
+                  {{ entry.directus_sync_status ?? 'pending' }}
+                </span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+
+<!-- ── New Time Entry Modal ── -->
+@if (showModal) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>New Time Entry</h2>
+        <button class="btn btn-icon" (click)="closeModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        @if (error) {
+          <div class="alert alert-error">{{ error }}</div>
+        }
+        @if (success) {
+          <div class="alert alert-success">{{ success }}</div>
+        }
+
+        <!-- Row 1: Project + Employee -->
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Project <span style="color:var(--color-red)">*</span></label>
+            <select class="form-control" title="Select project" [(ngModel)]="form.project_id" (change)="onProjectChange()">
+              <option value="">— Select Project —</option>
+              @for (p of projects; track p.id) {
+                <option [value]="p.id">{{ p.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Employee <span style="color:var(--color-red)">*</span></label>
+            <select class="form-control" title="Select employee" [(ngModel)]="form.employee_id">
+              <option value="">— Select Employee —</option>
+              @for (e of employees; track e.id) {
+                <option [value]="e.id">{{ e.first_name }} {{ e.last_name }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 2: Task + Subtask (cascading) -->
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Task <span style="color:var(--color-red)">*</span></label>
+            <select class="form-control" title="Select task" [(ngModel)]="form.task_id" (change)="onTaskChange()"
+                    [disabled]="!form.project_id">
+              <option value="">— Select Task —</option>
+              @for (t of tasks; track t.id) {
+                <option [value]="t.id">{{ t.title }}</option>
+              }
+            </select>
+            @if (!form.project_id) {
+              <small class="text-muted">Select a project first</small>
+            }
+          </div>
+          <div class="form-group">
+            <label class="form-label">Subtask</label>
+            <select class="form-control" title="Select subtask" [(ngModel)]="form.subtask_id"
+                    [disabled]="!form.task_id">
+              <option value="">— None —</option>
+              @for (s of subtasks; track s.id) {
+                <option [value]="s.id">{{ s.title }}</option>
+              }
+            </select>
+            @if (!form.task_id) {
+              <small class="text-muted">Select a task first</small>
+            }
+          </div>
+        </div>
+
+        <!-- Row 3: Start + End datetime -->
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Start Date & Time <span style="color:var(--color-red)">*</span></label>
+            <input type="datetime-local" class="form-control" title="Start date and time"
+                   [(ngModel)]="form.start_datetime"
+                   (change)="onDatetimeChange()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">End Date & Time <span style="color:var(--color-red)">*</span></label>
+            <input type="datetime-local" class="form-control" title="End date and time"
+                   [(ngModel)]="form.end_datetime"
+                   (change)="onDatetimeChange()">
+          </div>
+        </div>
+
+        <!-- Row 4: Hours Worked (auto-calculated) -->
+        <div class="form-group">
+          <label class="form-label">
+            Hours Worked <span style="color:var(--color-red)">*</span>
+            @if (!hoursManuallyEdited && form.hours_worked) {
+              <span class="badge badge-teal" style="margin-left:6px;">Auto-calculated</span>
+            }
+            @if (hoursManuallyEdited) {
+              <span class="badge badge-orange" style="margin-left:6px;">Manual</span>
+              <button class="btn btn-sm btn-secondary" style="margin-left:6px; padding:2px 8px; font-size:11px;"
+                      (click)="resetHoursManual()">↺ Recalculate</button>
+            }
+          </label>
+          <input type="number" class="form-control" step="0.25" min="0.25" max="24"
+                 [(ngModel)]="form.hours_worked"
+                 (input)="onHoursManualEdit()"
+                 placeholder="e.g. 2.5">
+          @if (form.start_datetime && form.end_datetime && form.hours_worked) {
+            <small class="text-muted">= {{ formatHours(form.hours_worked) }}</small>
+          }
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-control" rows="3" [(ngModel)]="form.description"
+                    placeholder="What did you work on?"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeModal()" [disabled]="saving">Cancel</button>
+        <button class="btn btn-primary" (click)="submitEntry()" [disabled]="saving">
+          @if (saving) {
+            <span class="spinner" style="width:14px;height:14px;border-width:2px;"></span>
+            Saving…
+          } @else {
+            Save Entry
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}

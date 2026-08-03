@@ -1,0 +1,83 @@
+<div class="page-header">
+  <div>
+    <h1>Tasks</h1>
+    <p>All tasks with expandable subtasks</p>
+  </div>
+  <a routerLink="/timesheet" class="btn btn-primary">⏱️ Log Time</a>
+</div>
+
+<!-- Filter -->
+<div class="filter-bar">
+  <div class="form-group" style="min-width:200px;">
+    <select class="form-control" title="Filter by project" [(ngModel)]="filterProjectId" (change)="loadTasks()">
+      <option value="">All Projects</option>
+      @for (p of projects; track p.id) {
+        <option [value]="p.id">{{ p.name }}</option>
+      }
+    </select>
+  </div>
+</div>
+
+<div class="card">
+  @if (loading) {
+    <div class="flex items-center gap-2" style="padding:20px 0;"><div class="spinner"></div><span class="text-muted">Loading tasks…</span></div>
+  } @else if (tasks.length === 0) {
+    <p class="text-muted" style="padding:20px 0;">No tasks found.</p>
+  } @else {
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:32px;"></th>
+            <th>Task</th>
+            <th>Project</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Due Date</th>
+            <th>Est. Hours</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (task of tasks; track task.id) {
+            <!-- Parent task row -->
+            <tr class="task-row" (click)="toggleExpand(task.id)">
+              <td style="text-align:center; cursor:pointer;">
+                @if (task.subtasks && task.subtasks.length > 0) {
+                  <span>{{ isExpanded(task.id) ? '▼' : '▶' }}</span>
+                }
+              </td>
+              <td>
+                <strong>{{ task.title }}</strong>
+                @if (task.subtasks && task.subtasks.length > 0) {
+                  <span class="badge badge-gray" style="margin-left:6px;">{{ task.subtasks.length }} subtasks</span>
+                }
+              </td>
+              <td>{{ getProjectName(task.project_id) }}</td>
+              <td><span class="badge" [class]="priorityClass(task.priority)">{{ task.priority }}</span></td>
+              <td><span class="badge" [class]="statusClass(task.status)">{{ task.status }}</span></td>
+              <td>{{ task.due_date ? (task.due_date | date:'dd MMM yyyy') : '—' }}</td>
+              <td>{{ task.estimated_hours ?? '—' }}</td>
+            </tr>
+            <!-- Subtask rows -->
+            @if (isExpanded(task.id) && task.subtasks) {
+              @for (sub of task.subtasks; track sub.id) {
+                <tr class="subtask-row">
+                  <td></td>
+                  <td style="padding-left:28px;">
+                    <span style="color:var(--color-text-muted); margin-right:6px;">↳</span>
+                    {{ sub.title }}
+                  </td>
+                  <td>{{ getProjectName(sub.project_id) }}</td>
+                  <td><span class="badge" [class]="priorityClass(sub.priority)">{{ sub.priority }}</span></td>
+                  <td><span class="badge" [class]="statusClass(sub.status)">{{ sub.status }}</span></td>
+                  <td>{{ sub.due_date ? (sub.due_date | date:'dd MMM yyyy') : '—' }}</td>
+                  <td>{{ sub.estimated_hours ?? '—' }}</td>
+                </tr>
+              }
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

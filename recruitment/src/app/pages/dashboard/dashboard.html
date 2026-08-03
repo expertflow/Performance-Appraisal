@@ -1,0 +1,86 @@
+<div class="page-header">
+  <div>
+    <h1>Recruitment Dashboard</h1>
+    <p>Overview of all active hiring activity</p>
+  </div>
+  <div class="flex gap-2">
+    <button class="btn btn-secondary btn-sm">Export</button>
+    <a routerLink="/requisitions" class="btn btn-primary btn-sm">+ New Requisition</a>
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="stat-grid" style="grid-template-columns: repeat(5, 1fr);">
+  @for (stat of stats; track stat.label) {
+    <div class="stat-card">
+      <div class="stat-label">{{ stat.label }}</div>
+      <div class="stat-value">{{ stat.value }}</div>
+      <div class="stat-sub">{{ stat.sub }}</div>
+    </div>
+  }
+</div>
+
+<!-- Hiring Funnel -->
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <h3>Hiring Funnel</h3>
+    <span class="text-secondary" style="font-size:12px;">Last 30 days</span>
+  </div>
+  <div class="funnel-bar">
+    @for (stage of funnelStages; track stage.label) {
+      <div class="funnel-segment" [style.width.%]="stage.pct" [style.background]="stage.color">
+        <span>{{ stage.label }} ({{ stage.count }})</span>
+      </div>
+    }
+  </div>
+  <div class="flex gap-3 mt-2" style="font-size:12px; color: var(--color-text-secondary);">
+    @for (stage of funnelStages; track stage.label) {
+      <span style="display:flex;align-items:center;gap:4px;">
+        <span style="width:10px;height:10px;border-radius:2px;display:inline-block;" [style.background]="stage.color"></span>
+        {{ stage.label }}
+      </span>
+    }
+  </div>
+</div>
+
+<!-- Job Cards -->
+<div class="card-header" style="margin-bottom:12px;">
+  <h3>Active Job Openings</h3>
+  <div class="tabs" style="margin-bottom:0;">
+    <button class="tab active">All Jobs</button>
+    <button class="tab">Active</button>
+    <button class="tab">On Hold</button>
+    <button class="tab">Closed</button>
+  </div>
+</div>
+
+@for (job of jobs; track job.title) {
+  <div class="job-card" [routerLink]="['/pipeline']">
+    <div class="job-info">
+      <div class="job-title">{{ job.title }}</div>
+      <div class="job-meta">
+        <span>{{ job.dept }}</span>
+        <span class="sep">·</span>
+        <span>{{ job.location }}</span>
+        <span class="sep">·</span>
+        <span>{{ job.type }}</span>
+        <span class="sep">·</span>
+        <span>Posted {{ job.posted }}</span>
+      </div>
+    </div>
+    <div class="job-stats">
+      <div class="job-stat">
+        <span class="job-stat-value">{{ job.applicants }}</span>
+        <span class="job-stat-label">Applicants</span>
+      </div>
+      <div class="job-stat">
+        <span class="job-stat-value">{{ job.interviews }}</span>
+        <span class="job-stat-label">Interviews</span>
+      </div>
+    </div>
+    <div class="job-actions">
+      <span class="badge" [class]="job.statusClass">{{ job.status }}</span>
+      <button class="btn btn-secondary btn-sm">View Pipeline</button>
+    </div>
+  </div>
+}

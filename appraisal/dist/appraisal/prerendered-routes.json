@@ -1,0 +1,9 @@
+{
+  "routes": {
+    "/": {},
+    "/cycles": {},
+    "/dashboard": {},
+    "/feedback": {},
+    "/goals": {}
+  }
+}

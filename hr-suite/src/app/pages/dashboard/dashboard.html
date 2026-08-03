@@ -1,0 +1,150 @@
+<!-- Welcome Banner -->
+<div class="welcome-banner">
+  <div>
+    <h1>Welcome back, Admin 👋</h1>
+    <p>Here's what's happening across your organization today.</p>
+  </div>
+  <div class="welcome-actions">
+    <button class="btn btn-secondary btn-sm">View Reports</button>
+    <button class="btn btn-primary btn-sm">+ Quick Action</button>
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="stat-grid" style="grid-template-columns: repeat(4, 1fr);">
+  @for (stat of stats; track stat.label) {
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-icon">{{ stat.icon }}</span>
+        <div class="stat-label">{{ stat.label }}</div>
+      </div>
+      <div class="stat-value">{{ stat.value }}</div>
+      <div class="stat-sub">{{ stat.sub }}</div>
+    </div>
+  }
+</div>
+
+<!-- Module Navigation Cards -->
+<div class="module-cards-grid">
+  <!-- Recruitment -->
+  <a routerLink="/recruitment" class="module-nav-card blue-card">
+    <div class="module-nav-header">
+      <div class="module-nav-icon">👥</div>
+      <div>
+        <div class="module-nav-title">Recruitment</div>
+        <div class="module-nav-sub">Hiring pipeline & offers</div>
+      </div>
+    </div>
+    <div class="module-nav-stats">
+      <div>
+        <div class="module-stat-value">24</div>
+        <div class="module-stat-label">Open Positions</div>
+      </div>
+      <div>
+        <div class="module-stat-value">187</div>
+        <div class="module-stat-label">Candidates</div>
+      </div>
+      <div>
+        <div class="module-stat-value">6</div>
+        <div class="module-stat-label">Offers Pending</div>
+      </div>
+    </div>
+    <div class="module-nav-arrow">→</div>
+  </a>
+
+  <!-- Performance Appraisal -->
+  <a routerLink="/appraisal" class="module-nav-card purple-card">
+    <div class="module-nav-header">
+      <div class="module-nav-icon">📊</div>
+      <div>
+        <div class="module-nav-title">Performance Appraisal</div>
+        <div class="module-nav-sub">Reviews, goals & feedback</div>
+      </div>
+    </div>
+    <div class="module-nav-stats">
+      <div>
+        <div class="module-stat-value">142</div>
+        <div class="module-stat-label">In Cycle</div>
+      </div>
+      <div>
+        <div class="module-stat-value">68%</div>
+        <div class="module-stat-label">Completion</div>
+      </div>
+      <div>
+        <div class="module-stat-value">12</div>
+        <div class="module-stat-label">Days Left</div>
+      </div>
+    </div>
+    <div class="module-nav-arrow">→</div>
+  </a>
+
+  <!-- Project Management -->
+  <a routerLink="/projects" class="module-nav-card teal-card">
+    <div class="module-nav-header">
+      <div class="module-nav-icon">📋</div>
+      <div>
+        <div class="module-nav-title">Project Management</div>
+        <div class="module-nav-sub">Tasks, kanban & timesheets</div>
+      </div>
+    </div>
+    <div class="module-nav-stats">
+      <div>
+        <div class="module-stat-value">18</div>
+        <div class="module-stat-label">Active Projects</div>
+      </div>
+      <div>
+        <div class="module-stat-value">94</div>
+        <div class="module-stat-label">Open Tasks</div>
+      </div>
+      <div>
+        <div class="module-stat-value">3</div>
+        <div class="module-stat-label">At Risk</div>
+      </div>
+    </div>
+    <div class="module-nav-arrow">→</div>
+  </a>
+</div>
+
+<!-- Bottom Grid -->
+<div class="bottom-grid">
+  <!-- Recent Activity -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h3>Recent Activity</h3>
+        <p style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">Latest updates across all modules</p>
+      </div>
+      <button class="btn btn-secondary btn-sm">View All</button>
+    </div>
+    @for (item of recentActivity; track item.text) {
+      <div class="activity-item">
+        <span class="activity-icon">{{ item.icon }}</span>
+        <div class="activity-content">
+          <div class="activity-text">{{ item.text }}</div>
+          <div class="activity-time">{{ item.time }}</div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Pending Actions -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h3>Pending Actions</h3>
+        <p style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">Items requiring your attention</p>
+      </div>
+      <span class="badge badge-red">{{ pendingActions.length }}</span>
+    </div>
+    @for (action of pendingActions; track action.text) {
+      <a [routerLink]="action.link" class="pending-item">
+        <div class="pending-dot" [class.urgent]="action.urgent"></div>
+        <div class="pending-content">
+          <div class="pending-text">{{ action.text }}</div>
+          <div class="pending-module">{{ action.module }}</div>
+        </div>
+        <span class="pending-arrow">→</span>
+      </a>
+    }
+  </div>
+</div>

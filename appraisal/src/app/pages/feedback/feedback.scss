@@ -1,0 +1,32 @@
+.td-person {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.person-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 11px;
+  color: #fff;
+  flex-shrink: 0;
+
+  &.avatar-blue { background: var(--color-blue); }
+  &.avatar-teal { background: var(--color-teal); }
+  &.avatar-purple { background: var(--color-purple); }
+  &.avatar-orange { background: var(--color-orange); }
+}
+
+.overdue-row td {
+  background: #FFF7F7;
+}
+
+.overdue-date {
+  color: var(--color-red);
+  font-weight: 600;
+}

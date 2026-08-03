@@ -1,0 +1,81 @@
+<div class="app-shell">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <a routerLink="/dashboard" class="sidebar-logo">
+      <div class="logo-mark">EF</div>
+      <div class="logo-text">
+        <span class="logo-title">ExpertFlow</span>
+        <span class="logo-sub">HR Suite</span>
+      </div>
+    </a>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🏠</span>
+        <span>Dashboard</span>
+      </a>
+
+      <div class="nav-section-label">Modules</div>
+      <a routerLink="/recruitment" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">👥</span>
+        <span>Recruitment</span>
+        <span class="nav-badge">5</span>
+      </a>
+      <a routerLink="/appraisal" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📊</span>
+        <span>Performance Appraisal</span>
+        <span class="nav-badge nav-badge-orange">3</span>
+      </a>
+      <a routerLink="/projects" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📋</span>
+        <span>Project Management</span>
+        <span class="nav-badge nav-badge-green">2</span>
+      </a>
+
+      <div class="nav-section-label">Administration</div>
+      <a routerLink="/employees" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">👤</span>
+        <span>Employees</span>
+      </a>
+      <a routerLink="/notifications" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🔔</span>
+        <span>Notifications</span>
+        <span class="nav-badge">8</span>
+      </a>
+      <a routerLink="/settings" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">⚙️</span>
+        <span>Settings</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar">A</div>
+        <div class="user-info">
+          <span class="user-name">Andreas</span>
+          <span class="user-role">Admin</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-breadcrumb">
+        <span class="breadcrumb-app">ExpertFlow HR Suite</span>
+        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-page">{{ currentPage }}</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-icon" title="Notifications">🔔</button>
+        <button class="btn btn-icon" title="Settings">⚙️</button>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <router-outlet />
+    </div>
+  </main>
+</div>

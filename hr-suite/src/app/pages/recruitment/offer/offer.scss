@@ -1,0 +1,28 @@
+.td-candidate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.candidate-avatar-sm {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 11px;
+  color: #fff;
+  flex-shrink: 0;
+
+  &.avatar-teal { background: var(--color-teal); }
+  &.avatar-blue { background: var(--color-blue); }
+  &.avatar-purple { background: var(--color-purple); }
+  &.avatar-orange { background: var(--color-orange); }
+}
+
+.text-orange {
+  color: var(--color-orange);
+  font-weight: 500;
+}

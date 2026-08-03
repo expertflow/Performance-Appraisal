@@ -1,0 +1,101 @@
+<div class="page-header">
+  <div>
+    <h1>Feedback</h1>
+    <p>Manage 360° peer feedback requests for the current cycle</p>
+  </div>
+  <div class="flex gap-2">
+    <button class="btn btn-secondary btn-sm">Export</button>
+    <button class="btn btn-primary btn-sm">+ Request Feedback</button>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stat-grid" style="grid-template-columns: repeat(4, 1fr);">
+  @for (stat of stats; track stat.label) {
+    <div class="stat-card">
+      <div class="stat-label">{{ stat.label }}</div>
+      <div class="stat-value">{{ stat.value }}</div>
+      <div class="stat-sub">{{ stat.sub }}</div>
+    </div>
+  }
+</div>
+
+<!-- Tabs + Filter -->
+<div class="flex items-center justify-between mb-3" style="flex-wrap:wrap;gap:8px;">
+  <div class="tabs" style="margin-bottom:0;">
+    @for (tab of tabs; track tab) {
+      <button class="tab" [class.active]="activeTab === tab" (click)="setTab(tab)">{{ tab }}</button>
+    }
+  </div>
+  <div class="flex gap-2">
+    <input class="form-control" style="width:200px;" placeholder="🔍 Search..." />
+    <select class="form-control" style="width:160px;" title="Filter by cycle">
+      <option>2025 Mid-Year Review</option>
+      <option>2025 Q1 Check-in</option>
+    </select>
+  </div>
+</div>
+
+<!-- Feedback Table -->
+<div class="card" style="padding:0;">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Reviewer</th>
+          <th>Type</th>
+          <th>Cycle</th>
+          <th>Requested</th>
+          <th>Due Date</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (fb of feedbackRequests; track fb.id) {
+          <tr [class.overdue-row]="fb.status === 'Overdue'">
+            <td>
+              <div class="td-person">
+                <div class="person-avatar" [class]="'avatar-' + fb.subjectColor">{{ fb.subjectInitials }}</div>
+                <div>
+                  <div style="font-weight:600;font-size:13px;">{{ fb.subject }}</div>
+                  <div style="font-size:11px;color:var(--color-text-muted);">{{ fb.id }}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="td-person">
+                <div class="person-avatar" [class]="'avatar-' + fb.reviewerColor">{{ fb.reviewerInitials }}</div>
+                <span style="font-size:13px;">{{ fb.reviewer }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="badge" [class]="fb.typeClass">{{ fb.type }}</span>
+            </td>
+            <td style="font-size:12px;color:var(--color-text-secondary);">{{ fb.cycle }}</td>
+            <td style="font-size:12px;">{{ fb.requestedDate }}</td>
+            <td>
+              <span [class.overdue-date]="fb.status === 'Overdue'" style="font-size:12px;">{{ fb.dueDate }}</span>
+            </td>
+            <td>
+              <span class="badge" [class]="fb.statusClass">{{ fb.status }}</span>
+            </td>
+            <td>
+              <div style="display:flex;gap:6px;">
+                @if (fb.status === 'Completed') {
+                  <button class="btn btn-secondary btn-sm">View</button>
+                } @else if (fb.status === 'Overdue') {
+                  <button class="btn btn-danger btn-sm">Remind</button>
+                } @else {
+                  <button class="btn btn-secondary btn-sm">Remind</button>
+                  <button class="btn btn-secondary btn-sm">Cancel</button>
+                }
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

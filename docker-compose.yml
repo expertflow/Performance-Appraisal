@@ -1,0 +1,70 @@
+version: '3.9'
+
+# ── Local development docker-compose ──────────────────────────────────────
+# Usage: docker-compose up --build
+# Frontend: http://localhost:4200
+# Backend:  http://localhost:3000
+# DB:       localhost:5432
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hr_suite_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hr_suite
+      POSTGRES_USER: hr_suite_user
+      POSTGRES_PASSWORD: changeme
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hr_suite_user -d hr_suite"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hr_suite_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: hr_suite
+      DB_USER: hr_suite_user
+      DB_PASSWORD: changeme
+      DIRECTUS_URL: https://bs4.expertflow.com
+      DIRECTUS_TOKEN: ${DIRECTUS_TOKEN:-}
+      APP_URL: http://localhost:4200
+      CORS_ORIGIN: http://localhost:4200
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend/src:/app/src:ro
+
+  frontend:
+    build:
+      context: ./hr-suite
+      dockerfile: Dockerfile
+    container_name: hr_suite_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "4200:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - BACKEND_URL=http://backend:3000
+
+volumes:
+  postgres_data:
