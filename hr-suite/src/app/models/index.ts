@@ -1,5 +1,27 @@
 // ── Shared models ──────────────────────────────────────────────────────────
 
+export type AppRole = 'AppAdmin' | 'HR' | 'Manager' | 'Employee';
+
+export interface AppUser {
+  id: string;
+  email: string;
+  name: string;
+  role: AppRole;
+  employee_id?: string;   // linked BS4/Directus employee record
+  manager_id?: string;    // for Employee role: their manager's employee_id
+  avatar_url?: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  token: string;
+  user: AppUser;
+}
+
 export interface Employee {
   id: string;
   first_name: string;
@@ -8,6 +30,7 @@ export interface Employee {
   department?: string;
   job_title?: string;
   avatar_url?: string;
+  manager_id?: string;    // reporting hierarchy from BS4 sync
 }
 
 export interface Project {
@@ -71,6 +94,29 @@ export interface TimeEntryFormData {
   start_datetime: string;
   end_datetime: string;
   hours_worked: number | null;
+}
+
+// ── Performance Appraisal ─────────────────────────────────────────────────
+
+export interface PerformanceAppraisal {
+  id: string;
+  employee_id: string;
+  manager_id: string;       // employee_id of the manager
+  cycle_id?: string;
+  rating?: number;          // 1-5
+  comments?: string;
+  goals_met?: number;       // percentage
+  status: 'draft' | 'submitted' | 'acknowledged';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ManagerEmployeeMapping {
+  id: string;
+  manager_employee_id: string;
+  employee_id: string;
+  synced_from_bs4: boolean;
+  created_at: string;
 }
 
 export interface ApiResponse<T> {

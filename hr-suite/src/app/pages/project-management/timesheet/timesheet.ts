@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../services/api';
+import { AuthService } from '../../../services/auth';
 import { TimeEntryService } from '../../../services/time-entry';
 import { TimeEntry, Project, Task, Employee, TimeEntryFormData } from '../../../models';
 
@@ -12,6 +13,13 @@ import { TimeEntry, Project, Task, Employee, TimeEntryFormData } from '../../../
   styleUrl: './timesheet.scss'
 })
 export class Timesheet implements OnInit {
+  private auth = inject(AuthService);
+
+  // ── Role helpers ───────────────────────────────────────────────────────────
+  /** All roles can log time entries (Employee can CRUD their own) */
+  readonly isEmployee = computed(() => this.auth.isEmployee());
+  readonly canLogTime = computed(() => true); // all roles can log time per spec
+
   // Data
   timeEntries: TimeEntry[] = [];
   projects: Project[] = [];
@@ -59,11 +67,17 @@ export class Timesheet implements OnInit {
   }
 
   loadTimeEntries() {
-    const filters: any = {};
-    if (this.filterProjectId) filters.project_id = this.filterProjectId;
-    if (this.filterEmployeeId) filters.employee_id = this.filterEmployeeId;
-    if (this.filterDateFrom) filters.date_from = this.filterDateFrom;
-    if (this.filterDateTo) filters.date_to = this.filterDateTo;
+    const filters: Record<string, string> = {};
+    if (this.filterProjectId) filters['project_id'] = this.filterProjectId;
+    if (this.filterEmployeeId) filters['employee_id'] = this.filterEmployeeId;
+    if (this.filterDateFrom) filters['date_from'] = this.filterDateFrom;
+    if (this.filterDateTo) filters['date_to'] = this.filterDateTo;
+
+    // Employee: auto-filter to their own entries
+    const user = this.auth.currentUser();
+    if (this.auth.isEmployee() && user?.employee_id) {
+      filters['employee_id'] = user.employee_id;
+    }
 
     this.api.getTimeEntries(filters).subscribe({
       next: e => { this.timeEntries = e; this.loading = false; },
@@ -98,7 +112,7 @@ export class Timesheet implements OnInit {
   // ── Hours auto-calculation ────────────────────────────────────────────────
 
   onDatetimeChange() {
-    if (this.hoursManuallyEdited) return; // respect manual override
+    if (this.hoursManuallyEdited) return;
     const calc = this.teService.calculateHours(this.form.start_datetime, this.form.end_datetime);
     if (calc !== null) this.form.hours_worked = calc;
   }
@@ -116,6 +130,11 @@ export class Timesheet implements OnInit {
 
   openModal() {
     this.form = this.emptyForm();
+    // Pre-fill employee for Employee role
+    const user = this.auth.currentUser();
+    if (this.auth.isEmployee() && user?.employee_id) {
+      this.form.employee_id = user.employee_id;
+    }
     this.tasks = [];
     this.subtasks = [];
     this.hoursManuallyEdited = false;

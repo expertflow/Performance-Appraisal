@@ -20,116 +20,136 @@
       <!-- MODULES -->
       <div class="nav-section-label">Modules</div>
 
-      <!-- Recruitment -->
-      <button class="nav-module-btn" [class.active]="isModuleActive('recruitment')" (click)="toggleModule('recruitment')">
-        <span class="nav-icon">👥</span>
-        <span class="nav-module-label">Recruitment</span>
-        <span class="nav-badge">5</span>
-        <span class="nav-chevron" [class.open]="expandedModule() === 'recruitment'">›</span>
-      </button>
-      @if (expandedModule() === 'recruitment') {
-        <div class="nav-sub-section">
-          <div class="nav-sub-label">Recruitment</div>
-          <a routerLink="/recruitment" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" class="nav-sub-item">
-            <span class="nav-sub-icon">📊</span>Dashboard
-          </a>
-          <a routerLink="/recruitment/requisitions" routerLinkActive="active" class="nav-sub-item">
-            <span class="nav-sub-icon">📝</span>Job Requisitions
-          </a>
-          <a routerLink="/recruitment/pipeline" routerLinkActive="active" class="nav-sub-item">
-            <span class="nav-sub-icon">🔀</span>Pipeline
-          </a>
-          <a routerLink="/recruitment/agencies" routerLinkActive="active" class="nav-sub-item">
-            <span class="nav-sub-icon">🏢</span>Agencies
-          </a>
-          <a routerLink="/recruitment/offer" routerLinkActive="active" class="nav-sub-item">
-            <span class="nav-sub-icon">💼</span>Offers
-          </a>
-        </div>
+      <!-- Recruitment (AppAdmin, HR only) -->
+      @if (canRecruit) {
+        <button class="nav-module-btn" [class.active]="isModuleActive('recruitment')" (click)="toggleModule('recruitment')">
+          <span class="nav-icon">👥</span>
+          <span class="nav-module-label">Recruitment</span>
+          <span class="nav-badge">5</span>
+          <span class="nav-chevron" [class.open]="expandedModule() === 'recruitment'">›</span>
+        </button>
+        @if (expandedModule() === 'recruitment') {
+          <div class="nav-sub-section">
+            <div class="nav-sub-label">Recruitment</div>
+            <a routerLink="/recruitment" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" class="nav-sub-item">
+              <span class="nav-sub-icon">📊</span>Dashboard
+            </a>
+            <a routerLink="/recruitment/requisitions" routerLinkActive="active" class="nav-sub-item">
+              <span class="nav-sub-icon">📝</span>Job Requisitions
+            </a>
+            <a routerLink="/recruitment/pipeline" routerLinkActive="active" class="nav-sub-item">
+              <span class="nav-sub-icon">🔀</span>Pipeline
+            </a>
+            <a routerLink="/recruitment/agencies" routerLinkActive="active" class="nav-sub-item">
+              <span class="nav-sub-icon">🏢</span>Agencies
+            </a>
+            <a routerLink="/recruitment/offer" routerLinkActive="active" class="nav-sub-item">
+              <span class="nav-sub-icon">💼</span>Offers
+            </a>
+          </div>
+        }
       }
 
-      <!-- Performance Appraisal -->
-      <button class="nav-module-btn" [class.active]="isModuleActive('appraisal')" (click)="toggleModule('appraisal')">
-        <span class="nav-icon">📊</span>
-        <span class="nav-module-label">Performance Appraisal</span>
-        <span class="nav-badge nav-badge-orange">3</span>
-        <span class="nav-chevron" [class.open]="expandedModule() === 'appraisal'">›</span>
-      </button>
-      @if (expandedModule() === 'appraisal') {
-        <div class="nav-sub-section">
-          <div class="nav-sub-label">Appraisal</div>
-          <a routerLink="/appraisal" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" class="nav-sub-item">
-            <span class="nav-sub-icon">📊</span>Dashboard
-          </a>
-          <a routerLink="/appraisal/cycles" routerLinkActive="active" class="nav-sub-item">
-            <span class="nav-sub-icon">🔄</span>Review Cycles
-          </a>
-          <a routerLink="/appraisal/goals" routerLinkActive="active" class="nav-sub-item">
-            <span class="nav-sub-icon">🎯</span>Goals
-          </a>
-          <a routerLink="/appraisal/feedback" routerLinkActive="active" class="nav-sub-item">
-            <span class="nav-sub-icon">💬</span>Feedback
-          </a>
-          <a routerLink="/appraisal/organogram" routerLinkActive="active" class="nav-sub-item">
-            <span class="nav-sub-icon">🌳</span>Organogram
-          </a>
-        </div>
+      <!-- Performance Appraisal (all roles) -->
+      @if (canAppraisal) {
+        <button class="nav-module-btn" [class.active]="isModuleActive('appraisal')" (click)="toggleModule('appraisal')">
+          <span class="nav-icon">📊</span>
+          <span class="nav-module-label">Performance Appraisal</span>
+          <span class="nav-badge nav-badge-orange">3</span>
+          <span class="nav-chevron" [class.open]="expandedModule() === 'appraisal'">›</span>
+        </button>
+        @if (expandedModule() === 'appraisal') {
+          <div class="nav-sub-section">
+            <div class="nav-sub-label">Appraisal</div>
+            <a routerLink="/appraisal" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" class="nav-sub-item">
+              <span class="nav-sub-icon">📊</span>Dashboard
+            </a>
+            <!-- Cycles: not for Employee -->
+            @if (!isEmployee) {
+              <a routerLink="/appraisal/cycles" routerLinkActive="active" class="nav-sub-item">
+                <span class="nav-sub-icon">🔄</span>Review Cycles
+              </a>
+            }
+            <a routerLink="/appraisal/goals" routerLinkActive="active" class="nav-sub-item">
+              <span class="nav-sub-icon">🎯</span>Goals
+            </a>
+            <a routerLink="/appraisal/feedback" routerLinkActive="active" class="nav-sub-item">
+              <span class="nav-sub-icon">💬</span>Feedback
+            </a>
+            <!-- Organogram: AppAdmin, HR only -->
+            @if (canRecruit) {
+              <a routerLink="/appraisal/organogram" routerLinkActive="active" class="nav-sub-item">
+                <span class="nav-sub-icon">🌳</span>Organogram
+              </a>
+            }
+          </div>
+        }
       }
 
-      <!-- Project Management -->
-      <button class="nav-module-btn" [class.active]="isModuleActive('projects')" (click)="toggleModule('projects')">
-        <span class="nav-icon">📋</span>
-        <span class="nav-module-label">Project Management</span>
-        <span class="nav-badge nav-badge-green">2</span>
-        <span class="nav-chevron" [class.open]="expandedModule() === 'projects'">›</span>
-      </button>
-      @if (expandedModule() === 'projects') {
-        <div class="nav-sub-section">
-          <div class="nav-sub-label">Projects</div>
-          <a routerLink="/projects" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" class="nav-sub-item">
-            <span class="nav-sub-icon">📊</span>Dashboard
-          </a>
-          <a routerLink="/projects/all" routerLinkActive="active" class="nav-sub-item">
-            <span class="nav-sub-icon">📁</span>All Projects
-          </a>
-          <a routerLink="/tasks" routerLinkActive="active" class="nav-sub-item">
-            <span class="nav-sub-icon">✅</span>Tasks
-          </a>
-          <a routerLink="/kanban" routerLinkActive="active" class="nav-sub-item">
-            <span class="nav-sub-icon">🗂️</span>Kanban Board
-          </a>
-          <a routerLink="/gantt" routerLinkActive="active" class="nav-sub-item">
-            <span class="nav-sub-icon">📅</span>Gantt Chart
-          </a>
-          <a routerLink="/timesheet" routerLinkActive="active" class="nav-sub-item">
-            <span class="nav-sub-icon">⏱️</span>Timesheets
-          </a>
-        </div>
+      <!-- Project Management (all roles) -->
+      @if (canProjects) {
+        <button class="nav-module-btn" [class.active]="isModuleActive('projects')" (click)="toggleModule('projects')">
+          <span class="nav-icon">📋</span>
+          <span class="nav-module-label">Project Management</span>
+          <span class="nav-badge nav-badge-green">2</span>
+          <span class="nav-chevron" [class.open]="expandedModule() === 'projects'">›</span>
+        </button>
+        @if (expandedModule() === 'projects') {
+          <div class="nav-sub-section">
+            <div class="nav-sub-label">Projects</div>
+            <a routerLink="/projects" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" class="nav-sub-item">
+              <span class="nav-sub-icon">📊</span>Dashboard
+            </a>
+            <a routerLink="/projects/all" routerLinkActive="active" class="nav-sub-item">
+              <span class="nav-sub-icon">📁</span>All Projects
+            </a>
+            <a routerLink="/tasks" routerLinkActive="active" class="nav-sub-item">
+              <span class="nav-sub-icon">✅</span>Tasks
+            </a>
+            <a routerLink="/kanban" routerLinkActive="active" class="nav-sub-item">
+              <span class="nav-sub-icon">🗂️</span>Kanban Board
+            </a>
+            <a routerLink="/gantt" routerLinkActive="active" class="nav-sub-item">
+              <span class="nav-sub-icon">📅</span>Gantt Chart
+            </a>
+            <a routerLink="/timesheet" routerLinkActive="active" class="nav-sub-item">
+              <span class="nav-sub-icon">⏱️</span>Timesheets
+            </a>
+          </div>
+        }
       }
 
-      <!-- ADMINISTRATION -->
-      <div class="nav-section-label">Administration</div>
-      <a routerLink="/employees" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">👤</span>
-        <span>Employees</span>
-      </a>
-      <a routerLink="/notifications" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">🔔</span>
-        <span>Notifications</span>
-        <span class="nav-badge">8</span>
-      </a>
-      <a routerLink="/settings" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">⚙️</span>
-        <span>Settings</span>
-      </a>
+      <!-- ADMINISTRATION (AppAdmin, HR only) -->
+      @if (canViewEmployees) {
+        <div class="nav-section-label">Administration</div>
+        <a routerLink="/employees" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">👤</span>
+          <span>Employees</span>
+        </a>
+        <a routerLink="/notifications" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">🔔</span>
+          <span>Notifications</span>
+          <span class="nav-badge">8</span>
+        </a>
+      }
     </nav>
 
+    <!-- Sidebar footer: user card + settings + logout -->
     <div class="sidebar-footer">
+      <a routerLink="/settings" class="sidebar-footer-link" title="Settings">
+        <span>⚙️</span> Settings
+      </a>
+      <a routerLink="/change-password" class="sidebar-footer-link" title="Change Password">
+        <span>🔑</span> Change Password
+      </a>
+      <button class="sidebar-footer-link sidebar-logout" (click)="logout()" title="Logout">
+        <span>🚪</span> Logout
+      </button>
       <div class="user-card">
-        <div class="user-avatar">SH</div>
+        <div class="user-avatar">{{ userInitials }}</div>
         <div class="user-info">
-          <span class="user-name">Sarah Hassan</span>
-          <span class="user-role">HR Administrator</span>
+          <span class="user-name">{{ user?.name ?? 'User' }}</span>
+          <span class="user-role">{{ roleLabel }}</span>
         </div>
       </div>
     </div>
@@ -148,11 +168,37 @@
         <input type="text" class="search-input" [placeholder]="topbarSearch" />
       </div>
       <div class="topbar-actions">
-        <button class="icon-btn" title="Notifications">
+        <a routerLink="/notifications" class="icon-btn" title="Notifications">
           <span>🔔</span>
           <span class="icon-btn-badge">4</span>
-        </button>
-        <div class="user-avatar-sm">SH</div>
+        </a>
+
+        <!-- Top-right user menu -->
+        <div class="user-menu-wrap">
+          <button class="user-avatar-btn" (click)="toggleUserMenu()" title="Account menu">
+            <div class="user-avatar-sm">{{ userInitials }}</div>
+          </button>
+          @if (userMenuOpen()) {
+            <div class="user-dropdown">
+              <div class="user-dropdown-header">
+                <div class="user-dropdown-name">{{ user?.name }}</div>
+                <div class="user-dropdown-email">{{ user?.email }}</div>
+                <span class="role-chip role-{{ user?.role?.toLowerCase() }}">{{ user?.role }}</span>
+              </div>
+              <div class="user-dropdown-divider"></div>
+              <a routerLink="/settings" class="user-dropdown-item">
+                <span>⚙️</span> Settings
+              </a>
+              <a routerLink="/change-password" class="user-dropdown-item">
+                <span>🔑</span> Change Password
+              </a>
+              <div class="user-dropdown-divider"></div>
+              <button class="user-dropdown-item user-dropdown-logout" (click)="logout()">
+                <span>🚪</span> Sign Out
+              </button>
+            </div>
+          }
+        </div>
       </div>
     </header>
 

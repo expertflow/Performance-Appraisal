@@ -1,11 +1,21 @@
 <div class="page-header">
   <div>
-    <h1>Feedback</h1>
-    <p>Manage 360° peer feedback requests for the current cycle</p>
+    <h1>
+      @if (isEmployee()) { My Feedback }
+      @else if (isManager()) { Team Feedback }
+      @else { Feedback }
+    </h1>
+    <p>
+      @if (isEmployee()) { Feedback you've given and received this cycle }
+      @else if (isManager()) { 360° feedback for your team members }
+      @else { Manage 360° peer feedback requests for the current cycle }
+    </p>
   </div>
   <div class="flex gap-2">
     <button class="btn btn-secondary btn-sm" (click)="exportData()">Export</button>
-    <button class="btn btn-primary btn-sm" (click)="openModal()">+ Request Feedback</button>
+    @if (canRequestFeedback()) {
+      <button class="btn btn-primary btn-sm" (click)="openModal()">+ Request Feedback</button>
+    }
   </div>
 </div>
 

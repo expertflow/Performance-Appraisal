@@ -1,0 +1,431 @@
+// ── Layout ────────────────────────────────────────────────────────────────────
+.login-shell {
+  display: flex;
+  min-height: 100vh;
+  background: #F8FAFC;
+}
+
+// ── Brand panel ───────────────────────────────────────────────────────────────
+.brand-panel {
+  flex: 1;
+  // Dark navy gradient matching the mockup
+  background: radial-gradient(ellipse at 30% 20%, #0d2d52 0%, #0a1f3a 40%, #060f1e 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 40px 52px 52px;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+
+  // Subtle radial glow in top-right
+  &::before {
+    content: '';
+    position: absolute;
+    top: -80px;
+    right: -80px;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(24,120,204,0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  @media (max-width: 768px) { display: none; }
+}
+
+// Logo row
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 64px;
+}
+
+.logo-icon {
+  width: 44px;
+  height: 44px;
+  background: #1878cc;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.logo-title {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #fff;
+}
+
+.logo-sub {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+// Hero copy
+.brand-hero {
+  margin-bottom: 48px;
+}
+
+.hero-headline {
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: #fff;
+  margin: 0 0 20px;
+  letter-spacing: -0.5px;
+}
+
+.hero-body {
+  font-size: 15px;
+  line-height: 1.65;
+  color: rgba(255,255,255,0.55);
+  max-width: 480px;
+  margin: 0;
+}
+
+// Module cards
+.brand-modules {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.module-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 14px 18px;
+}
+
+.module-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+
+  &.mod-blue   { background: rgba(24,120,204,0.35); }
+  &.mod-purple { background: rgba(109,40,217,0.35); }
+  &.mod-teal   { background: rgba(13,148,136,0.35); }
+}
+
+.module-icon { line-height: 1; }
+
+.module-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.module-desc {
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+}
+
+// ── Form panel ────────────────────────────────────────────────────────────────
+.form-panel {
+  width: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 32px;
+  background: #fff;
+
+  @media (max-width: 768px) { width: 100%; }
+}
+
+.form-card {
+  width: 100%;
+  max-width: 400px;
+}
+
+.form-header {
+  margin-bottom: 28px;
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 6px;
+    letter-spacing: -0.3px;
+  }
+
+  p {
+    font-size: 14px;
+    color: #64748b;
+    margin: 0;
+  }
+}
+
+// Google SSO button
+.btn-google {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px 16px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  margin-bottom: 20px;
+
+  &:hover {
+    border-color: #94a3b8;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+}
+
+.google-icon { flex-shrink: 0; }
+
+// Divider
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  color: #94a3b8;
+  font-size: 12px;
+
+  &::before, &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+  }
+}
+
+// Form fields
+.form-group { margin-bottom: 18px; }
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1e293b;
+  background: #fff;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: #1878cc;
+    box-shadow: 0 0 0 3px rgba(24,120,204,0.12);
+  }
+
+  &::placeholder { color: #94a3b8; }
+}
+
+.input-with-action {
+  position: relative;
+
+  .form-control { padding-right: 44px; }
+}
+
+.toggle-pass {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  line-height: 1;
+}
+
+// Keep signed in + forgot password row
+.form-row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: #1878cc;
+  cursor: pointer;
+}
+
+.forgot-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1878cc;
+  text-decoration: none;
+
+  &:hover { text-decoration: underline; }
+}
+
+// Sign In button
+.btn-signin {
+  width: 100%;
+  padding: 13px;
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: #1878cc;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.15s;
+  margin-bottom: 20px;
+
+  &:hover:not(:disabled) { background: #1260a8; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+// Alert
+.alert {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.alert-error {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+// Terms text
+.terms-text {
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: center;
+  line-height: 1.6;
+  margin: 0 0 16px;
+}
+
+.terms-link {
+  color: #1878cc;
+  text-decoration: none;
+
+  &:hover { text-decoration: underline; }
+}
+
+// Trust badges
+.trust-badges {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+  margin-bottom: 20px;
+}
+
+.trust-badge {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+// ── Demo section ──────────────────────────────────────────────────────────────
+.demo-section {
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.demo-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.demo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.demo-btn {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: all 0.15s;
+
+  &:hover { opacity: 0.85; }
+}
+
+.demo-admin    { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.demo-hr       { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
+.demo-manager  { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+.demo-employee { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+
+// ── Spinner ───────────────────────────────────────────────────────────────────
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

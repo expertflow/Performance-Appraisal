@@ -1,10 +1,15 @@
 <div class="page-header">
   <div>
     <h1>Timesheet</h1>
-    <p>Log and manage time entries — synced with Directus ERP</p>
+    <p>
+      @if (isEmployee()) { Log your time entries for assigned tasks }
+      @else { Log and manage time entries — synced with Directus ERP }
+    </p>
   </div>
   <div class="flex gap-2">
-    <button class="btn btn-secondary" (click)="triggerSync()" title="Trigger manual sync">🔄 Sync Now</button>
+    @if (!isEmployee()) {
+      <button class="btn btn-secondary" (click)="triggerSync()" title="Trigger manual sync">🔄 Sync Now</button>
+    }
     <button class="btn btn-primary" (click)="openModal()">+ New Time Entry</button>
   </div>
 </div>
@@ -27,14 +32,16 @@
       }
     </select>
   </div>
-  <div class="form-group" style="flex:1; min-width:160px;">
-    <select class="form-control" title="Filter by employee" [(ngModel)]="filterEmployeeId" (change)="loadTimeEntries()">
-      <option value="">All Employees</option>
-      @for (e of employees; track e.id) {
-        <option [value]="e.id">{{ e.first_name }} {{ e.last_name }}</option>
-      }
-    </select>
-  </div>
+  @if (!isEmployee()) {
+    <div class="form-group" style="flex:1; min-width:160px;">
+      <select class="form-control" title="Filter by employee" [(ngModel)]="filterEmployeeId" (change)="loadTimeEntries()">
+        <option value="">All Employees</option>
+        @for (e of employees; track e.id) {
+          <option [value]="e.id">{{ e.first_name }} {{ e.last_name }}</option>
+        }
+      </select>
+    </div>
+  }
   <div class="form-group">
     <input type="date" class="form-control" [(ngModel)]="filterDateFrom" (change)="loadTimeEntries()" placeholder="From">
   </div>
@@ -130,12 +137,18 @@
           </div>
           <div class="form-group">
             <label class="form-label">Employee <span style="color:var(--color-red)">*</span></label>
-            <select class="form-control" title="Select employee" [(ngModel)]="form.employee_id">
-              <option value="">— Select Employee —</option>
-              @for (e of employees; track e.id) {
-                <option [value]="e.id">{{ e.first_name }} {{ e.last_name }}</option>
-              }
-            </select>
+            @if (isEmployee()) {
+              <!-- Employee: locked to their own account -->
+              <input class="form-control" [value]="getEmployeeName(form.employee_id)" readonly
+                     style="background:var(--color-bg-secondary);cursor:not-allowed;" title="Your employee account" />
+            } @else {
+              <select class="form-control" title="Select employee" [(ngModel)]="form.employee_id">
+                <option value="">— Select Employee —</option>
+                @for (e of employees; track e.id) {
+                  <option [value]="e.id">{{ e.first_name }} {{ e.last_name }}</option>
+                }
+              </select>
+            }
           </div>
         </div>
 

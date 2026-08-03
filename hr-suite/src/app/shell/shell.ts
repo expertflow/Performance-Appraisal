@@ -3,6 +3,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } fro
 import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { AuthService } from '../services/auth';
 
 @Component({
   selector: 'app-shell',
@@ -12,9 +13,13 @@ import { toSignal } from '@angular/core/rxjs-interop';
 })
 export class Shell {
   private router = inject(Router);
+  readonly auth   = inject(AuthService);
 
-  // Track which module section is expanded using a signal
+  // Track which module section is expanded
   expandedModule = signal<'recruitment' | 'appraisal' | 'projects' | null>(null);
+
+  // User menu dropdown open state
+  userMenuOpen = signal(false);
 
   // Convert router events to a signal so zoneless CD picks up URL changes
   private navEnd = toSignal(
@@ -22,32 +27,49 @@ export class Shell {
     { initialValue: null }
   );
 
-  // Computed signal for current URL — re-evaluates whenever navEnd changes
+  // Computed signal for current URL
   private currentUrl = computed(() => {
-    this.navEnd(); // subscribe to navigation changes
+    this.navEnd();
     return this.router.url;
   });
 
+  // ── Role helpers exposed to template ─────────────────────────────────────
+  get user()           { return this.auth.currentUser(); }
+  get isAppAdmin()     { return this.auth.isAppAdmin(); }
+  get isHR()           { return this.auth.isHR(); }
+  get isManager()      { return this.auth.isManager(); }
+  get isEmployee()     { return this.auth.isEmployee(); }
+  get canRecruit()     { return this.auth.canAccessRecruitment(); }
+  get canAppraisal()   { return this.auth.canAccessAppraisal(); }
+  get canProjects()    { return this.auth.canAccessProjects(); }
+  get canViewEmployees() { return this.auth.canViewEmployees(); }
+
+  get userInitials(): string {
+    const name = this.user?.name ?? '';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  }
+
+  get roleLabel(): string {
+    const r = this.user?.role;
+    if (r === 'AppAdmin') return 'App Administrator';
+    if (r === 'HR')       return 'HR Manager';
+    if (r === 'Manager')  return 'Team Manager';
+    if (r === 'Employee') return 'Employee';
+    return '';
+  }
+
   constructor() {
-    // Auto-expand the active module on navigation using effect-like computed
-    // We use a toSignal + effect pattern to auto-expand
+    // Auto-expand the active module on navigation
     this.router.events.pipe(
       filter(e => e instanceof NavigationEnd)
     ).subscribe(() => {
-      const url = this.router.url;
-      if (url.startsWith('/recruitment')) {
-        this.expandedModule.set('recruitment');
-      } else if (url.startsWith('/appraisal')) {
-        this.expandedModule.set('appraisal');
-      } else if (
-        url.startsWith('/projects') || url.startsWith('/tasks') ||
-        url.startsWith('/kanban') || url.startsWith('/timesheet') || url.startsWith('/gantt')
-      ) {
-        this.expandedModule.set('projects');
-      }
+      this.autoExpand();
+      this.userMenuOpen.set(false); // close user menu on navigation
     });
+    this.autoExpand();
+  }
 
-    // Set initial state based on current URL
+  private autoExpand() {
     const url = this.router.url;
     if (url.startsWith('/recruitment')) {
       this.expandedModule.set('recruitment');
@@ -68,42 +90,52 @@ export class Shell {
   isModuleActive(module: 'recruitment' | 'appraisal' | 'projects'): boolean {
     const url = this.currentUrl();
     if (module === 'recruitment') return url.startsWith('/recruitment');
-    if (module === 'appraisal') return url.startsWith('/appraisal');
-    if (module === 'projects') return (
+    if (module === 'appraisal')   return url.startsWith('/appraisal');
+    if (module === 'projects')    return (
       url.startsWith('/projects') || url.startsWith('/tasks') ||
       url.startsWith('/kanban') || url.startsWith('/timesheet') || url.startsWith('/gantt')
     );
     return false;
   }
 
+  toggleUserMenu() {
+    this.userMenuOpen.set(!this.userMenuOpen());
+  }
+
+  logout() {
+    this.userMenuOpen.set(false);
+    this.auth.logout();
+  }
+
   get currentPage(): string {
     const url = this.currentUrl();
     if (url.startsWith('/recruitment/requisitions')) return 'Job Requisitions';
-    if (url.startsWith('/recruitment/pipeline')) return 'Pipeline';
-    if (url.startsWith('/recruitment/agencies')) return 'Agencies';
-    if (url.startsWith('/recruitment/offer')) return 'Offers';
-    if (url.startsWith('/recruitment')) return 'Recruitment';
-    if (url.startsWith('/appraisal/cycles')) return 'Review Cycles';
-    if (url.startsWith('/appraisal/goals')) return 'Goals';
-    if (url.startsWith('/appraisal/feedback')) return 'Feedback';
-    if (url.startsWith('/appraisal/organogram')) return 'Organogram';
-    if (url.startsWith('/appraisal')) return 'Performance Appraisal';
-    if (url.startsWith('/projects/all')) return 'All Projects';
-    if (url.startsWith('/projects')) return 'Project Management';
-    if (url.startsWith('/tasks')) return 'Tasks';
-    if (url.startsWith('/kanban')) return 'Kanban Board';
-    if (url.startsWith('/gantt')) return 'Gantt Chart';
-    if (url.startsWith('/timesheet')) return 'Timesheets';
-    if (url.startsWith('/employees')) return 'Employees';
-    if (url.startsWith('/notifications')) return 'Notifications';
-    if (url.startsWith('/settings')) return 'Settings';
+    if (url.startsWith('/recruitment/pipeline'))    return 'Pipeline';
+    if (url.startsWith('/recruitment/agencies'))    return 'Agencies';
+    if (url.startsWith('/recruitment/offer'))       return 'Offers';
+    if (url.startsWith('/recruitment'))             return 'Recruitment';
+    if (url.startsWith('/appraisal/cycles'))        return 'Review Cycles';
+    if (url.startsWith('/appraisal/goals'))         return 'Goals';
+    if (url.startsWith('/appraisal/feedback'))      return 'Feedback';
+    if (url.startsWith('/appraisal/organogram'))    return 'Organogram';
+    if (url.startsWith('/appraisal'))               return 'Performance Appraisal';
+    if (url.startsWith('/projects/all'))            return 'All Projects';
+    if (url.startsWith('/projects'))                return 'Project Management';
+    if (url.startsWith('/tasks'))                   return 'Tasks';
+    if (url.startsWith('/kanban'))                  return 'Kanban Board';
+    if (url.startsWith('/gantt'))                   return 'Gantt Chart';
+    if (url.startsWith('/timesheet'))               return 'Timesheets';
+    if (url.startsWith('/employees'))               return 'Employees';
+    if (url.startsWith('/notifications'))           return 'Notifications';
+    if (url.startsWith('/settings'))                return 'Settings';
+    if (url.startsWith('/change-password'))         return 'Change Password';
     return 'Dashboard';
   }
 
   get topbarSearch(): string {
     const url = this.currentUrl();
     if (url.startsWith('/recruitment')) return 'Search jobs, candidates...';
-    if (url.startsWith('/appraisal')) return 'Search employees, cycles...';
+    if (url.startsWith('/appraisal'))   return 'Search employees, cycles...';
     if (
       url.startsWith('/projects') || url.startsWith('/tasks') ||
       url.startsWith('/kanban') || url.startsWith('/gantt') || url.startsWith('/timesheet')

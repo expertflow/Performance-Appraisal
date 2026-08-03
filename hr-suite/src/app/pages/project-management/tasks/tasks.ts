@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../../services/api';
+import { AuthService } from '../../../services/auth';
 import { Task, Project } from '../../../models';
 
 @Component({
@@ -12,6 +13,14 @@ import { Task, Project } from '../../../models';
   styleUrl: './tasks.scss'
 })
 export class Tasks implements OnInit {
+  private auth = inject(AuthService);
+
+  // ── Role helpers ───────────────────────────────────────────────────────────
+  /** Employee can CRUD their own tasks/time entries but cannot create projects */
+  readonly isEmployee = computed(() => this.auth.isEmployee());
+  /** All roles can see tasks; Employee can also create/update tasks */
+  readonly canMutateTasks = computed(() => true); // all roles can manage tasks per spec
+
   tasks: Task[] = [];
   projects: Project[] = [];
   loading = true;

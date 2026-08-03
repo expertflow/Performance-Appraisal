@@ -1,11 +1,29 @@
 <div class="page-header">
   <div>
-    <h1>Appraisal Dashboard</h1>
-    <p>Performance review cycle overview</p>
+    <h1>
+      @if (isEmployee()) { My Appraisal }
+      @else if (isManager()) { Team Appraisal }
+      @else { Appraisal Dashboard }
+    </h1>
+    <p>
+      @if (isEmployee()) { Your performance review for the current cycle }
+      @else if (isManager()) { Your team's performance review overview }
+      @else { Performance review cycle overview }
+    </p>
   </div>
   <div class="flex gap-2">
-    <button class="btn btn-secondary btn-sm">Export Report</button>
-    <a routerLink="/appraisal/cycles" class="btn btn-primary btn-sm">Manage Cycles</a>
+    @if (!isEmployee()) {
+      <button class="btn btn-secondary btn-sm">Export Report</button>
+    }
+    @if (isHROrAdmin()) {
+      <a routerLink="/appraisal/cycles" class="btn btn-primary btn-sm">Manage Cycles</a>
+    }
+    @if (isManager()) {
+      <a routerLink="/appraisal/goals" class="btn btn-primary btn-sm">Review Team Goals</a>
+    }
+    @if (isEmployee()) {
+      <a routerLink="/appraisal/goals" class="btn btn-primary btn-sm">My Goals</a>
+    }
   </div>
 </div>
 
@@ -22,15 +40,21 @@
   </div>
   <div class="cycle-progress-wrap">
     <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-      <span style="font-size:12px;color:rgba(255,255,255,0.7);">Overall Completion</span>
+      <span style="font-size:12px;color:rgba(255,255,255,0.7);">
+        @if (isEmployee()) { Your Completion } @else { Overall Completion }
+      </span>
       <span style="font-size:14px;font-weight:700;color:#fff;">{{ currentCycle.progress }}%</span>
     </div>
     <div class="cycle-progress-bar">
       <div class="cycle-progress-fill" [style.width.%]="currentCycle.progress"></div>
     </div>
     <div style="display:flex;gap:12px;margin-top:12px;">
-      <a routerLink="/appraisal/cycles" class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);">View Cycle</a>
-      <a routerLink="/appraisal/goals" class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);">View Goals</a>
+      @if (isHROrAdmin()) {
+        <a routerLink="/appraisal/cycles" class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);">View Cycle</a>
+      }
+      <a routerLink="/appraisal/goals" class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);">
+        @if (isEmployee()) { My Goals } @else { View Goals }
+      </a>
     </div>
   </div>
 </div>
@@ -48,41 +72,94 @@
 
 <!-- Two-column layout -->
 <div class="grid-2" style="margin-bottom:20px;">
-  <!-- Department Completion -->
+  <!-- Completion by Dept (HR/Admin) or Team Member (Manager) or My Progress (Employee) -->
   <div class="card">
     <div class="card-header">
-      <h3>Completion by Department</h3>
-      <a routerLink="/appraisal/cycles" style="font-size:12px;color:var(--color-teal);text-decoration:none;">View all →</a>
+      <h3>
+        @if (isEmployee()) { My Review Progress }
+        @else if (isManager()) { Team Completion }
+        @else { Completion by Department }
+      </h3>
+      @if (!isEmployee()) {
+        <a routerLink="/appraisal/goals" style="font-size:12px;color:var(--color-teal);text-decoration:none;">View all →</a>
+      }
     </div>
-    @for (dept of deptCompletion; track dept.dept) {
-      <div class="dept-row">
-        <div class="dept-name">{{ dept.dept }}</div>
-        <div class="dept-bar-wrap">
-          <div class="dept-bar" [style.width.%]="dept.pct"
-               [style.background]="dept.pct >= 80 ? '#059669' : dept.pct >= 60 ? '#D97706' : '#DC2626'"></div>
+
+    @if (isEmployee()) {
+      <!-- Employee: personal progress steps -->
+      <div style="display:flex;flex-direction:column;gap:12px;padding:8px 0;">
+        <div class="dept-row">
+          <div class="dept-name">Self-Review</div>
+          <div class="dept-bar-wrap"><div class="dept-bar" style="width:100%;background:#059669;"></div></div>
+          <div class="dept-count" style="color:#059669;">Done</div>
         </div>
-        <div class="dept-count">{{ dept.done }}/{{ dept.total }}</div>
+        <div class="dept-row">
+          <div class="dept-name">Manager Review</div>
+          <div class="dept-bar-wrap"><div class="dept-bar" style="width:0%;background:#D97706;"></div></div>
+          <div class="dept-count" style="color:#D97706;">Pending</div>
+        </div>
+        <div class="dept-row">
+          <div class="dept-name">Peer Feedback</div>
+          <div class="dept-bar-wrap"><div class="dept-bar" style="width:100%;background:#059669;"></div></div>
+          <div class="dept-count" style="color:#059669;">3 received</div>
+        </div>
+        <div class="dept-row">
+          <div class="dept-name">Goals</div>
+          <div class="dept-bar-wrap"><div class="dept-bar" style="width:50%;background:#D97706;"></div></div>
+          <div class="dept-count">2/4</div>
+        </div>
       </div>
+    } @else {
+      @for (item of completionData; track item.dept) {
+        <div class="dept-row">
+          <div class="dept-name">{{ item.dept }}</div>
+          <div class="dept-bar-wrap">
+            <div class="dept-bar" [style.width.%]="item.pct"
+                 [style.background]="item.pct >= 80 ? '#059669' : item.pct >= 60 ? '#D97706' : '#DC2626'"></div>
+          </div>
+          <div class="dept-count">{{ item.done }}/{{ item.total }}</div>
+        </div>
+      }
     }
   </div>
 
-  <!-- Score Distribution -->
+  <!-- Score Distribution (HR/Admin/Manager) or My Ratings (Employee) -->
   <div class="card">
     <div class="card-header">
-      <h3>Score Distribution</h3>
+      <h3>
+        @if (isEmployee()) { My Ratings History } @else { Score Distribution }
+      </h3>
       <span style="font-size:12px;color:var(--color-text-secondary);">{{ currentCycle.name }}</span>
     </div>
-    <div class="score-chart">
-      @for (item of scoreDistribution; track item.label) {
-        <div class="score-bar-item">
-          <div class="score-bar-col">
-            <div class="score-bar-fill" [style.height.%]="item.pct" [style.background]="item.color"></div>
-          </div>
-          <div class="score-bar-label">{{ item.label }}</div>
-          <div class="score-bar-count">{{ item.count }}</div>
+
+    @if (isEmployee()) {
+      <div style="display:flex;flex-direction:column;gap:10px;padding:8px 0;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--color-border);">
+          <span style="font-size:13px;color:var(--color-text-secondary);">2024 Annual Review</span>
+          <span class="badge badge-green">Exceeds Expectations</span>
         </div>
-      }
-    </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--color-border);">
+          <span style="font-size:13px;color:var(--color-text-secondary);">2024 Mid-Year Review</span>
+          <span class="badge badge-teal">Meets Expectations</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;">
+          <span style="font-size:13px;color:var(--color-text-secondary);">2025 Mid-Year Review</span>
+          <span class="badge badge-gray">Pending</span>
+        </div>
+      </div>
+    } @else {
+      <div class="score-chart">
+        @for (item of scoreDistribution; track item.label) {
+          <div class="score-bar-item">
+            <div class="score-bar-col">
+              <div class="score-bar-fill" [style.height.%]="item.pct" [style.background]="item.color"></div>
+            </div>
+            <div class="score-bar-label">{{ item.label }}</div>
+            <div class="score-bar-count">{{ item.count }}</div>
+          </div>
+        }
+      </div>
+    }
   </div>
 </div>
 
@@ -91,7 +168,9 @@
   <!-- Recent Activity -->
   <div class="card">
     <div class="card-header">
-      <h3>Recent Activity</h3>
+      <h3>
+        @if (isEmployee()) { My Activity } @else { Recent Activity }
+      </h3>
     </div>
     @for (item of recentActivity; track item.employee) {
       <div class="activity-row">
@@ -111,34 +190,46 @@
       <h3>Quick Actions</h3>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px;">
-      <a routerLink="/appraisal/cycles" class="quick-action-btn">
-        <span class="quick-action-icon">🔄</span>
-        <div>
-          <div style="font-weight:600;font-size:13px;">Manage Cycles</div>
-          <div style="font-size:11px;color:var(--color-text-secondary);">Create or edit appraisal cycles</div>
-        </div>
-      </a>
+      @if (isHROrAdmin()) {
+        <a routerLink="/appraisal/cycles" class="quick-action-btn">
+          <span class="quick-action-icon">🔄</span>
+          <div>
+            <div style="font-weight:600;font-size:13px;">Manage Cycles</div>
+            <div style="font-size:11px;color:var(--color-text-secondary);">Create or edit appraisal cycles</div>
+          </div>
+        </a>
+      }
       <a routerLink="/appraisal/goals" class="quick-action-btn">
         <span class="quick-action-icon">🎯</span>
         <div>
-          <div style="font-weight:600;font-size:13px;">Review Goals</div>
-          <div style="font-size:11px;color:var(--color-text-secondary);">Track employee goal progress</div>
+          <div style="font-weight:600;font-size:13px;">
+            @if (isEmployee()) { My Goals } @else { Review Goals }
+          </div>
+          <div style="font-size:11px;color:var(--color-text-secondary);">
+            @if (isEmployee()) { Track your goal progress } @else { Track employee goal progress }
+          </div>
         </div>
       </a>
       <a routerLink="/appraisal/feedback" class="quick-action-btn">
         <span class="quick-action-icon">💬</span>
         <div>
-          <div style="font-weight:600;font-size:13px;">Feedback Requests</div>
-          <div style="font-size:11px;color:var(--color-text-secondary);">Manage 360° peer feedback</div>
+          <div style="font-weight:600;font-size:13px;">
+            @if (isEmployee()) { My Feedback } @else { Feedback Requests }
+          </div>
+          <div style="font-size:11px;color:var(--color-text-secondary);">
+            @if (isEmployee()) { View feedback received } @else { Manage 360° peer feedback }
+          </div>
         </div>
       </a>
-      <button class="quick-action-btn">
-        <span class="quick-action-icon">📊</span>
-        <div>
-          <div style="font-weight:600;font-size:13px;">Calibration Session</div>
-          <div style="font-size:11px;color:var(--color-text-secondary);">Start manager calibration</div>
-        </div>
-      </button>
+      @if (!isEmployee()) {
+        <button class="quick-action-btn">
+          <span class="quick-action-icon">📊</span>
+          <div>
+            <div style="font-weight:600;font-size:13px;">Calibration Session</div>
+            <div style="font-size:11px;color:var(--color-text-secondary);">Start manager calibration</div>
+          </div>
+        </button>
+      }
     </div>
   </div>
 </div>

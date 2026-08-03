@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
+import { AuthService } from '../../../services/auth';
 
 @Component({
   selector: 'app-all-projects',
@@ -7,14 +8,21 @@ import { Component } from '@angular/core';
     <div class="page-header">
       <div>
         <h1>All Projects</h1>
-        <p>Browse and manage all active projects</p>
+        <p>{{ isEmployee() ? 'Browse projects you are assigned to' : 'Browse and manage all active projects' }}</p>
       </div>
-      <button class="btn btn-primary">+ New Project</button>
+      @if (canMutate()) {
+        <button class="btn btn-primary">+ New Project</button>
+      }
     </div>
     <div class="card" style="padding: 48px; text-align: center; color: var(--color-text-secondary);">
       <div style="font-size: 48px; margin-bottom: 16px;">📁</div>
       <h3>All Projects</h3>
       <p>Full project list coming soon.</p>
+      @if (isEmployee()) {
+        <p style="font-size:12px;margin-top:8px;color:var(--color-text-muted);">
+          You have read-only access to projects.
+        </p>
+      }
     </div>
   `,
   styles: [`
@@ -26,4 +34,9 @@ import { Component } from '@angular/core';
     .btn-primary { background: #0D9488; color: #fff; }
   `]
 })
-export class AllProjects {}
+export class AllProjects {
+  private auth = inject(AuthService);
+
+  readonly isEmployee = computed(() => this.auth.isEmployee());
+  readonly canMutate  = computed(() => this.auth.canMutateProjects());
+}

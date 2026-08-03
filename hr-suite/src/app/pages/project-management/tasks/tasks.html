@@ -1,9 +1,11 @@
 <div class="page-header">
   <div>
     <h1>Tasks</h1>
-    <p>All tasks with expandable subtasks</p>
+    <p>
+      @if (isEmployee()) { Your assigned tasks } @else { All tasks with expandable subtasks }
+    </p>
   </div>
-  <a routerLink="/timesheet" class="btn btn-primary">⏱️ Log Time</a>
+  <a routerLink="/projects/timesheet" class="btn btn-primary">⏱️ Log Time</a>
 </div>
 
 <!-- Filter -->

@@ -1,10 +1,13 @@
-import { Component } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../../services/auth';
 
 interface GoalItem {
   id: string;
   title: string;
   employee: string;
+  employeeId: string;
+  managerId: string;
   initials: string;
   color: string;
   dept: string;
@@ -23,6 +26,14 @@ interface GoalItem {
   styleUrl: './goals.scss'
 })
 export class Goals {
+  private auth = inject(AuthService);
+
+  // ── Role helpers ───────────────────────────────────────────────────────────
+  readonly isEmployee  = computed(() => this.auth.isEmployee());
+  readonly isManager   = computed(() => this.auth.isManager());
+  readonly isHROrAdmin = computed(() => this.auth.hasRole('AppAdmin', 'HR'));
+  readonly canAddGoal  = computed(() => !this.auth.isEmployee());
+
   activeTab = 'All Goals';
   tabs = ['All Goals', 'My Team', 'Overdue', 'Completed'];
   activeFilter = 'All';
@@ -44,11 +55,14 @@ export class Goals {
     description: '',
   };
 
-  goals: GoalItem[] = [
+  // All goals — in production these would be filtered server-side by role
+  allGoals: GoalItem[] = [
     {
       id: 'G-2025-041',
       title: 'Migrate legacy API to GraphQL',
       employee: 'Fatima Malik',
+      employeeId: 'emp-001',
+      managerId: 'emp-mgr',
       initials: 'FM',
       color: 'blue',
       dept: 'Engineering',
@@ -63,6 +77,8 @@ export class Goals {
       id: 'G-2025-040',
       title: 'Launch Q3 product roadmap',
       employee: 'Omar Sheikh',
+      employeeId: 'emp-002',
+      managerId: 'emp-mgr',
       initials: 'OS',
       color: 'teal',
       dept: 'Product',
@@ -77,6 +93,8 @@ export class Goals {
       id: 'G-2025-039',
       title: 'Redesign onboarding flow',
       employee: 'Zara Hussain',
+      employeeId: 'emp-003',
+      managerId: 'emp-mgr',
       initials: 'ZH',
       color: 'purple',
       dept: 'Design',
@@ -91,6 +109,8 @@ export class Goals {
       id: 'G-2025-038',
       title: 'Reduce deployment time by 40%',
       employee: 'Ahmed Raza',
+      employeeId: 'emp-004',
+      managerId: 'emp-mgr',
       initials: 'AR',
       color: 'teal',
       dept: 'Engineering',
@@ -105,6 +125,8 @@ export class Goals {
       id: 'G-2025-037',
       title: 'Complete PMP certification',
       employee: 'Khalid Mahmood',
+      employeeId: 'emp-005',
+      managerId: 'emp-mgr2',
       initials: 'KM',
       color: 'orange',
       dept: 'Operations',
@@ -119,6 +141,8 @@ export class Goals {
       id: 'G-2025-036',
       title: 'Implement automated testing suite',
       employee: 'Nadia Baig',
+      employeeId: 'emp-006',
+      managerId: 'emp-mgr2',
       initials: 'NB',
       color: 'blue',
       dept: 'Engineering',
@@ -130,6 +154,23 @@ export class Goals {
       description: 'Set up Playwright E2E tests covering all critical user flows',
     },
   ];
+
+  /** Goals scoped to the current user's role */
+  get goals(): GoalItem[] {
+    const user = this.auth.currentUser();
+    if (!user) return [];
+
+    if (this.auth.isEmployee()) {
+      // Employee sees only their own goals
+      return this.allGoals.filter(g => g.employeeId === user.employee_id);
+    }
+    if (this.auth.isManager()) {
+      // Manager sees only goals of their direct reports
+      return this.allGoals.filter(g => g.managerId === user.employee_id);
+    }
+    // HR / AppAdmin see all
+    return this.allGoals;
+  }
 
   get onTrackCount(): number { return this.goals.filter(g => g.status === 'On Track').length; }
   get atRiskCount(): number { return this.goals.filter(g => g.status === 'At Risk' || g.status === 'Overdue').length; }
@@ -167,17 +208,20 @@ export class Goals {
     if (!this.newGoal.title || !this.newGoal.employee) return;
     const initials = this.newGoal.employee.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
     const colors = ['blue', 'teal', 'purple', 'orange'];
-    const color = colors[this.goals.length % colors.length];
+    const color = colors[this.allGoals.length % colors.length];
     const fmt = (s: string) => {
       if (!s) return 'TBD';
       const d = new Date(s);
       return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     };
-    const nextNum = 42 + (this.goals.length - 6);
-    this.goals.unshift({
+    const nextNum = 42 + (this.allGoals.length - 6);
+    const user = this.auth.currentUser();
+    this.allGoals.unshift({
       id: `G-2025-0${nextNum}`,
       title: this.newGoal.title,
       employee: this.newGoal.employee,
+      employeeId: 'emp-new',
+      managerId: user?.employee_id ?? '',
       initials,
       color,
       dept: this.newGoal.dept,
@@ -211,9 +255,6 @@ export class Goals {
     } else if (this.updatedProgress >= 60) {
       this.selectedGoal.status = 'On Track';
       this.selectedGoal.statusClass = 'badge-green';
-    } else if (this.updatedProgress >= 30) {
-      this.selectedGoal.status = 'At Risk';
-      this.selectedGoal.statusClass = 'badge-orange';
     } else {
       this.selectedGoal.status = 'At Risk';
       this.selectedGoal.statusClass = 'badge-orange';

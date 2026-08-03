@@ -395,3 +395,119 @@
   overflow-y: auto;
   padding: 24px;
 }
+
+/* ── Sidebar footer links ── */
+.sidebar-footer-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: color 0.15s;
+
+  &:hover { color: #fff; }
+}
+
+.sidebar-logout {
+  color: rgba(239,68,68,0.8);
+  &:hover { color: #EF4444; }
+}
+
+/* ── Top-right user menu ── */
+.user-menu-wrap {
+  position: relative;
+}
+
+.user-avatar-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.user-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 240px;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.user-dropdown-header {
+  padding: 14px 16px;
+  background: #F8FAFC;
+}
+
+.user-dropdown-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+  margin-bottom: 2px;
+}
+
+.user-dropdown-email {
+  font-size: 12px;
+  color: #64748B;
+  margin-bottom: 6px;
+}
+
+.role-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.role-appadmin  { background: #EFF6FF; color: #1D4ED8; }
+.role-hr        { background: #F5F3FF; color: #6D28D9; }
+.role-manager   { background: #FFF7ED; color: #C2410C; }
+.role-employee  { background: #F0FDF4; color: #15803D; }
+
+.user-dropdown-divider {
+  height: 1px;
+  background: #E2E8F0;
+}
+
+.user-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: #374151;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.12s;
+
+  &:hover { background: #F1F5F9; }
+}
+
+.user-dropdown-logout {
+  color: #DC2626;
+  &:hover { background: #FEF2F2; }
+}
+
+/* ── Icon-btn as link ── */
+.icon-btn {
+  text-decoration: none;
+}

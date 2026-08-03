@@ -1,11 +1,21 @@
 <div class="page-header">
   <div>
-    <h1>Goals</h1>
-    <p>Track employee goals and progress for the current cycle</p>
+    <h1>
+      @if (isEmployee()) { My Goals }
+      @else if (isManager()) { Team Goals }
+      @else { Goals }
+    </h1>
+    <p>
+      @if (isEmployee()) { Your goals and progress for the current cycle }
+      @else if (isManager()) { Your team's goals and progress }
+      @else { Track employee goals and progress for the current cycle }
+    </p>
   </div>
   <div class="flex gap-2">
     <button class="btn btn-secondary btn-sm" (click)="exportData()">Export</button>
-    <button class="btn btn-primary btn-sm" (click)="openModal()">+ Add Goal</button>
+    @if (canAddGoal()) {
+      <button class="btn btn-primary btn-sm" (click)="openModal()">+ Add Goal</button>
+    }
   </div>
 </div>
 
