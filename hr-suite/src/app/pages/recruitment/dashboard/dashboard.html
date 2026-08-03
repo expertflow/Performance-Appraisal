@@ -47,10 +47,9 @@
 <div class="card-header" style="margin-bottom:12px;">
   <h3>Active Job Openings</h3>
   <div class="tabs" style="margin-bottom:0;">
-    <button class="tab active">All Jobs</button>
-    <button class="tab">Active</button>
-    <button class="tab">On Hold</button>
-    <button class="tab">Closed</button>
+    @for (tab of jobTabs; track tab) {
+      <button class="tab" [class.active]="activeJobTab === tab" (click)="setJobTab(tab)">{{ tab }}</button>
+    }
   </div>
 </div>
 

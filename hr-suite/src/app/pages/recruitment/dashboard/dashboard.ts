@@ -1,13 +1,21 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-recruitment-dashboard',
-  imports: [RouterLink],
+  imports: [RouterLink, CommonModule],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss'
 })
 export class RecruitmentDashboard {
+  jobTabs = ['All Jobs', 'Active', 'On Hold', 'Closed'];
+  activeJobTab = 'All Jobs';
+
+  setJobTab(tab: string) {
+    this.activeJobTab = tab;
+  }
+
   stats = [
     { label: 'Open Positions', value: '24', sub: '8 urgent' },
     { label: 'Active Candidates', value: '187', sub: '+12 this week' },
@@ -24,7 +32,7 @@ export class RecruitmentDashboard {
     { label: 'Offer', count: 6, color: '#059669', pct: 3 },
   ];
 
-  jobs = [
+  allJobs = [
     {
       title: 'Senior Angular Developer',
       dept: 'Engineering',
@@ -69,5 +77,21 @@ export class RecruitmentDashboard {
       status: 'Active',
       statusClass: 'badge-green',
     },
+    {
+      title: 'QA Engineer',
+      dept: 'Engineering',
+      location: 'Lahore · Remote',
+      type: 'Full-time',
+      posted: '1 month ago',
+      applicants: 8,
+      interviews: 0,
+      status: 'Closed',
+      statusClass: 'badge-gray',
+    },
   ];
+
+  get jobs() {
+    if (this.activeJobTab === 'All Jobs') return this.allJobs;
+    return this.allJobs.filter(j => j.status === this.activeJobTab);
+  }
 }

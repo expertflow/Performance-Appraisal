@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 
 interface CycleItem {
   id: string;
@@ -16,13 +17,26 @@ interface CycleItem {
 
 @Component({
   selector: 'app-cycles',
-  imports: [],
+  imports: [FormsModule],
   templateUrl: './cycles.html',
   styleUrl: './cycles.scss'
 })
 export class Cycles {
   activeTab = 'Active';
   tabs = ['Active', 'Upcoming', 'Completed', 'All'];
+
+  // Modal state
+  showModal = false;
+  exportToast = false;
+
+  newCycle = {
+    name: '',
+    type: 'Semi-Annual',
+    periodStart: '',
+    periodEnd: '',
+    reviewStart: '',
+    reviewEnd: '',
+  };
 
   cycles: CycleItem[] = [
     {
@@ -83,6 +97,16 @@ export class Cycles {
     this.activeTab = tab;
   }
 
+  get filteredCycles(): CycleItem[] {
+    if (this.activeTab === 'All') return this.cycles;
+    if (this.activeTab === 'Active') return this.cycles.filter(c =>
+      c.phase !== 'Upcoming' && c.phase !== 'Finalized' && c.phase !== 'Signed');
+    if (this.activeTab === 'Upcoming') return this.cycles.filter(c => c.phase === 'Upcoming');
+    if (this.activeTab === 'Completed') return this.cycles.filter(c =>
+      c.phase === 'Finalized' || c.phase === 'Signed');
+    return this.cycles;
+  }
+
   phases = [
     { label: 'Goal Setting', icon: '🎯' },
     { label: 'Self Review', icon: '✍️' },
@@ -91,4 +115,39 @@ export class Cycles {
     { label: 'Calibration', icon: '⚖️' },
     { label: 'Finalized', icon: '✅' },
   ];
+
+  openModal() { this.showModal = true; }
+  closeModal() { this.showModal = false; this.resetForm(); }
+
+  resetForm() {
+    this.newCycle = { name: '', type: 'Semi-Annual', periodStart: '', periodEnd: '', reviewStart: '', reviewEnd: '' };
+  }
+
+  submitCycle() {
+    if (!this.newCycle.name || !this.newCycle.periodStart || !this.newCycle.periodEnd) return;
+    const fmt = (s: string) => {
+      const d = new Date(s);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
+    const nextNum = this.cycles.length + 1;
+    this.cycles.unshift({
+      id: `CYC-2025-0${nextNum}`,
+      name: this.newCycle.name,
+      type: this.newCycle.type,
+      period: `${fmt(this.newCycle.periodStart)} – ${fmt(this.newCycle.periodEnd)}`,
+      startDate: this.newCycle.reviewStart ? fmt(this.newCycle.reviewStart) : fmt(this.newCycle.periodEnd),
+      endDate: this.newCycle.reviewEnd ? fmt(this.newCycle.reviewEnd) : '',
+      phase: 'Upcoming',
+      phaseClass: 'badge-gray',
+      totalEmployees: 0,
+      completed: 0,
+      pct: 0,
+    });
+    this.closeModal();
+  }
+
+  exportData() {
+    this.exportToast = true;
+    setTimeout(() => this.exportToast = false, 3000);
+  }
 }

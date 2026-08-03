@@ -4,11 +4,18 @@
     <p>Track and manage all candidate offers</p>
   </div>
   <div class="flex gap-2">
-    <button class="btn btn-secondary btn-sm">Export</button>
+    <button class="btn btn-secondary btn-sm" (click)="exportData()">Export</button>
     <a routerLink="/recruitment/pipeline" class="btn btn-secondary btn-sm">← Pipeline</a>
-    <button class="btn btn-primary btn-sm">+ Create Offer</button>
+    <button class="btn btn-primary btn-sm" (click)="openModal()">+ Create Offer</button>
   </div>
 </div>
+
+<!-- Export Toast -->
+@if (exportToast) {
+  <div class="alert alert-success" style="margin-bottom:12px;">
+    ✓ Offers exported successfully (CSV download started)
+  </div>
+}
 
 <!-- Stat Cards -->
 <div class="stat-grid" style="grid-template-columns: repeat(5, 1fr);">
@@ -26,8 +33,10 @@
   <div class="card-header" style="padding:16px 20px;border-bottom:1px solid var(--color-border);">
     <h3>All Offers</h3>
     <div class="flex gap-2">
-      <input class="form-control" style="width:200px;" placeholder="🔍 Search..." />
-      <select class="form-control" style="width:160px;" title="Filter by status">
+      <input class="form-control" style="width:200px;" placeholder="🔍 Search..."
+        [(ngModel)]="searchText" />
+      <select class="form-control" style="width:160px;" title="Filter by status"
+        [(ngModel)]="filterStatus">
         <option>All Statuses</option>
         <option>Pending</option>
         <option>Accepted</option>
@@ -51,7 +60,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (offer of offers; track offer.id) {
+        @for (offer of filteredOffers; track offer.id) {
           <tr>
             <td>
               <span style="font-family:monospace;font-size:12px;color:var(--color-text-secondary);">{{ offer.id }}</span>
@@ -86,7 +95,62 @@
             </td>
           </tr>
         }
+        @if (filteredOffers.length === 0) {
+          <tr>
+            <td colspan="8" style="text-align:center;padding:32px;color:var(--color-text-muted);">
+              No offers match your search.
+            </td>
+          </tr>
+        }
       </tbody>
     </table>
   </div>
 </div>
+
+<!-- Create Offer Modal -->
+@if (showModal) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Create New Offer</h2>
+        <button class="btn btn-icon" (click)="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Candidate Name *</label>
+          <input class="form-control" placeholder="e.g. Ahmed Raza" [(ngModel)]="newOffer.candidate" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Role / Position *</label>
+          <input class="form-control" placeholder="e.g. Senior Angular Developer" [(ngModel)]="newOffer.role" />
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Department</label>
+            <select class="form-control" title="Department" [(ngModel)]="newOffer.dept">
+              <option>Engineering</option>
+              <option>Product</option>
+              <option>Design</option>
+              <option>Operations</option>
+              <option>Infrastructure</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Offer Expiry (days)</label>
+            <input class="form-control" type="number" min="1" max="30" title="Expiry days"
+              [(ngModel)]="newOffer.expiryDays" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Salary Package *</label>
+          <input class="form-control" placeholder="e.g. PKR 350,000 / month" [(ngModel)]="newOffer.salary" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeModal()">Cancel</button>
+        <button class="btn btn-primary" (click)="submitOffer()"
+          [disabled]="!newOffer.candidate || !newOffer.role || !newOffer.salary">Send Offer</button>
+      </div>
+    </div>
+  </div>
+}

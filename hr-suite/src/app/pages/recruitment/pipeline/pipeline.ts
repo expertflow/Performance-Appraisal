@@ -88,9 +88,41 @@ export class Pipeline {
   selectedCandidate = this.columns[2].candidates[0];
   selectedColumn = this.columns[2];
 
+  toast = '';
+
   selectCandidate(candidate: Candidate, column: PipelineColumn) {
     this.selectedCandidate = candidate;
     this.selectedColumn = column;
+  }
+
+  showToast(msg: string) {
+    this.toast = msg;
+    setTimeout(() => this.toast = '', 3000);
+  }
+
+  scheduleInterview() {
+    this.showToast(`✓ Interview scheduled for ${this.selectedCandidate.name}`);
+  }
+
+  moveStage() {
+    const colIndex = this.columns.findIndex(c => c.id === this.selectedColumn.id);
+    if (colIndex < this.columns.length - 1) {
+      const nextCol = this.columns[colIndex + 1];
+      this.selectedColumn.candidates = this.selectedColumn.candidates.filter(c => c !== this.selectedCandidate);
+      nextCol.candidates.unshift(this.selectedCandidate);
+      this.selectedColumn = nextCol;
+      this.showToast(`✓ ${this.selectedCandidate.name} moved to ${nextCol.label}`);
+    } else {
+      this.showToast('Candidate is already in the final stage');
+    }
+  }
+
+  rejectCandidate() {
+    this.showToast(`${this.selectedCandidate.name} has been rejected`);
+    this.selectedColumn.candidates = this.selectedColumn.candidates.filter(c => c !== this.selectedCandidate);
+    if (this.selectedColumn.candidates.length > 0) {
+      this.selectedCandidate = this.selectedColumn.candidates[0];
+    }
   }
 
   competencies = [

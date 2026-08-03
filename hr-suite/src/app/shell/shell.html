@@ -25,9 +25,9 @@
         <span class="nav-icon">👥</span>
         <span class="nav-module-label">Recruitment</span>
         <span class="nav-badge">5</span>
-        <span class="nav-chevron" [class.open]="expandedModule === 'recruitment'">›</span>
+        <span class="nav-chevron" [class.open]="expandedModule() === 'recruitment'">›</span>
       </button>
-      @if (expandedModule === 'recruitment') {
+      @if (expandedModule() === 'recruitment') {
         <div class="nav-sub-section">
           <div class="nav-sub-label">Recruitment</div>
           <a routerLink="/recruitment" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" class="nav-sub-item">
@@ -53,9 +53,9 @@
         <span class="nav-icon">📊</span>
         <span class="nav-module-label">Performance Appraisal</span>
         <span class="nav-badge nav-badge-orange">3</span>
-        <span class="nav-chevron" [class.open]="expandedModule === 'appraisal'">›</span>
+        <span class="nav-chevron" [class.open]="expandedModule() === 'appraisal'">›</span>
       </button>
-      @if (expandedModule === 'appraisal') {
+      @if (expandedModule() === 'appraisal') {
         <div class="nav-sub-section">
           <div class="nav-sub-label">Appraisal</div>
           <a routerLink="/appraisal" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" class="nav-sub-item">
@@ -81,9 +81,9 @@
         <span class="nav-icon">📋</span>
         <span class="nav-module-label">Project Management</span>
         <span class="nav-badge nav-badge-green">2</span>
-        <span class="nav-chevron" [class.open]="expandedModule === 'projects'">›</span>
+        <span class="nav-chevron" [class.open]="expandedModule() === 'projects'">›</span>
       </button>
-      @if (expandedModule === 'projects') {
+      @if (expandedModule() === 'projects') {
         <div class="nav-sub-section">
           <div class="nav-sub-label">Projects</div>
           <a routerLink="/projects" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" class="nav-sub-item">

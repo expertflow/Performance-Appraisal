@@ -4,28 +4,37 @@
     <p>Manage and track all open hiring requests</p>
   </div>
   <div class="flex gap-2">
-    <button class="btn btn-secondary btn-sm">Export</button>
-    <button class="btn btn-primary btn-sm">+ New Requisition</button>
+    <button class="btn btn-secondary btn-sm" (click)="exportData()">Export</button>
+    <button class="btn btn-primary btn-sm" (click)="openModal()">+ New Requisition</button>
   </div>
 </div>
 
+<!-- Export Toast -->
+@if (exportToast) {
+  <div class="alert alert-success" style="margin-bottom:12px;">
+    ✓ Requisitions exported successfully (CSV download started)
+  </div>
+}
+
 <!-- Filter Bar -->
 <div class="filter-bar">
-  <input class="form-control" style="width:240px;" placeholder="🔍 Search requisitions..." />
-  <select class="form-control" style="width:160px;">
+  <input class="form-control" style="width:240px;" placeholder="🔍 Search requisitions..."
+    [(ngModel)]="searchText" />
+  <select class="form-control" style="width:160px;" [(ngModel)]="filterDept">
     <option>All Departments</option>
     <option>Engineering</option>
     <option>Product</option>
     <option>Design</option>
     <option>Operations</option>
+    <option>Infrastructure</option>
   </select>
-  <select class="form-control" style="width:140px;">
+  <select class="form-control" style="width:140px;" [(ngModel)]="filterLocation">
     <option>All Locations</option>
     <option>Lahore</option>
     <option>Karachi</option>
     <option>Islamabad</option>
   </select>
-  <select class="form-control" style="width:140px;">
+  <select class="form-control" style="width:140px;" [(ngModel)]="filterPriority">
     <option>All Priorities</option>
     <option>Urgent</option>
     <option>High</option>
@@ -54,7 +63,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (req of requisitions; track req.id) {
+        @for (req of filteredRequisitions; track req.id) {
           <tr class="req-row" [routerLink]="['/recruitment/pipeline']" style="cursor:pointer;">
             <td>
               <div style="font-weight:600;font-size:13px;">{{ req.title }}</div>
@@ -93,11 +102,18 @@
             </td>
           </tr>
         }
+        @if (filteredRequisitions.length === 0) {
+          <tr>
+            <td colspan="5" style="text-align:center;padding:32px;color:var(--color-text-muted);">
+              No requisitions match your filters.
+            </td>
+          </tr>
+        }
       </tbody>
     </table>
   </div>
   <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;font-size:13px;color:var(--color-text-secondary);border-top:1px solid var(--color-border);">
-    <span>Showing 5 of 41 requisitions</span>
+    <span>Showing {{ filteredRequisitions.length }} of {{ requisitions.length }} requisitions</span>
     <div style="display:flex;gap:4px;">
       <button class="btn btn-secondary btn-sm">← Prev</button>
       <button class="btn btn-primary btn-sm">1</button>
@@ -107,3 +123,74 @@
     </div>
   </div>
 </div>
+
+<!-- New Requisition Modal -->
+@if (showModal) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>New Job Requisition</h2>
+        <button class="btn btn-icon" (click)="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Job Title *</label>
+          <input class="form-control" placeholder="e.g. Senior Angular Developer" [(ngModel)]="newReq.title" />
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Department *</label>
+            <select class="form-control" [(ngModel)]="newReq.dept">
+              <option>Engineering</option>
+              <option>Product</option>
+              <option>Design</option>
+              <option>Operations</option>
+              <option>Infrastructure</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Location</label>
+            <select class="form-control" [(ngModel)]="newReq.location">
+              <option>Lahore · Hybrid</option>
+              <option>Karachi · Remote</option>
+              <option>Islamabad · On-site</option>
+              <option>Karachi · Hybrid</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Employment Type</label>
+            <select class="form-control" [(ngModel)]="newReq.type">
+              <option>Full-time</option>
+              <option>Part-time</option>
+              <option>Contract</option>
+              <option>Internship</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Headcount</label>
+            <input class="form-control" type="number" min="1" [(ngModel)]="newReq.headcount" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Priority</label>
+            <select class="form-control" [(ngModel)]="newReq.priority">
+              <option>Urgent</option>
+              <option>High</option>
+              <option>Normal</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hiring Manager *</label>
+          <input class="form-control" placeholder="e.g. Fatima Malik" [(ngModel)]="newReq.hiringManager" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeModal()">Cancel</button>
+        <button class="btn btn-primary" (click)="submitRequisition()"
+          [disabled]="!newReq.title || !newReq.hiringManager">Submit for Approval</button>
+      </div>
+    </div>
+  </div>
+}

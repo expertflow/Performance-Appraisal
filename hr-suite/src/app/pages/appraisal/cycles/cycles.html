@@ -4,10 +4,17 @@
     <p>Manage performance review cycles and phases</p>
   </div>
   <div class="flex gap-2">
-    <button class="btn btn-secondary btn-sm">Export</button>
-    <button class="btn btn-primary btn-sm">+ New Cycle</button>
+    <button class="btn btn-secondary btn-sm" (click)="exportData()">Export</button>
+    <button class="btn btn-primary btn-sm" (click)="openModal()">+ New Cycle</button>
   </div>
 </div>
+
+<!-- Export Toast -->
+@if (exportToast) {
+  <div class="alert alert-success" style="margin-bottom:12px;">
+    ✓ Cycles exported successfully (CSV download started)
+  </div>
+}
 
 <!-- Phase Timeline -->
 <div class="card" style="margin-bottom:20px;">
@@ -50,7 +57,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (cycle of cycles; track cycle.id) {
+        @for (cycle of filteredCycles; track cycle.id) {
           <tr style="cursor:pointer;">
             <td>
               <div style="font-weight:600;font-size:13px;">{{ cycle.name }}</div>
@@ -88,7 +95,66 @@
             </td>
           </tr>
         }
+        @if (filteredCycles.length === 0) {
+          <tr>
+            <td colspan="6" style="text-align:center;padding:32px;color:var(--color-text-muted);">
+              No cycles in this category.
+            </td>
+          </tr>
+        }
       </tbody>
     </table>
   </div>
 </div>
+
+<!-- New Cycle Modal -->
+@if (showModal) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>New Appraisal Cycle</h2>
+        <button class="btn btn-icon" (click)="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Cycle Name *</label>
+          <input class="form-control" placeholder="e.g. 2025 Year-End Review" [(ngModel)]="newCycle.name" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cycle Type</label>
+          <select class="form-control" title="Cycle type" [(ngModel)]="newCycle.type">
+            <option>Annual</option>
+            <option>Semi-Annual</option>
+            <option>Quarterly</option>
+            <option>Monthly</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Period Start *</label>
+            <input class="form-control" type="date" [(ngModel)]="newCycle.periodStart" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Period End *</label>
+            <input class="form-control" type="date" [(ngModel)]="newCycle.periodEnd" />
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Review Start Date</label>
+            <input class="form-control" type="date" [(ngModel)]="newCycle.reviewStart" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Review End Date</label>
+            <input class="form-control" type="date" [(ngModel)]="newCycle.reviewEnd" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeModal()">Cancel</button>
+        <button class="btn btn-primary" (click)="submitCycle()"
+          [disabled]="!newCycle.name || !newCycle.periodStart || !newCycle.periodEnd">Create Cycle</button>
+      </div>
+    </div>
+  </div>
+}

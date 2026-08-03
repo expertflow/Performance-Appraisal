@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 
 interface OfferItem {
   id: string;
@@ -17,11 +18,27 @@ interface OfferItem {
 
 @Component({
   selector: 'app-offer',
-  imports: [RouterLink],
+  imports: [RouterLink, FormsModule],
   templateUrl: './offer.html',
   styleUrl: './offer.scss'
 })
 export class Offer {
+  // Filter state
+  searchText = '';
+  filterStatus = 'All Statuses';
+
+  // Modal state
+  showModal = false;
+  exportToast = false;
+
+  newOffer = {
+    candidate: '',
+    role: '',
+    dept: 'Engineering',
+    salary: '',
+    expiryDays: 7,
+  };
+
   offers: OfferItem[] = [
     {
       id: 'OFF-2025-018',
@@ -110,4 +127,53 @@ export class Offer {
     { label: 'Declined', value: '1', sub: 'Requires re-pipeline' },
     { label: 'Avg. Time to Accept', value: '3.2d', sub: 'Last 30 days' },
   ];
+
+  get filteredOffers(): OfferItem[] {
+    return this.offers.filter(o => {
+      const matchSearch = !this.searchText ||
+        o.candidate.toLowerCase().includes(this.searchText.toLowerCase()) ||
+        o.role.toLowerCase().includes(this.searchText.toLowerCase()) ||
+        o.id.toLowerCase().includes(this.searchText.toLowerCase());
+      const matchStatus = this.filterStatus === 'All Statuses' || o.status === this.filterStatus;
+      return matchSearch && matchStatus;
+    });
+  }
+
+  openModal() { this.showModal = true; }
+  closeModal() { this.showModal = false; this.resetForm(); }
+
+  resetForm() {
+    this.newOffer = { candidate: '', role: '', dept: 'Engineering', salary: '', expiryDays: 7 };
+  }
+
+  submitOffer() {
+    if (!this.newOffer.candidate || !this.newOffer.role || !this.newOffer.salary) return;
+    const initials = this.newOffer.candidate.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
+    const colors = ['teal', 'blue', 'purple', 'orange'];
+    const color = colors[this.offers.length % colors.length];
+    const today = new Date();
+    const expiry = new Date(today);
+    expiry.setDate(expiry.getDate() + this.newOffer.expiryDays);
+    const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const nextNum = 19 + (this.offers.length - 6);
+    this.offers.unshift({
+      id: `OFF-2025-0${nextNum}`,
+      candidate: this.newOffer.candidate,
+      initials,
+      color,
+      role: this.newOffer.role,
+      dept: this.newOffer.dept,
+      salary: this.newOffer.salary,
+      sentDate: fmt(today),
+      expiryDate: fmt(expiry),
+      status: 'Pending',
+      statusClass: 'badge-orange',
+    });
+    this.closeModal();
+  }
+
+  exportData() {
+    this.exportToast = true;
+    setTimeout(() => this.exportToast = false, 3000);
+  }
 }

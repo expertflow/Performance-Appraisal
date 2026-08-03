@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs/operators';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-shell',
@@ -12,49 +13,71 @@ import { filter } from 'rxjs/operators';
 export class Shell {
   private router = inject(Router);
 
-  // Track which module section is expanded
-  expandedModule: 'recruitment' | 'appraisal' | 'projects' | null = null;
+  // Track which module section is expanded using a signal
+  expandedModule = signal<'recruitment' | 'appraisal' | 'projects' | null>(null);
+
+  // Convert router events to a signal so zoneless CD picks up URL changes
+  private navEnd = toSignal(
+    this.router.events.pipe(filter(e => e instanceof NavigationEnd)),
+    { initialValue: null }
+  );
+
+  // Computed signal for current URL — re-evaluates whenever navEnd changes
+  private currentUrl = computed(() => {
+    this.navEnd(); // subscribe to navigation changes
+    return this.router.url;
+  });
 
   constructor() {
-    // Auto-expand the active module on navigation
+    // Auto-expand the active module on navigation using effect-like computed
+    // We use a toSignal + effect pattern to auto-expand
     this.router.events.pipe(
       filter(e => e instanceof NavigationEnd)
     ).subscribe(() => {
       const url = this.router.url;
       if (url.startsWith('/recruitment')) {
-        this.expandedModule = 'recruitment';
+        this.expandedModule.set('recruitment');
       } else if (url.startsWith('/appraisal')) {
-        this.expandedModule = 'appraisal';
-      } else if (url.startsWith('/projects') || url.startsWith('/tasks') || url.startsWith('/kanban') || url.startsWith('/timesheet') || url.startsWith('/gantt')) {
-        this.expandedModule = 'projects';
+        this.expandedModule.set('appraisal');
+      } else if (
+        url.startsWith('/projects') || url.startsWith('/tasks') ||
+        url.startsWith('/kanban') || url.startsWith('/timesheet') || url.startsWith('/gantt')
+      ) {
+        this.expandedModule.set('projects');
       }
     });
 
     // Set initial state based on current URL
     const url = this.router.url;
     if (url.startsWith('/recruitment')) {
-      this.expandedModule = 'recruitment';
+      this.expandedModule.set('recruitment');
     } else if (url.startsWith('/appraisal')) {
-      this.expandedModule = 'appraisal';
-    } else if (url.startsWith('/projects') || url.startsWith('/tasks') || url.startsWith('/kanban') || url.startsWith('/timesheet') || url.startsWith('/gantt')) {
-      this.expandedModule = 'projects';
+      this.expandedModule.set('appraisal');
+    } else if (
+      url.startsWith('/projects') || url.startsWith('/tasks') ||
+      url.startsWith('/kanban') || url.startsWith('/timesheet') || url.startsWith('/gantt')
+    ) {
+      this.expandedModule.set('projects');
     }
   }
 
   toggleModule(module: 'recruitment' | 'appraisal' | 'projects') {
-    this.expandedModule = this.expandedModule === module ? null : module;
+    this.expandedModule.set(this.expandedModule() === module ? null : module);
   }
 
   isModuleActive(module: 'recruitment' | 'appraisal' | 'projects'): boolean {
-    const url = this.router.url;
+    const url = this.currentUrl();
     if (module === 'recruitment') return url.startsWith('/recruitment');
     if (module === 'appraisal') return url.startsWith('/appraisal');
-    if (module === 'projects') return url.startsWith('/projects') || url.startsWith('/tasks') || url.startsWith('/kanban') || url.startsWith('/timesheet') || url.startsWith('/gantt');
+    if (module === 'projects') return (
+      url.startsWith('/projects') || url.startsWith('/tasks') ||
+      url.startsWith('/kanban') || url.startsWith('/timesheet') || url.startsWith('/gantt')
+    );
     return false;
   }
 
   get currentPage(): string {
-    const url = this.router.url;
+    const url = this.currentUrl();
     if (url.startsWith('/recruitment/requisitions')) return 'Job Requisitions';
     if (url.startsWith('/recruitment/pipeline')) return 'Pipeline';
     if (url.startsWith('/recruitment/agencies')) return 'Agencies';
@@ -78,10 +101,13 @@ export class Shell {
   }
 
   get topbarSearch(): string {
-    const url = this.router.url;
+    const url = this.currentUrl();
     if (url.startsWith('/recruitment')) return 'Search jobs, candidates...';
     if (url.startsWith('/appraisal')) return 'Search employees, cycles...';
-    if (url.startsWith('/projects') || url.startsWith('/tasks') || url.startsWith('/kanban') || url.startsWith('/gantt') || url.startsWith('/timesheet')) return 'Search projects, tasks...';
+    if (
+      url.startsWith('/projects') || url.startsWith('/tasks') ||
+      url.startsWith('/kanban') || url.startsWith('/gantt') || url.startsWith('/timesheet')
+    ) return 'Search projects, tasks...';
     return 'Search...';
   }
 }
