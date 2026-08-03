@@ -1,0 +1,131 @@
+.goals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.goal-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  transition: var(--transition);
+
+  &:hover {
+    box-shadow: var(--shadow-sm);
+    border-color: var(--color-teal);
+  }
+
+  &.overdue {
+    border-left: 3px solid var(--color-red);
+  }
+
+  &.completed {
+    border-left: 3px solid var(--color-green);
+    opacity: 0.85;
+  }
+}
+
+.goal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.goal-employee {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.emp-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  color: #fff;
+  flex-shrink: 0;
+
+  &.avatar-blue { background: var(--color-blue); }
+  &.avatar-teal { background: var(--color-teal); }
+  &.avatar-purple { background: var(--color-purple); }
+  &.avatar-orange { background: var(--color-orange); }
+}
+
+.emp-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.emp-dept {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.goal-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.goal-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 4px;
+}
+
+.goal-desc {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 12px;
+}
+
+.goal-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.progress-pct {
+  font-size: 13px;
+  font-weight: 700;
+  width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.goal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.filter-chip {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  transition: var(--transition);
+
+  &.active {
+    background: var(--color-teal);
+    color: #fff;
+    border-color: var(--color-teal);
+  }
+
+  &:hover:not(.active) {
+    background: var(--color-bg);
+  }
+}

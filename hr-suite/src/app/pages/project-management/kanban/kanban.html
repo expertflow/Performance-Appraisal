@@ -1,0 +1,49 @@
+<div class="page-header">
+  <div>
+    <h1>Kanban Board</h1>
+    <p>Drag-and-drop task management</p>
+  </div>
+  <div class="flex gap-2">
+    <select class="form-control" title="Filter by project" style="width:200px;" [(ngModel)]="filterProjectId" (change)="loadTasks()">
+      <option value="">All Projects</option>
+      @for (p of projects; track p.id) {
+        <option [value]="p.id">{{ p.name }}</option>
+      }
+    </select>
+    <a routerLink="/tasks" class="btn btn-secondary">📋 Table View</a>
+  </div>
+</div>
+
+@if (loading) {
+  <div class="flex items-center gap-2"><div class="spinner"></div><span class="text-muted">Loading…</span></div>
+} @else {
+  <div class="kanban-board">
+    @for (col of columns; track col.id) {
+      <div class="kanban-col">
+        <div class="kanban-col-header" [style.border-top-color]="col.color">
+          <span class="col-title">{{ col.label }}</span>
+          <span class="col-count">{{ getColumnTasks(col.id).length }}</span>
+        </div>
+        <div class="kanban-cards">
+          @for (task of getColumnTasks(col.id); track task.id) {
+            <div class="kanban-card">
+              <div class="card-title">{{ task.title }}</div>
+              @if (task.project_id) {
+                <div class="card-project">{{ getProjectName(task.project_id) }}</div>
+              }
+              <div class="card-footer">
+                <span class="badge" [class]="priorityClass(task.priority)">{{ task.priority }}</span>
+                @if (task.due_date) {
+                  <span class="card-due">{{ task.due_date | date:'dd MMM' }}</span>
+                }
+              </div>
+            </div>
+          }
+          @if (getColumnTasks(col.id).length === 0) {
+            <div class="kanban-empty">No tasks</div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+}

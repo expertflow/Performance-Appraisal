@@ -1,0 +1,10 @@
+.task-row {
+  cursor: pointer;
+  &:hover td { background: #F0F9FF; }
+}
+
+.subtask-row {
+  background: #FAFBFC;
+  td { border-bottom: 1px solid #F1F5F9; font-size: 12px; }
+  &:hover td { background: #F0F9FF; }
+}

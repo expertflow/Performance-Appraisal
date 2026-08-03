@@ -1,0 +1,191 @@
+<div class="page-header">
+  <div>
+    <h1>Goals</h1>
+    <p>Track employee goals and progress for the current cycle</p>
+  </div>
+  <div class="flex gap-2">
+    <button class="btn btn-secondary btn-sm" (click)="exportData()">Export</button>
+    <button class="btn btn-primary btn-sm" (click)="openModal()">+ Add Goal</button>
+  </div>
+</div>
+
+<!-- Export Toast -->
+@if (exportToast) {
+  <div class="alert alert-success" style="margin-bottom:12px;">
+    ✓ Goals exported successfully (CSV download started)
+  </div>
+}
+
+<!-- Summary Stats -->
+<div class="stat-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px;">
+  <div class="stat-card">
+    <div class="stat-label">Total Goals</div>
+    <div class="stat-value">{{ goals.length }}</div>
+    <div class="stat-sub">Current cycle</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">On Track</div>
+    <div class="stat-value" style="color:var(--color-green);">{{ onTrackCount }}</div>
+    <div class="stat-sub">50% of goals</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">At Risk / Overdue</div>
+    <div class="stat-value" style="color:var(--color-orange);">{{ atRiskCount }}</div>
+    <div class="stat-sub">Need attention</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Completed</div>
+    <div class="stat-value" style="color:var(--color-teal);">{{ completedCount }}</div>
+    <div class="stat-sub">17% completion rate</div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="flex gap-2 mb-3" style="flex-wrap:wrap;">
+  <div class="tabs" style="margin-bottom:0;">
+    @for (tab of tabs; track tab) {
+      <button class="tab" [class.active]="activeTab === tab" (click)="setTab(tab)">{{ tab }}</button>
+    }
+  </div>
+  <div style="margin-left:auto;display:flex;gap:8px;">
+    @for (filter of filters; track filter) {
+      <button class="filter-chip" [class.active]="activeFilter === filter" (click)="setFilter(filter)">{{ filter }}</button>
+    }
+  </div>
+</div>
+
+<!-- Goals List -->
+<div class="goals-list">
+  @for (goal of filteredGoals; track goal.id) {
+    <div class="goal-card" [class.overdue]="goal.status === 'Overdue'" [class.completed]="goal.status === 'Completed'">
+      <div class="goal-header">
+        <div class="goal-employee">
+          <div class="emp-avatar" [class]="'avatar-' + goal.color">{{ goal.initials }}</div>
+          <div>
+            <div class="emp-name">{{ goal.employee }}</div>
+            <div class="emp-dept">{{ goal.dept }} · {{ goal.category }}</div>
+          </div>
+        </div>
+        <div class="goal-meta">
+          <span class="badge" [class]="goal.statusClass">{{ goal.status }}</span>
+          <span style="font-size:11px;color:var(--color-text-muted);">Due {{ goal.dueDate }}</span>
+        </div>
+      </div>
+
+      <div class="goal-title">{{ goal.title }}</div>
+      <div class="goal-desc">{{ goal.description }}</div>
+
+      <div class="goal-progress">
+        <div class="progress-bar-wrap" style="flex:1;">
+          <div class="progress-bar" [style.width.%]="goal.progress" [style.background]="getProgressColor(goal.progress)"></div>
+        </div>
+        <span class="progress-pct" [style.color]="getProgressColor(goal.progress)">{{ goal.progress }}%</span>
+      </div>
+
+      <div class="goal-footer">
+        <span style="font-size:11px;color:var(--color-text-muted);">{{ goal.id }}</span>
+        <div class="flex gap-2">
+          <button class="btn btn-secondary btn-sm" (click)="openUpdateModal(goal)">Update Progress</button>
+          <button class="btn btn-secondary btn-sm">View Details</button>
+        </div>
+      </div>
+    </div>
+  }
+  @if (filteredGoals.length === 0) {
+    <div style="text-align:center;padding:40px;color:var(--color-text-muted);">
+      No goals match your current filters.
+    </div>
+  }
+</div>
+
+<!-- Add Goal Modal -->
+@if (showModal) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Add New Goal</h2>
+        <button class="btn btn-icon" (click)="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Goal Title *</label>
+          <input class="form-control" placeholder="e.g. Migrate legacy API to GraphQL" [(ngModel)]="newGoal.title" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Employee *</label>
+          <input class="form-control" placeholder="e.g. Fatima Malik" [(ngModel)]="newGoal.employee" />
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Department</label>
+            <select class="form-control" title="Department" [(ngModel)]="newGoal.dept">
+              <option>Engineering</option>
+              <option>Product</option>
+              <option>Design</option>
+              <option>Operations</option>
+              <option>Infrastructure</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select class="form-control" title="Category" [(ngModel)]="newGoal.category">
+              <option>Technical</option>
+              <option>Strategic</option>
+              <option>Operational</option>
+              <option>Development</option>
+              <option>UX</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Due Date</label>
+          <input class="form-control" type="date" title="Due date" [(ngModel)]="newGoal.dueDate" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-control" rows="3" placeholder="Describe the goal and success criteria..."
+            [(ngModel)]="newGoal.description" style="resize:vertical;"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeModal()">Cancel</button>
+        <button class="btn btn-primary" (click)="submitGoal()"
+          [disabled]="!newGoal.title || !newGoal.employee">Add Goal</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Update Progress Modal -->
+@if (showUpdateModal && selectedGoal) {
+  <div class="modal-overlay" (click)="closeUpdateModal()">
+    <div class="modal" style="max-width:420px;" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Update Progress</h2>
+        <button class="btn btn-icon" (click)="closeUpdateModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-weight:600;margin-bottom:4px;">{{ selectedGoal.title }}</div>
+        <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:16px;">
+          {{ selectedGoal.employee }} · {{ selectedGoal.dept }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Progress: {{ updatedProgress }}%</label>
+          <input type="range" min="0" max="100" step="5" [(ngModel)]="updatedProgress"
+            style="width:100%;accent-color:var(--color-blue);" title="Progress percentage" />
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-muted);margin-top:4px;">
+            <span>0%</span><span>50%</span><span>100%</span>
+          </div>
+        </div>
+        <div class="progress-bar-wrap" style="margin-top:8px;">
+          <div class="progress-bar" [style.width.%]="updatedProgress"
+            [style.background]="getProgressColor(updatedProgress)"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeUpdateModal()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveProgress()">Save Progress</button>
+      </div>
+    </div>
+  </div>
+}

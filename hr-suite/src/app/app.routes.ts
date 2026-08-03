@@ -36,52 +36,52 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/recruitment/offer/offer').then(m => m.Offer)
       },
 
-      // ── Appraisal module ──
+      // ── Performance Appraisal module ──
       {
         path: 'appraisal',
-        loadComponent: () => import('./pages/appraisal/dashboard/dashboard').then(m => m.AppraisalDashboard)
+        loadComponent: () => import('./pages/performance-appraisal/dashboard/dashboard').then(m => m.AppraisalDashboard)
       },
       {
         path: 'appraisal/cycles',
-        loadComponent: () => import('./pages/appraisal/cycles/cycles').then(m => m.Cycles)
+        loadComponent: () => import('./pages/performance-appraisal/cycles/cycles').then(m => m.Cycles)
       },
       {
         path: 'appraisal/goals',
-        loadComponent: () => import('./pages/appraisal/goals/goals').then(m => m.Goals)
+        loadComponent: () => import('./pages/performance-appraisal/goals/goals').then(m => m.Goals)
       },
       {
         path: 'appraisal/feedback',
-        loadComponent: () => import('./pages/appraisal/feedback/feedback').then(m => m.Feedback)
+        loadComponent: () => import('./pages/performance-appraisal/feedback/feedback').then(m => m.Feedback)
       },
       {
         path: 'appraisal/organogram',
-        loadComponent: () => import('./pages/appraisal/organogram/organogram').then(m => m.Organogram)
+        loadComponent: () => import('./pages/performance-appraisal/organogram/organogram').then(m => m.Organogram)
       },
 
       // ── Project Management module ──
       {
         path: 'projects',
-        loadComponent: () => import('./pages/projects/projects').then(m => m.Projects)
+        loadComponent: () => import('./pages/project-management/dashboard/dashboard').then(m => m.ProjectsDashboard)
       },
       {
         path: 'projects/all',
-        loadComponent: () => import('./pages/projects/all-projects/all-projects').then(m => m.AllProjects)
+        loadComponent: () => import('./pages/project-management/all-projects/all-projects').then(m => m.AllProjects)
       },
       {
         path: 'tasks',
-        loadComponent: () => import('./pages/tasks/tasks').then(m => m.Tasks)
+        loadComponent: () => import('./pages/project-management/tasks/tasks').then(m => m.Tasks)
       },
       {
         path: 'kanban',
-        loadComponent: () => import('./pages/kanban/kanban').then(m => m.Kanban)
+        loadComponent: () => import('./pages/project-management/kanban/kanban').then(m => m.Kanban)
       },
       {
         path: 'gantt',
-        loadComponent: () => import('./pages/gantt/gantt').then(m => m.Gantt)
+        loadComponent: () => import('./pages/project-management/gantt/gantt').then(m => m.Gantt)
       },
       {
         path: 'timesheet',
-        loadComponent: () => import('./pages/timesheet/timesheet').then(m => m.Timesheet)
+        loadComponent: () => import('./pages/project-management/timesheet/timesheet').then(m => m.Timesheet)
       },
 
       // ── Administration ──
