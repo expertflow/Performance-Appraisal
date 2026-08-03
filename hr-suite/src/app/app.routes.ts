@@ -28,6 +28,10 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/recruitment/pipeline/pipeline').then(m => m.Pipeline)
       },
       {
+        path: 'recruitment/agencies',
+        loadComponent: () => import('./pages/recruitment/agencies/agencies').then(m => m.Agencies)
+      },
+      {
         path: 'recruitment/offer',
         loadComponent: () => import('./pages/recruitment/offer/offer').then(m => m.Offer)
       },
@@ -49,11 +53,19 @@ export const routes: Routes = [
         path: 'appraisal/feedback',
         loadComponent: () => import('./pages/appraisal/feedback/feedback').then(m => m.Feedback)
       },
+      {
+        path: 'appraisal/organogram',
+        loadComponent: () => import('./pages/appraisal/organogram/organogram').then(m => m.Organogram)
+      },
 
       // ── Project Management module ──
       {
         path: 'projects',
         loadComponent: () => import('./pages/projects/projects').then(m => m.Projects)
+      },
+      {
+        path: 'projects/all',
+        loadComponent: () => import('./pages/projects/all-projects/all-projects').then(m => m.AllProjects)
       },
       {
         path: 'tasks',
@@ -62,6 +74,10 @@ export const routes: Routes = [
       {
         path: 'kanban',
         loadComponent: () => import('./pages/kanban/kanban').then(m => m.Kanban)
+      },
+      {
+        path: 'gantt',
+        loadComponent: () => import('./pages/gantt/gantt').then(m => m.Gantt)
       },
       {
         path: 'timesheet',
