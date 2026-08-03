@@ -1,0 +1,96 @@
+/* Danger button */
+.btn-danger {
+  background: #DC2626;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover { background: #B91C1C; }
+}
+
+/* Delete confirm modal body */
+.delete-confirm-body {
+  text-align: center;
+  padding: 8px 0;
+
+  .delete-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+  }
+
+  p {
+    font-size: 14px;
+    color: #1E293B;
+    margin-bottom: 8px;
+  }
+
+  .delete-warn {
+    font-size: 12px;
+    color: #DC2626;
+  }
+}
+
+.td-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar-sm-tbl {
+  width: 34px;
+  height: 34px;
+  background: #0D9488;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 11px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.td-user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1E293B;
+  line-height: 1.2;
+}
+
+.td-user-email {
+  font-size: 11px;
+  color: #64748B;
+}
+
+/* Role chips */
+.role-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.role-appadmin { background: #EFF6FF; color: #1D4ED8; }
+.role-hr       { background: #F5F3FF; color: #6D28D9; }
+.role-manager  { background: #FFF7ED; color: #C2410C; }
+.role-employee { background: #F0FDF4; color: #15803D; }
+
+/* Status badges */
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.status-active   { background: #F0FDF4; color: #15803D; }
+.status-inactive { background: #FEF2F2; color: #DC2626; }

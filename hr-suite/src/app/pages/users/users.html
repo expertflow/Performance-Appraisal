@@ -1,0 +1,200 @@
+<div class="page-header">
+  <div>
+    <h1>All Users</h1>
+    <p>Manage application users and their roles</p>
+  </div>
+</div>
+
+<!-- Delete confirmation modal -->
+@if (deletingUser) {
+  <div class="modal-overlay" (click)="cancelDelete()">
+    <div class="modal" style="max-width:420px;" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Delete User</h3>
+        <button class="modal-close" (click)="cancelDelete()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="delete-confirm-body">
+          <div class="delete-icon">🗑️</div>
+          <p>Are you sure you want to delete <strong>{{ deletingUser.name }}</strong>?</p>
+          <p class="delete-warn">This action cannot be undone. The user will lose all access to HR Suite.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="cancelDelete()">Cancel</button>
+        <button class="btn btn-danger" (click)="deleteUser()">Delete User</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Stats row -->
+<div class="stat-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px;">
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.total }}</div>
+    <div class="stat-label">Total Users</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" style="color:#059669;">{{ stats.active }}</div>
+    <div class="stat-label">Active</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" style="color:#DC2626;">{{ stats.inactive }}</div>
+    <div class="stat-label">Inactive</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" style="color:#1D4ED8;">{{ stats.admins }}</div>
+    <div class="stat-label">Admins / HR</div>
+  </div>
+</div>
+
+<!-- Filter bar -->
+<div class="filter-bar" style="margin-bottom:16px;">
+  <div class="form-group" style="flex:2; min-width:200px;">
+    <input
+      type="text"
+      class="form-control"
+      placeholder="Search by name, email, department…"
+      title="Search users"
+      [(ngModel)]="searchQuery" />
+  </div>
+  <div class="form-group" style="min-width:160px;">
+    <select class="form-control" title="Filter by role" [(ngModel)]="filterRole">
+      <option value="">All Roles</option>
+      <option value="AppAdmin">App Admin</option>
+      <option value="HR">HR</option>
+      <option value="Manager">Manager</option>
+      <option value="Employee">Employee</option>
+    </select>
+  </div>
+  <div class="form-group" style="min-width:140px;">
+    <select class="form-control" title="Filter by status" [(ngModel)]="filterStatus">
+      <option value="">All Status</option>
+      <option value="Active">Active</option>
+      <option value="Inactive">Inactive</option>
+    </select>
+  </div>
+</div>
+
+<!-- Users table -->
+<div class="card" style="padding:0;">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Role</th>
+          <th>Department</th>
+          <th>Designation</th>
+          <th>Last Login</th>
+          <th>Status</th>
+          <th style="text-align:center;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (filteredUsers.length === 0) {
+          <tr>
+            <td colspan="7" style="text-align:center; padding:40px; color:var(--color-text-muted);">
+              No users match the current filters.
+            </td>
+          </tr>
+        }
+        @for (u of filteredUsers; track u.id) {
+          <tr>
+            <td>
+              <div class="td-user">
+                <div class="user-avatar-sm-tbl">{{ initials(u.name) }}</div>
+                <div>
+                  <div class="td-user-name">{{ u.name }}</div>
+                  <div class="td-user-email">{{ u.email }}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="role-chip" [class]="roleClass(u.role)">{{ u.role }}</span>
+            </td>
+            <td>{{ u.department }}</td>
+            <td>{{ u.designation }}</td>
+            <td style="color:var(--color-text-secondary); font-size:12px;">{{ u.lastLogin }}</td>
+            <td>
+              <span class="status-badge" [class.status-active]="u.status === 'Active'" [class.status-inactive]="u.status === 'Inactive'">
+                {{ u.status }}
+              </span>
+            </td>
+            <td style="text-align:center;">
+              <div class="flex gap-2" style="justify-content:center;">
+                <button class="btn btn-sm btn-secondary" (click)="openEdit(u)" title="Edit user">
+                  ✏️ Edit
+                </button>
+                <button
+                  class="btn btn-sm"
+                  [class.btn-secondary]="u.status === 'Active'"
+                  [class.btn-primary]="u.status === 'Inactive'"
+                  (click)="toggleStatus(u)"
+                  [title]="u.status === 'Active' ? 'Deactivate user' : 'Activate user'">
+                  {{ u.status === 'Active' ? '🚫 Deactivate' : '✅ Activate' }}
+                </button>
+                <button class="btn btn-sm btn-danger" (click)="confirmDelete(u)" title="Delete user">
+                  🗑️ Delete
+                </button>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Edit modal -->
+@if (editingUser) {
+  <div class="modal-overlay" (click)="closeEdit()">
+    <div class="modal" style="max-width:480px;" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Edit User — {{ editingUser.name }}</h3>
+        <button class="modal-close" (click)="closeEdit()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" class="form-control" title="Full name" [(ngModel)]="editForm.name" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-control" title="Email address" [(ngModel)]="editForm.email" />
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="form-group">
+            <label class="form-label">App Role</label>
+            <select class="form-control" title="App role" [(ngModel)]="editForm.role">
+              @for (r of roles; track r) {
+                <option [value]="r">{{ r }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select class="form-control" title="Status" [(ngModel)]="editForm.status">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Department</label>
+          <input type="text" class="form-control" title="Department" [(ngModel)]="editForm.department" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Designation</label>
+          <input type="text" class="form-control" title="Designation" [(ngModel)]="editForm.designation" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeEdit()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveEdit()" [disabled]="saving">
+          @if (saving) { Saving… } @else { Save Changes }
+        </button>
+      </div>
+    </div>
+  </div>
+}

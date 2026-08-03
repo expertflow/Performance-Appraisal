@@ -149,6 +149,11 @@
             </div>
           </div>
           <div class="profile-popup-divider"></div>
+          @if (canViewEmployees) {
+            <a routerLink="/users" class="profile-popup-item" (click)="closeProfileMenu()">
+              <span>👥</span> All Users
+            </a>
+          }
           <a routerLink="/settings" class="profile-popup-item" (click)="closeProfileMenu()">
             <span>⚙️</span> Settings
           </a>

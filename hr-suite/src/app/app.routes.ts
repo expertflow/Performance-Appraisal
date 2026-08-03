@@ -36,6 +36,13 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/settings/settings').then(m => m.Settings)
       },
 
+      // ── All Users (AppAdmin, HR only) ──
+      {
+        path: 'users',
+        canActivate: [roleGuard(['AppAdmin', 'HR'])],
+        loadComponent: () => import('./pages/users/users').then(m => m.Users)
+      },
+
       // ── Notifications (all roles) ──
       {
         path: 'notifications',
