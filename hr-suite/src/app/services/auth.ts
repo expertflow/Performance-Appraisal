@@ -36,7 +36,9 @@ export class AuthService {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     this._user.set(null);
-    this.router.navigate(['/login']);
+    // replaceUrl: true replaces the current history entry so the back button
+    // cannot navigate back into the app after logout.
+    this.router.navigate(['/login'], { replaceUrl: true });
   }
 
   changePassword(currentPassword: string, newPassword: string): Observable<{ message: string }> {
@@ -86,7 +88,18 @@ export class AuthService {
   /** Manager's employee_id (for Employee role: who their manager is) */
   get managerId(): string | undefined { return this._user()?.manager_id; }
 
-  // ── Dev/demo: mock login without backend ──────────────────────────────────
+  // ── Local / mock login helpers ────────────────────────────────────────────
+
+  /**
+   * Log in with a fully-formed AppUser object and token.
+   * Used for hardcoded local accounts (e.g. zaeem.ahmad@expertflow.com).
+   */
+  mockLoginWithUser(user: AppUser, token: string): void {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    this._user.set(user);
+  }
+
   /**
    * Use this when the backend is not available.
    * Call mockLogin('AppAdmin' | 'HR' | 'Manager' | 'Employee') from the login page.

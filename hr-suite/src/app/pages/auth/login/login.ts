@@ -2,7 +2,23 @@ import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../services/auth';
-import { AppRole } from '../../../models';
+import { AppUser } from '../../../models';
+
+// ── Hardcoded accounts (replace with real API when backend is ready) ──────────
+const LOCAL_ACCOUNTS: Array<{ email: string; password: string; user: AppUser; token: string }> = [
+  {
+    email: 'zaeem.ahmad@expertflow.com',
+    password: '12345',
+    token: 'local-token-appadmin',
+    user: {
+      id: 'u-zaeem',
+      email: 'zaeem.ahmad@expertflow.com',
+      name: 'Zaeem Ahmad',
+      role: 'AppAdmin',
+      employee_id: 'emp-zaeem',
+    }
+  }
+];
 
 @Component({
   selector: 'app-login',
@@ -11,17 +27,17 @@ import { AppRole } from '../../../models';
   styleUrl: './login.scss'
 })
 export class Login {
-  email         = '';
-  password      = '';
-  keepSignedIn  = false;
-  loading       = signal(false);
-  error         = signal('');
-  showPass      = signal(false);
+  email        = '';
+  password     = '';
+  keepSignedIn = false;
+  loading      = signal(false);
+  error        = signal('');
+  showPass     = signal(false);
 
   constructor(private auth: AuthService, private router: Router) {
-    // Already logged in → redirect
     if (this.auth.isLoggedIn()) {
-      this.router.navigate(['/dashboard']);
+      // Replace login in history so back button doesn't return here when already logged in
+      this.router.navigate(['/dashboard'], { replaceUrl: true });
     }
   }
 
@@ -30,8 +46,31 @@ export class Login {
       this.error.set('Please enter your email and password.');
       return;
     }
+
     this.loading.set(true);
     this.error.set('');
+
+    // ── Check local accounts first ─────────────────────────────────────────
+    const match = LOCAL_ACCOUNTS.find(
+      a => a.email.toLowerCase() === this.email.toLowerCase() && a.password === this.password
+    );
+
+    if (match) {
+      // Simulate a successful login without a backend
+      this.auth.mockLoginWithUser(match.user, match.token);
+      this.loading.set(false);
+      this.router.navigate(['/dashboard']);
+      return;
+    }
+
+    // ── Validate @expertflow.com domain ───────────────────────────────────
+    if (!this.email.toLowerCase().endsWith('@expertflow.com')) {
+      this.loading.set(false);
+      this.error.set('Access restricted to ExpertFlow personnel only. Please use your @expertflow.com account.');
+      return;
+    }
+
+    // ── Try real backend ───────────────────────────────────────────────────
     this.auth.login({ email: this.email, password: this.password }).subscribe({
       next: () => {
         this.loading.set(false);
@@ -44,9 +83,8 @@ export class Login {
     });
   }
 
-  // ── Demo quick-login buttons (remove in production) ───────────────────────
-  demoLogin(role: AppRole) {
-    this.auth.mockLogin(role);
-    this.router.navigate(['/dashboard']);
+  googleSignIn() {
+    // Placeholder — wire to real Google OAuth when backend is ready
+    this.error.set('Google SSO is not yet configured. Please sign in with your email and password.');
   }
 }

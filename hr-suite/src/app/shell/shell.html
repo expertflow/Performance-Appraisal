@@ -129,29 +129,47 @@
         <a routerLink="/notifications" routerLinkActive="active" class="nav-item">
           <span class="nav-icon">🔔</span>
           <span>Notifications</span>
-          <span class="nav-badge">8</span>
+          @if (notif.unreadCount() > 0) {
+            <span class="nav-badge">{{ notif.unreadCount() }}</span>
+          }
         </a>
       }
     </nav>
 
-    <!-- Sidebar footer: user card + settings + logout -->
+    <!-- Sidebar footer: user card (click to open popup) -->
     <div class="sidebar-footer">
-      <a routerLink="/settings" class="sidebar-footer-link" title="Settings">
-        <span>⚙️</span> Settings
-      </a>
-      <a routerLink="/change-password" class="sidebar-footer-link" title="Change Password">
-        <span>🔑</span> Change Password
-      </a>
-      <button class="sidebar-footer-link sidebar-logout" (click)="logout()" title="Logout">
-        <span>🚪</span> Logout
-      </button>
-      <div class="user-card">
+      <!-- Profile popup — appears above the user card -->
+      @if (profileMenuOpen()) {
+        <div class="profile-popup">
+          <div class="profile-popup-header">
+            <div class="profile-popup-avatar">{{ userInitials }}</div>
+            <div class="profile-popup-info">
+              <span class="profile-popup-name">{{ user?.name ?? 'User' }}</span>
+              <span class="profile-popup-email">{{ user?.email }}</span>
+            </div>
+          </div>
+          <div class="profile-popup-divider"></div>
+          <a routerLink="/settings" class="profile-popup-item" (click)="closeProfileMenu()">
+            <span>⚙️</span> Settings
+          </a>
+          <a routerLink="/change-password" class="profile-popup-item" (click)="closeProfileMenu()">
+            <span>🔑</span> Change Password
+          </a>
+          <div class="profile-popup-divider"></div>
+          <button class="profile-popup-item profile-popup-logout" (click)="logout()">
+            <span>🚪</span> Logout
+          </button>
+        </div>
+      }
+      <!-- Clickable user card -->
+      <button class="user-card" (click)="toggleProfileMenu()" [class.active]="profileMenuOpen()">
         <div class="user-avatar">{{ userInitials }}</div>
         <div class="user-info">
           <span class="user-name">{{ user?.name ?? 'User' }}</span>
           <span class="user-role">{{ roleLabel }}</span>
         </div>
-      </div>
+        <span class="user-card-chevron" [class.open]="profileMenuOpen()">›</span>
+      </button>
     </div>
   </aside>
 
@@ -170,7 +188,9 @@
       <div class="topbar-actions">
         <a routerLink="/notifications" class="icon-btn" title="Notifications">
           <span>🔔</span>
-          <span class="icon-btn-badge">4</span>
+          @if (notif.unreadCount() > 0) {
+            <span class="icon-btn-badge">{{ notif.unreadCount() }}</span>
+          }
         </a>
 
         <!-- Top-right user menu -->

@@ -1,0 +1,42 @@
+<div class="page-header">
+  <div>
+    <h1>Notifications</h1>
+    <p>System alerts and workflow notifications</p>
+  </div>
+  <div class="flex gap-2">
+    @if (unreadCount() > 0) {
+      <span class="unread-chip">{{ unreadCount() }} unread</span>
+    }
+    <button class="btn btn-secondary btn-sm" (click)="markAllRead()" [disabled]="unreadCount() === 0">
+      Mark All Read
+    </button>
+  </div>
+</div>
+
+<div class="card" style="padding: 0;">
+  @if (notifications().length === 0) {
+    <div style="text-align:center; padding: 60px 20px;">
+      <div style="font-size:48px; margin-bottom:16px;">🔔</div>
+      <h3 style="margin-bottom:8px;">All caught up!</h3>
+      <p style="color:var(--color-text-secondary); font-size:13px;">No notifications to show.</p>
+    </div>
+  } @else {
+    <div class="notif-list">
+      @for (n of notifications(); track n.id) {
+        <div class="notif-row" [class.unread]="!n.read" (click)="markRead(n)">
+          <div class="notif-icon-wrap" [class]="typeClass(n.type)">
+            <span class="notif-icon">{{ typeIcon(n.type) }}</span>
+          </div>
+          <div class="notif-body">
+            <div class="notif-title">{{ n.title }}</div>
+            <div class="notif-text">{{ n.body }}</div>
+            <div class="notif-time">{{ n.time }}</div>
+          </div>
+          @if (!n.read) {
+            <div class="notif-unread-dot" title="Unread"></div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

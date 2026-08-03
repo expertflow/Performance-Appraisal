@@ -1,21 +1,36 @@
-import { Component } from '@angular/core';
+// notifications page
+import { Component, inject, computed } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { NotificationService, AppNotification } from '../../services/notification';
 
 @Component({
   selector: 'app-notifications',
-  imports: [],
-  template: `
-    <div class="page-header">
-      <div>
-        <h1>Notifications</h1>
-        <p>System alerts and workflow notifications</p>
-      </div>
-      <button class="btn btn-secondary btn-sm">Mark All Read</button>
-    </div>
-    <div class="card" style="text-align:center;padding:60px 20px;">
-      <div style="font-size:48px;margin-bottom:16px;">🔔</div>
-      <h3 style="margin-bottom:8px;">Notification Center</h3>
-      <p style="color:var(--color-text-secondary);font-size:13px;">Notification management will be available in a future release.</p>
-    </div>
-  `
+  imports: [CommonModule],
+  templateUrl: './notifications.html',
+  styleUrl: './notifications.scss'
 })
-export class Notifications {}
+export class Notifications {
+  readonly notif = inject(NotificationService);
+
+  readonly notifications = computed(() => this.notif.notifications());
+  readonly unreadCount   = computed(() => this.notif.unreadCount());
+
+  markRead(n: AppNotification): void {
+    this.notif.markRead(n.id);
+  }
+
+  markAllRead(): void {
+    this.notif.markAllRead();
+  }
+
+  typeIcon(type: AppNotification['type']): string {
+    if (type === 'success') return '✅';
+    if (type === 'warning') return '⚠️';
+    if (type === 'error')   return '❌';
+    return 'ℹ️';
+  }
+
+  typeClass(type: AppNotification['type']): string {
+    return `notif-type-${type}`;
+  }
+}

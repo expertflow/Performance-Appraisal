@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthService } from '../services/auth';
+import { NotificationService } from '../services/notification';
 
 @Component({
   selector: 'app-shell',
@@ -14,12 +15,16 @@ import { AuthService } from '../services/auth';
 export class Shell {
   private router = inject(Router);
   readonly auth   = inject(AuthService);
+  readonly notif  = inject(NotificationService);
 
   // Track which module section is expanded
   expandedModule = signal<'recruitment' | 'appraisal' | 'projects' | null>(null);
 
-  // User menu dropdown open state
+  // User menu dropdown open state (top-right)
   userMenuOpen = signal(false);
+
+  // Profile popup open state (bottom-left sidebar)
+  profileMenuOpen = signal(false);
 
   // Convert router events to a signal so zoneless CD picks up URL changes
   private navEnd = toSignal(
@@ -64,7 +69,8 @@ export class Shell {
       filter(e => e instanceof NavigationEnd)
     ).subscribe(() => {
       this.autoExpand();
-      this.userMenuOpen.set(false); // close user menu on navigation
+      this.userMenuOpen.set(false);    // close top-right user menu on navigation
+      this.profileMenuOpen.set(false); // close sidebar profile popup on navigation
     });
     this.autoExpand();
   }
@@ -102,8 +108,17 @@ export class Shell {
     this.userMenuOpen.set(!this.userMenuOpen());
   }
 
+  toggleProfileMenu() {
+    this.profileMenuOpen.set(!this.profileMenuOpen());
+  }
+
+  closeProfileMenu() {
+    this.profileMenuOpen.set(false);
+  }
+
   logout() {
     this.userMenuOpen.set(false);
+    this.profileMenuOpen.set(false);
     this.auth.logout();
   }
 
