@@ -1,20 +1,20 @@
 <div class="page-header">
   <div>
     <h1>
-      @if (isEmployee()) { My Feedback }
-      @else if (isManager()) { Team Feedback }
-      @else { Feedback }
+      @if (isEmployee()) { My Appraisals }
+      @else if (isManager()) { Team Appraisals }
+      @else { Performance Appraisals }
     </h1>
     <p>
-      @if (isEmployee()) { Feedback you've given and received this cycle }
-      @else if (isManager()) { 360° feedback for your team members }
-      @else { Manage 360° peer feedback requests for the current cycle }
+      @if (isEmployee()) { Your performance appraisal records }
+      @else if (isManager()) { Appraisal records for your team members }
+      @else { Manage performance appraisal records for all employees }
     </p>
   </div>
   <div class="flex gap-2">
     <button class="btn btn-secondary btn-sm" (click)="exportData()">Export</button>
-    @if (canRequestFeedback()) {
-      <button class="btn btn-primary btn-sm" (click)="openModal()">+ Request Feedback</button>
+    @if (canAddAppraisal()) {
+      <button class="btn btn-primary btn-sm" (click)="openModal()">+ Add Appraisal</button>
     }
   </div>
 </div>
@@ -22,7 +22,7 @@
 <!-- Export Toast -->
 @if (exportToast) {
   <div class="alert alert-success" style="margin-bottom:12px;">
-    ✓ Feedback data exported successfully (CSV download started)
+    ✓ Appraisal data exported successfully
   </div>
 }
 
@@ -37,140 +37,254 @@
   }
 </div>
 
-<!-- Tabs + Filter -->
+<!-- Tabs + Search -->
 <div class="flex items-center justify-between mb-3" style="flex-wrap:wrap;gap:8px;">
   <div class="tabs" style="margin-bottom:0;">
     @for (tab of tabs; track tab) {
       <button class="tab" [class.active]="activeTab === tab" (click)="setTab(tab)">{{ tab }}</button>
     }
   </div>
-  <div class="flex gap-2">
-    <input class="form-control" style="width:200px;" placeholder="🔍 Search..."
-      [(ngModel)]="searchText" />
-    <select class="form-control" style="width:200px;" title="Filter by cycle"
-      [(ngModel)]="filterCycle">
-      <option>2025 Mid-Year Review</option>
-      <option>2025 Q1 Check-in</option>
-    </select>
-  </div>
+  <input class="form-control" style="width:220px;" placeholder="🔍 Search employee, dept..."
+    [(ngModel)]="searchText" />
 </div>
 
-<!-- Feedback Table -->
-<div class="card" style="padding:0;">
-  <div class="table-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <th>Subject</th>
-          <th>Reviewer</th>
-          <th>Type</th>
-          <th>Cycle</th>
-          <th>Requested</th>
-          <th>Due Date</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (fb of filteredFeedback; track fb.id) {
-          <tr [class.overdue-row]="fb.status === 'Overdue'">
-            <td>
-              <div class="td-person">
-                <div class="person-avatar" [class]="'avatar-' + fb.subjectColor">{{ fb.subjectInitials }}</div>
-                <div>
-                  <div style="font-weight:600;font-size:13px;">{{ fb.subject }}</div>
-                  <div style="font-size:11px;color:var(--color-text-muted);">{{ fb.id }}</div>
-                </div>
-              </div>
-            </td>
-            <td>
-              <div class="td-person">
-                <div class="person-avatar" [class]="'avatar-' + fb.reviewerColor">{{ fb.reviewerInitials }}</div>
-                <span style="font-size:13px;">{{ fb.reviewer }}</span>
-              </div>
-            </td>
-            <td>
-              <span class="badge" [class]="fb.typeClass">{{ fb.type }}</span>
-            </td>
-            <td style="font-size:12px;color:var(--color-text-secondary);">{{ fb.cycle }}</td>
-            <td style="font-size:12px;">{{ fb.requestedDate }}</td>
-            <td>
-              <span [class.overdue-date]="fb.status === 'Overdue'" style="font-size:12px;">{{ fb.dueDate }}</span>
-            </td>
-            <td>
-              <span class="badge" [class]="fb.statusClass">{{ fb.status }}</span>
-            </td>
-            <td>
-              <div style="display:flex;gap:6px;">
-                @if (fb.status === 'Completed') {
-                  <button class="btn btn-secondary btn-sm">View</button>
-                } @else if (fb.status === 'Overdue') {
-                  <button class="btn btn-danger btn-sm">Remind</button>
-                } @else {
-                  <button class="btn btn-secondary btn-sm">Remind</button>
-                  <button class="btn btn-secondary btn-sm">Cancel</button>
-                }
-              </div>
-            </td>
-          </tr>
-        }
-        @if (filteredFeedback.length === 0) {
+<!-- Loading -->
+@if (store.loading()) {
+  <div style="text-align:center;padding:40px;color:var(--color-text-muted);">Loading appraisals…</div>
+}
+
+<!-- Table -->
+@if (!store.loading()) {
+  <div class="card" style="padding:0;">
+    <div class="table-wrapper">
+      <table>
+        <thead>
           <tr>
-            <td colspan="8" style="text-align:center;padding:32px;color:var(--color-text-muted);">
-              No feedback requests match your filters.
-            </td>
+            <th>Employee</th>
+            <th>Department</th>
+            @if (!isEmployee()) { <th>Manager Review</th> }
+            <th>Rating</th>
+            <th>Goals Met</th>
+            <th>Status</th>
+            <th>Actions</th>
           </tr>
-        }
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          @for (rec of filteredRecords; track rec.id) {
+            <tr>
+              <td>
+                <div class="td-person">
+                  <div class="person-avatar" [class]="'avatar-' + avatarColor(rec.employeeName)">
+                    {{ initials(rec.employeeName) }}
+                  </div>
+                  <div>
+                    <div style="font-weight:600;font-size:13px;">{{ rec.employeeName }}</div>
+                    <div style="font-size:11px;color:var(--color-text-muted);">{{ rec.cycleName || 'No cycle' }}</div>
+                  </div>
+                </div>
+              </td>
+              <td style="font-size:13px;">{{ rec.department || '—' }}</td>
+              @if (!isEmployee()) {
+                <td style="font-size:12px;color:var(--color-text-secondary);max-width:200px;">
+                  {{ rec.managerReview ? (rec.managerReview.length > 60 ? rec.managerReview.slice(0,60) + '…' : rec.managerReview) : '—' }}
+                </td>
+              }
+              <td>
+                @if (rec.rating) {
+                  <span style="font-weight:700;font-size:14px;">{{ rec.rating }}<span style="font-size:11px;color:var(--color-text-muted);">/5</span></span>
+                } @else {
+                  <span style="color:var(--color-text-muted);font-size:12px;">—</span>
+                }
+              </td>
+              <td>
+                @if (rec.goalsMet > 0) {
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <div class="progress-bar-wrap" style="width:60px;">
+                      <div class="progress-bar" [style.width.%]="rec.goalsMet"
+                        [style.background]="rec.goalsMet >= 80 ? '#059669' : rec.goalsMet >= 60 ? '#D97706' : '#DC2626'"></div>
+                    </div>
+                    <span style="font-size:12px;font-weight:600;">{{ rec.goalsMet }}%</span>
+                  </div>
+                } @else {
+                  <span style="color:var(--color-text-muted);font-size:12px;">—</span>
+                }
+              </td>
+              <td>
+                <span class="badge" [class]="statusClass(rec.status)">{{ rec.status }}</span>
+              </td>
+              <td>
+                <div style="display:flex;gap:6px;">
+                  @if (isEmployee()) {
+                    <button class="btn btn-secondary btn-sm">View</button>
+                  } @else {
+                    <button class="btn btn-secondary btn-sm" (click)="openEdit(rec)">✏️ Review</button>
+                    @if (isHROrAdmin()) {
+                      <button class="btn btn-danger btn-sm" (click)="deleteRecord(rec)">🗑️</button>
+                    }
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+          @if (filteredRecords.length === 0) {
+            <tr>
+              <td [attr.colspan]="isEmployee() ? 5 : 6" style="text-align:center;padding:32px;color:var(--color-text-muted);">
+                @if (records.length === 0) {
+                  No appraisal records found.
+                  @if (canAddAppraisal()) { Click "+ Add Appraisal" to create one. }
+                } @else {
+                  No records match your filters.
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
   </div>
-</div>
+}
 
-<!-- Request Feedback Modal -->
+<!-- Add Appraisal Modal -->
 @if (showModal) {
   <div class="modal-overlay" (click)="closeModal()">
-    <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal" style="max-width:560px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h2>Request Feedback</h2>
+        <h2>Add Performance Appraisal</h2>
         <button class="btn btn-icon" (click)="closeModal()">✕</button>
       </div>
       <div class="modal-body">
+
+        <!-- Manager: pick from team dropdown -->
+        @if (isManager()) {
+          <div class="form-group">
+            <label class="form-label">Team Member *</label>
+            <select class="form-control" title="Select team member"
+              [(ngModel)]="newForm.employeeId" (change)="onTeamMemberChange()">
+              <option value="">— Select team member —</option>
+              @for (member of teamMembers; track member.id) {
+                <option [value]="member.id">{{ member.fullName }} ({{ member.department }})</option>
+              }
+            </select>
+            @if (teamMembers.length === 0) {
+              <div style="font-size:11px;color:var(--color-orange);margin-top:4px;">
+                ⚠️ No team members found. Ensure employees have manager_id set in BS4/Directus.
+              </div>
+            }
+          </div>
+        }
+
+        <!-- HR/Admin: free-text -->
+        @if (isHROrAdmin()) {
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label class="form-label">Employee ID *</label>
+              <input class="form-control" placeholder="e.g. emp-001" [(ngModel)]="newForm.employeeId" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Employee Name *</label>
+              <input class="form-control" placeholder="e.g. Fatima Malik" [(ngModel)]="newForm.employeeName" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Department</label>
+            <input class="form-control" placeholder="e.g. Engineering" [(ngModel)]="newForm.department" />
+          </div>
+        }
+
         <div class="form-group">
-          <label class="form-label">Subject (Employee being reviewed) *</label>
-          <input class="form-control" placeholder="e.g. Fatima Malik" [(ngModel)]="newFeedback.subject" />
+          <label class="form-label">Manager Review / Comments</label>
+          <textarea class="form-control" rows="3" placeholder="Overall performance assessment..."
+            [(ngModel)]="newForm.managerReview" style="resize:vertical;"></textarea>
         </div>
-        <div class="form-group">
-          <label class="form-label">Reviewer *</label>
-          <input class="form-control" placeholder="e.g. Omar Sheikh" [(ngModel)]="newFeedback.reviewer" />
-        </div>
+
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div class="form-group">
-            <label class="form-label">Feedback Type</label>
-            <select class="form-control" title="Feedback type" [(ngModel)]="newFeedback.type">
-              <option>Peer</option>
-              <option>360°</option>
-              <option>Manager</option>
-              <option>Self</option>
+            <label class="form-label">Rating (1–5)</label>
+            <select class="form-control" title="Rating" [(ngModel)]="newForm.rating">
+              <option value="">— Not rated yet —</option>
+              <option value="5">5 — Exceptional</option>
+              <option value="4">4 — Exceeds Expectations</option>
+              <option value="3">3 — Meets Expectations</option>
+              <option value="2">2 — Below Expectations</option>
+              <option value="1">1 — Unsatisfactory</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">Due Date</label>
-            <input class="form-control" type="date" title="Due date" [(ngModel)]="newFeedback.dueDate" />
+            <label class="form-label">Goals Met (%)</label>
+            <input class="form-control" type="number" min="0" max="100" placeholder="0–100"
+              [(ngModel)]="newForm.goalsMet" />
           </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Appraisal Cycle</label>
-          <select class="form-control" title="Appraisal cycle" [(ngModel)]="newFeedback.cycle">
-            <option>2025 Mid-Year Review</option>
-            <option>2025 Q1 Check-in</option>
-            <option>2025 Year-End Review</option>
-          </select>
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" (click)="closeModal()">Cancel</button>
-        <button class="btn btn-primary" (click)="submitFeedback()"
-          [disabled]="!newFeedback.subject || !newFeedback.reviewer">Send Request</button>
+        <button class="btn btn-primary" (click)="submitAppraisal()"
+          [disabled]="saving() || !newForm.employeeId || (!isManager() && !newForm.employeeName)">
+          @if (saving()) { <span class="spinner-sm"></span> Saving… } @else { Save Appraisal }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Edit / Review Modal -->
+@if (showEditModal && selectedRecord) {
+  <div class="modal-overlay" (click)="closeEdit()">
+    <div class="modal" style="max-width:560px;" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Review Appraisal — {{ selectedRecord.employeeName }}</h2>
+        <button class="btn btn-icon" (click)="closeEdit()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="background:var(--color-bg);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:16px;font-size:13px;">
+          <div style="font-weight:600;margin-bottom:4px;">{{ selectedRecord.employeeName }}</div>
+          <div style="color:var(--color-text-secondary);">{{ selectedRecord.department }} · {{ selectedRecord.cycleName || 'No cycle' }}</div>
+          @if (selectedRecord.selfReview) {
+            <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--color-border);">
+              <div style="font-size:11px;font-weight:600;color:var(--color-text-muted);margin-bottom:4px;">SELF REVIEW</div>
+              <div style="color:var(--color-text-primary);">{{ selectedRecord.selfReview }}</div>
+            </div>
+          }
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Manager Review / Comments</label>
+          <textarea class="form-control" rows="4" placeholder="Overall performance assessment..."
+            [(ngModel)]="editForm.managerReview" style="resize:vertical;"></textarea>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Rating (1–5)</label>
+            <select class="form-control" title="Rating" [(ngModel)]="editForm.rating">
+              <option value="">— Not rated —</option>
+              <option value="5">5 — Exceptional</option>
+              <option value="4">4 — Exceeds</option>
+              <option value="3">3 — Meets</option>
+              <option value="2">2 — Below</option>
+              <option value="1">1 — Unsatisfactory</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Goals Met (%)</label>
+            <input class="form-control" type="number" min="0" max="100" title="Goals met percentage" placeholder="0–100"
+              [(ngModel)]="editForm.goalsMet" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select class="form-control" title="Status" [(ngModel)]="editForm.status">
+              <option value="draft">Draft</option>
+              <option value="submitted">Submitted</option>
+              <option value="acknowledged">Acknowledged</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeEdit()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveEdit()" [disabled]="saving()">
+          @if (saving()) { <span class="spinner-sm"></span> Saving… } @else { Save Changes }
+        </button>
       </div>
     </div>
   </div>

@@ -1,32 +1,18 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, computed, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
 import { AuthService } from '../../../services/auth';
-
-interface GoalItem {
-  id: string;
-  title: string;
-  employee: string;
-  employeeId: string;
-  managerId: string;
-  initials: string;
-  color: string;
-  dept: string;
-  category: string;
-  progress: number;
-  dueDate: string;
-  status: string;
-  statusClass: string;
-  description: string;
-}
+import { AppraisalStoreService, AppraisalGoal } from '../../../services/appraisal-store';
 
 @Component({
   selector: 'app-goals',
-  imports: [FormsModule],
+  imports: [FormsModule, CommonModule],
   templateUrl: './goals.html',
   styleUrl: './goals.scss'
 })
-export class Goals {
-  private auth = inject(AuthService);
+export class Goals implements OnInit {
+  private auth  = inject(AuthService);
+  readonly store = inject(AppraisalStoreService);
 
   // ── Role helpers ───────────────────────────────────────────────────────────
   readonly isEmployee  = computed(() => this.auth.isEmployee());
@@ -34,232 +20,138 @@ export class Goals {
   readonly isHROrAdmin = computed(() => this.auth.hasRole('AppAdmin', 'HR'));
   readonly canAddGoal  = computed(() => !this.auth.isEmployee());
 
-  activeTab = 'All Goals';
-  tabs = ['All Goals', 'My Team', 'Overdue', 'Completed'];
+  // ── UI state ───────────────────────────────────────────────────────────────
+  activeTab    = 'All Goals';
+  tabs         = ['All Goals', 'On Track', 'At Risk', 'Overdue', 'Completed'];
   activeFilter = 'All';
-  filters = ['All', 'Engineering', 'Product', 'Design', 'Operations'];
+  filters      = ['All', 'Engineering', 'Product', 'Design', 'Operations', 'Finance'];
 
-  // Modal state
-  showModal = false;
-  showUpdateModal = false;
-  exportToast = false;
-  selectedGoal: GoalItem | null = null;
-  updatedProgress = 0;
+  showModal        = false;
+  showUpdateModal  = false;
+  exportToast      = false;
+  saving           = signal(false);
+  selectedGoal: AppraisalGoal | null = null;
+  updatedProgress  = 0;
 
   newGoal = {
-    title: '',
-    employee: '',
-    dept: 'Engineering',
-    category: 'Technical',
-    dueDate: '',
+    employeeId:  '',
+    title:       '',
+    dept:        'Engineering',
+    category:    'Technical',
+    dueDate:     '',
     description: '',
   };
 
-  // All goals — in production these would be filtered server-side by role
-  allGoals: GoalItem[] = [
-    {
-      id: 'G-2025-041',
-      title: 'Migrate legacy API to GraphQL',
-      employee: 'Fatima Malik',
-      employeeId: 'emp-001',
-      managerId: 'emp-mgr',
-      initials: 'FM',
-      color: 'blue',
-      dept: 'Engineering',
-      category: 'Technical',
-      progress: 75,
-      dueDate: 'Jun 30, 2025',
-      status: 'On Track',
-      statusClass: 'badge-green',
-      description: 'Complete migration of 3 remaining REST endpoints to GraphQL schema',
-    },
-    {
-      id: 'G-2025-040',
-      title: 'Launch Q3 product roadmap',
-      employee: 'Omar Sheikh',
-      employeeId: 'emp-002',
-      managerId: 'emp-mgr',
-      initials: 'OS',
-      color: 'teal',
-      dept: 'Product',
-      category: 'Strategic',
-      progress: 60,
-      dueDate: 'Jul 15, 2025',
-      status: 'On Track',
-      statusClass: 'badge-green',
-      description: 'Define and communicate Q3 product priorities to all stakeholders',
-    },
-    {
-      id: 'G-2025-039',
-      title: 'Redesign onboarding flow',
-      employee: 'Zara Hussain',
-      employeeId: 'emp-003',
-      managerId: 'emp-mgr',
-      initials: 'ZH',
-      color: 'purple',
-      dept: 'Design',
-      category: 'UX',
-      progress: 40,
-      dueDate: 'Jun 15, 2025',
-      status: 'At Risk',
-      statusClass: 'badge-orange',
-      description: 'Complete user research and deliver new onboarding wireframes',
-    },
-    {
-      id: 'G-2025-038',
-      title: 'Reduce deployment time by 40%',
-      employee: 'Ahmed Raza',
-      employeeId: 'emp-004',
-      managerId: 'emp-mgr',
-      initials: 'AR',
-      color: 'teal',
-      dept: 'Engineering',
-      category: 'Operational',
-      progress: 90,
-      dueDate: 'Jun 30, 2025',
-      status: 'On Track',
-      statusClass: 'badge-green',
-      description: 'Implement CI/CD pipeline improvements to reduce deployment time',
-    },
-    {
-      id: 'G-2025-037',
-      title: 'Complete PMP certification',
-      employee: 'Khalid Mahmood',
-      employeeId: 'emp-005',
-      managerId: 'emp-mgr2',
-      initials: 'KM',
-      color: 'orange',
-      dept: 'Operations',
-      category: 'Development',
-      progress: 20,
-      dueDate: 'May 31, 2025',
-      status: 'Overdue',
-      statusClass: 'badge-red',
-      description: 'Pass PMP exam and obtain certification',
-    },
-    {
-      id: 'G-2025-036',
-      title: 'Implement automated testing suite',
-      employee: 'Nadia Baig',
-      employeeId: 'emp-006',
-      managerId: 'emp-mgr2',
-      initials: 'NB',
-      color: 'blue',
-      dept: 'Engineering',
-      category: 'Technical',
-      progress: 100,
-      dueDate: 'May 15, 2025',
-      status: 'Completed',
-      statusClass: 'badge-teal',
-      description: 'Set up Playwright E2E tests covering all critical user flows',
-    },
-  ];
-
-  /** Goals scoped to the current user's role */
-  get goals(): GoalItem[] {
+  ngOnInit(): void {
     const user = this.auth.currentUser();
-    if (!user) return [];
+    if (!user) return;
 
     if (this.auth.isEmployee()) {
-      // Employee sees only their own goals
-      return this.allGoals.filter(g => g.employeeId === user.employee_id);
+      this.store.loadGoals({ employeeId: user.employee_id });
+    } else if (this.auth.isManager()) {
+      this.store.loadGoals({ managerId: user.employee_id });
+      this.store.loadTeam(user.employee_id!);
+    } else {
+      // HR / AppAdmin — load all
+      this.store.loadGoals();
     }
-    if (this.auth.isManager()) {
-      // Manager sees only goals of their direct reports
-      return this.allGoals.filter(g => g.managerId === user.employee_id);
-    }
-    // HR / AppAdmin see all
-    return this.allGoals;
   }
 
-  get onTrackCount(): number { return this.goals.filter(g => g.status === 'On Track').length; }
-  get atRiskCount(): number { return this.goals.filter(g => g.status === 'At Risk' || g.status === 'Overdue').length; }
-  get completedCount(): number { return this.goals.filter(g => g.status === 'Completed').length; }
+  // ── Computed goal list ─────────────────────────────────────────────────────
+  get goals(): AppraisalGoal[] { return this.store.goals(); }
 
-  setTab(tab: string) { this.activeTab = tab; }
-  setFilter(filter: string) { this.activeFilter = filter; }
+  get onTrackCount():  number { return this.goals.filter(g => g.status === 'On Track').length; }
+  get atRiskCount():   number { return this.goals.filter(g => g.status === 'At Risk' || g.status === 'Overdue').length; }
+  get completedCount():number { return this.goals.filter(g => g.status === 'Completed').length; }
 
-  get filteredGoals(): GoalItem[] {
+  get filteredGoals(): AppraisalGoal[] {
     return this.goals.filter(g => {
-      const matchTab = this.activeTab === 'All Goals' ||
-        (this.activeTab === 'Overdue' && g.status === 'Overdue') ||
-        (this.activeTab === 'Completed' && g.status === 'Completed') ||
-        (this.activeTab === 'My Team');
-      const matchFilter = this.activeFilter === 'All' || g.dept === this.activeFilter;
+      const matchTab =
+        this.activeTab === 'All Goals' ||
+        (this.activeTab === 'On Track'  && g.status === 'On Track') ||
+        (this.activeTab === 'At Risk'   && g.status === 'At Risk') ||
+        (this.activeTab === 'Overdue'   && g.status === 'Overdue') ||
+        (this.activeTab === 'Completed' && g.status === 'Completed');
+      const matchFilter = this.activeFilter === 'All' || g.department === this.activeFilter;
       return matchTab && matchFilter;
     });
   }
 
+  // ── Team members for Manager dropdown ─────────────────────────────────────
+  get teamMembers() { return this.store.team(); }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  initials(name: string): string { return this.store.initials(name); }
+  avatarColor(name: string): string { return this.store.avatarColor(name); }
+  goalStatusClass(s: string): string { return this.store.goalStatusClass(s); }
+
   getProgressColor(pct: number): string {
     if (pct === 100) return '#059669';
-    if (pct >= 70) return '#0066CC';
-    if (pct >= 40) return '#D97706';
+    if (pct >= 70)   return '#0066CC';
+    if (pct >= 40)   return '#D97706';
     return '#DC2626';
   }
 
-  openModal() { this.showModal = true; }
+  setTab(tab: string)       { this.activeTab = tab; }
+  setFilter(filter: string) { this.activeFilter = filter; }
+
+  // ── Modal ──────────────────────────────────────────────────────────────────
+  openModal()  { this.showModal = true; }
   closeModal() { this.showModal = false; this.resetForm(); }
 
   resetForm() {
-    this.newGoal = { title: '', employee: '', dept: 'Engineering', category: 'Technical', dueDate: '', description: '' };
+    this.newGoal = { employeeId: '', title: '', dept: 'Engineering', category: 'Technical', dueDate: '', description: '' };
   }
 
   submitGoal() {
-    if (!this.newGoal.title || !this.newGoal.employee) return;
-    const initials = this.newGoal.employee.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
-    const colors = ['blue', 'teal', 'purple', 'orange'];
-    const color = colors[this.allGoals.length % colors.length];
-    const fmt = (s: string) => {
-      if (!s) return 'TBD';
-      const d = new Date(s);
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    };
-    const nextNum = 42 + (this.allGoals.length - 6);
     const user = this.auth.currentUser();
-    this.allGoals.unshift({
-      id: `G-2025-0${nextNum}`,
-      title: this.newGoal.title,
-      employee: this.newGoal.employee,
-      employeeId: 'emp-new',
-      managerId: user?.employee_id ?? '',
-      initials,
-      color,
-      dept: this.newGoal.dept,
-      category: this.newGoal.category,
-      progress: 0,
-      dueDate: fmt(this.newGoal.dueDate),
-      status: 'On Track',
-      statusClass: 'badge-green',
+    if (!user) return;
+
+    // For Manager: employeeId is selected from team dropdown
+    // For HR/Admin: employeeId is typed or selected
+    const empId   = this.isManager() ? this.newGoal.employeeId : (this.newGoal.employeeId || user.employee_id!);
+    const empName = this.isManager()
+      ? (this.teamMembers.find(m => m.id === empId)?.fullName ?? empId)
+      : this.newGoal.employeeId;
+
+    if (!this.newGoal.title || !empId) return;
+    this.saving.set(true);
+
+    this.store.createGoal({
+      employeeId:  empId,
+      managerId:   user.employee_id!,
+      title:       this.newGoal.title,
       description: this.newGoal.description,
+      department:  this.newGoal.dept,
+      category:    this.newGoal.category,
+      dueDate:     this.newGoal.dueDate || null,
+    }).subscribe({
+      next: () => { this.saving.set(false); this.closeModal(); },
+      error: err => { console.error(err); this.saving.set(false); }
     });
-    this.closeModal();
   }
 
-  openUpdateModal(goal: GoalItem) {
-    this.selectedGoal = goal;
+  // ── Update Progress Modal ──────────────────────────────────────────────────
+  openUpdateModal(goal: AppraisalGoal) {
+    this.selectedGoal    = goal;
     this.updatedProgress = goal.progress;
     this.showUpdateModal = true;
   }
 
   closeUpdateModal() {
     this.showUpdateModal = false;
-    this.selectedGoal = null;
+    this.selectedGoal    = null;
   }
 
   saveProgress() {
     if (!this.selectedGoal) return;
-    this.selectedGoal.progress = this.updatedProgress;
-    if (this.updatedProgress === 100) {
-      this.selectedGoal.status = 'Completed';
-      this.selectedGoal.statusClass = 'badge-teal';
-    } else if (this.updatedProgress >= 60) {
-      this.selectedGoal.status = 'On Track';
-      this.selectedGoal.statusClass = 'badge-green';
-    } else {
-      this.selectedGoal.status = 'At Risk';
-      this.selectedGoal.statusClass = 'badge-orange';
-    }
-    this.closeUpdateModal();
+    const pct = this.updatedProgress;
+    const status = pct === 100 ? 'Completed' : pct >= 60 ? 'On Track' : 'At Risk';
+
+    this.store.updateGoal(this.selectedGoal.id, { progress: pct, status }).subscribe({
+      next: () => this.closeUpdateModal(),
+      error: err => console.error(err)
+    });
   }
 
   exportData() {

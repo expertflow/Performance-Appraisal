@@ -111,27 +111,27 @@ export const routes: Routes = [
       {
         path: 'appraisal',
         canActivate: [roleGuard(['AppAdmin', 'HR', 'Manager', 'Employee'])],
-        loadComponent: () => import('./pages/performance-appraisal/dashboard/dashboard').then(m => m.AppraisalDashboard)
+        loadComponent: () => import('./pages/appraisal/dashboard/dashboard').then(m => m.AppraisalDashboard)
       },
       {
         path: 'appraisal/cycles',
         canActivate: [roleGuard(['AppAdmin', 'HR', 'Manager'])],
-        loadComponent: () => import('./pages/performance-appraisal/cycles/cycles').then(m => m.Cycles)
+        loadComponent: () => import('./pages/appraisal/cycles/cycles').then(m => m.Cycles)
       },
       {
         path: 'appraisal/goals',
         canActivate: [roleGuard(['AppAdmin', 'HR', 'Manager', 'Employee'])],
-        loadComponent: () => import('./pages/performance-appraisal/goals/goals').then(m => m.Goals)
+        loadComponent: () => import('./pages/appraisal/goals/goals').then(m => m.Goals)
       },
       {
         path: 'appraisal/feedback',
         canActivate: [roleGuard(['AppAdmin', 'HR', 'Manager', 'Employee'])],
-        loadComponent: () => import('./pages/performance-appraisal/feedback/feedback').then(m => m.Feedback)
+        loadComponent: () => import('./pages/appraisal/feedback/feedback').then(m => m.Feedback)
       },
       {
         path: 'appraisal/organogram',
-        canActivate: [roleGuard(['AppAdmin', 'HR'])],
-        loadComponent: () => import('./pages/performance-appraisal/organogram/organogram').then(m => m.Organogram)
+        canActivate: [roleGuard(['AppAdmin', 'HR', 'Manager', 'Employee'])],
+        loadComponent: () => import('./pages/appraisal/organogram/organogram').then(m => m.Organogram)
       },
 
       // ── Project Management module (all internal roles) ──────────────────────

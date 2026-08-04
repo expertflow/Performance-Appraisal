@@ -36,7 +36,7 @@
   <div class="stat-card">
     <div class="stat-label">On Track</div>
     <div class="stat-value" style="color:var(--color-green);">{{ onTrackCount }}</div>
-    <div class="stat-sub">50% of goals</div>
+    <div class="stat-sub">Progressing well</div>
   </div>
   <div class="stat-card">
     <div class="stat-label">At Risk / Overdue</div>
@@ -46,7 +46,7 @@
   <div class="stat-card">
     <div class="stat-label">Completed</div>
     <div class="stat-value" style="color:var(--color-teal);">{{ completedCount }}</div>
-    <div class="stat-sub">17% completion rate</div>
+    <div class="stat-sub">Achieved</div>
   </div>
 </div>
 
@@ -57,56 +57,72 @@
       <button class="tab" [class.active]="activeTab === tab" (click)="setTab(tab)">{{ tab }}</button>
     }
   </div>
-  <div style="margin-left:auto;display:flex;gap:8px;">
-    @for (filter of filters; track filter) {
-      <button class="filter-chip" [class.active]="activeFilter === filter" (click)="setFilter(filter)">{{ filter }}</button>
-    }
-  </div>
+  @if (!isEmployee()) {
+    <div style="margin-left:auto;display:flex;gap:8px;">
+      @for (filter of filters; track filter) {
+        <button class="filter-chip" [class.active]="activeFilter === filter" (click)="setFilter(filter)">{{ filter }}</button>
+      }
+    </div>
+  }
 </div>
+
+<!-- Loading -->
+@if (store.loading()) {
+  <div style="text-align:center;padding:40px;color:var(--color-text-muted);">Loading goals…</div>
+}
 
 <!-- Goals List -->
-<div class="goals-list">
-  @for (goal of filteredGoals; track goal.id) {
-    <div class="goal-card" [class.overdue]="goal.status === 'Overdue'" [class.completed]="goal.status === 'Completed'">
-      <div class="goal-header">
-        <div class="goal-employee">
-          <div class="emp-avatar" [class]="'avatar-' + goal.color">{{ goal.initials }}</div>
-          <div>
-            <div class="emp-name">{{ goal.employee }}</div>
-            <div class="emp-dept">{{ goal.dept }} · {{ goal.category }}</div>
+@if (!store.loading()) {
+  <div class="goals-list">
+    @for (goal of filteredGoals; track goal.id) {
+      <div class="goal-card" [class.overdue]="goal.status === 'Overdue'" [class.completed]="goal.status === 'Completed'">
+        <div class="goal-header">
+          <div class="goal-employee">
+            <div class="emp-avatar" [class]="'avatar-' + avatarColor(goal.employeeId)">{{ initials(goal.employeeId) }}</div>
+            <div>
+              <div class="emp-name">{{ goal.employeeId }}</div>
+              <div class="emp-dept">{{ goal.department }} · {{ goal.category }}</div>
+            </div>
+          </div>
+          <div class="goal-meta">
+            <span class="badge" [class]="goalStatusClass(goal.status)">{{ goal.status }}</span>
+            @if (goal.dueDate) {
+              <span style="font-size:11px;color:var(--color-text-muted);">Due {{ goal.dueDate }}</span>
+            }
           </div>
         </div>
-        <div class="goal-meta">
-          <span class="badge" [class]="goal.statusClass">{{ goal.status }}</span>
-          <span style="font-size:11px;color:var(--color-text-muted);">Due {{ goal.dueDate }}</span>
+
+        <div class="goal-title">{{ goal.title }}</div>
+        @if (goal.description) {
+          <div class="goal-desc">{{ goal.description }}</div>
+        }
+
+        <div class="goal-progress">
+          <div class="progress-bar-wrap" style="flex:1;">
+            <div class="progress-bar" [style.width.%]="goal.progress" [style.background]="getProgressColor(goal.progress)"></div>
+          </div>
+          <span class="progress-pct" [style.color]="getProgressColor(goal.progress)">{{ goal.progress }}%</span>
+        </div>
+
+        <div class="goal-footer">
+          <span style="font-size:11px;color:var(--color-text-muted);">{{ goal.id }}</span>
+          <div class="flex gap-2">
+            @if (!isEmployee()) {
+              <button class="btn btn-secondary btn-sm" (click)="openUpdateModal(goal)">Update Progress</button>
+            }
+            <button class="btn btn-secondary btn-sm">View Details</button>
+          </div>
         </div>
       </div>
-
-      <div class="goal-title">{{ goal.title }}</div>
-      <div class="goal-desc">{{ goal.description }}</div>
-
-      <div class="goal-progress">
-        <div class="progress-bar-wrap" style="flex:1;">
-          <div class="progress-bar" [style.width.%]="goal.progress" [style.background]="getProgressColor(goal.progress)"></div>
-        </div>
-        <span class="progress-pct" [style.color]="getProgressColor(goal.progress)">{{ goal.progress }}%</span>
+    }
+    @if (filteredGoals.length === 0 && !store.loading()) {
+      <div style="text-align:center;padding:40px;color:var(--color-text-muted);">
+        @if (goals.length === 0) { No goals found. @if (canAddGoal()) { Click "+ Add Goal" to create one. } }
+        @else { No goals match your current filters. }
       </div>
-
-      <div class="goal-footer">
-        <span style="font-size:11px;color:var(--color-text-muted);">{{ goal.id }}</span>
-        <div class="flex gap-2">
-          <button class="btn btn-secondary btn-sm" (click)="openUpdateModal(goal)">Update Progress</button>
-          <button class="btn btn-secondary btn-sm">View Details</button>
-        </div>
-      </div>
-    </div>
-  }
-  @if (filteredGoals.length === 0) {
-    <div style="text-align:center;padding:40px;color:var(--color-text-muted);">
-      No goals match your current filters.
-    </div>
-  }
-</div>
+    }
+  </div>
+}
 
 <!-- Add Goal Modal -->
 @if (showModal) {
@@ -117,13 +133,34 @@
         <button class="btn btn-icon" (click)="closeModal()">✕</button>
       </div>
       <div class="modal-body">
+        <!-- Manager: pick from team dropdown -->
+        @if (isManager()) {
+          <div class="form-group">
+            <label class="form-label">Team Member *</label>
+            <select class="form-control" title="Select team member" [(ngModel)]="newGoal.employeeId">
+              <option value="">— Select team member —</option>
+              @for (member of teamMembers; track member.id) {
+                <option [value]="member.id">{{ member.fullName }} ({{ member.department }})</option>
+              }
+            </select>
+            @if (teamMembers.length === 0) {
+              <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">
+                No team members found. Ensure employees have manager_id set in BS4.
+              </div>
+            }
+          </div>
+        }
+        <!-- HR/Admin: free-text employee name -->
+        @if (isHROrAdmin()) {
+          <div class="form-group">
+            <label class="form-label">Employee ID / Name *</label>
+            <input class="form-control" placeholder="e.g. emp-001 or Fatima Malik" [(ngModel)]="newGoal.employeeId" />
+          </div>
+        }
+
         <div class="form-group">
           <label class="form-label">Goal Title *</label>
           <input class="form-control" placeholder="e.g. Migrate legacy API to GraphQL" [(ngModel)]="newGoal.title" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Employee *</label>
-          <input class="form-control" placeholder="e.g. Fatima Malik" [(ngModel)]="newGoal.employee" />
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div class="form-group">
@@ -133,6 +170,7 @@
               <option>Product</option>
               <option>Design</option>
               <option>Operations</option>
+              <option>Finance</option>
               <option>Infrastructure</option>
             </select>
           </div>
@@ -160,7 +198,9 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" (click)="closeModal()">Cancel</button>
         <button class="btn btn-primary" (click)="submitGoal()"
-          [disabled]="!newGoal.title || !newGoal.employee">Add Goal</button>
+          [disabled]="saving() || !newGoal.title || !newGoal.employeeId">
+          @if (saving()) { <span class="spinner-sm"></span> Saving… } @else { Add Goal }
+        </button>
       </div>
     </div>
   </div>
@@ -177,7 +217,7 @@
       <div class="modal-body">
         <div style="font-weight:600;margin-bottom:4px;">{{ selectedGoal.title }}</div>
         <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:16px;">
-          {{ selectedGoal.employee }} · {{ selectedGoal.dept }}
+          {{ selectedGoal.employeeId }} · {{ selectedGoal.department }}
         </div>
         <div class="form-group">
           <label class="form-label">Progress: {{ updatedProgress }}%</label>

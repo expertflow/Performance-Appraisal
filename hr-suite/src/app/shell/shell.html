@@ -87,12 +87,10 @@
             <a routerLink="/appraisal/feedback" routerLinkActive="active" class="nav-sub-item">
               <span class="nav-sub-icon">💬</span>Feedback
             </a>
-            <!-- Organogram: AppAdmin, HR only -->
-            @if (canRecruit) {
-              <a routerLink="/appraisal/organogram" routerLinkActive="active" class="nav-sub-item">
-                <span class="nav-sub-icon">🌳</span>Organogram
-              </a>
-            }
+            <!-- Organogram: all internal roles -->
+            <a routerLink="/appraisal/organogram" routerLinkActive="active" class="nav-sub-item">
+              <span class="nav-sub-icon">🌳</span>Organogram
+            </a>
           </div>
         }
       }

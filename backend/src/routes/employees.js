@@ -9,7 +9,7 @@ router.get('/', async (req, res) => {
   const { search } = req.query;
   try {
     // Try local snapshot first
-    let query = `SELECT * FROM project.employee_snapshot`;
+    let query = `SELECT id, first_name, last_name, email, department, job_title, manager_id, synced_at FROM project.employee_snapshot`;
     const values = [];
     if (search) {
       query += ` WHERE first_name ILIKE $1 OR last_name ILIKE $1 OR email ILIKE $1`;
@@ -25,20 +25,20 @@ router.get('/', async (req, res) => {
           ? `&filter[_or][0][first_name][_contains]=${encodeURIComponent(search)}&filter[_or][1][last_name][_contains]=${encodeURIComponent(search)}`
           : '';
         const resp = await axios.get(
-          `${process.env.DIRECTUS_URL}/items/employee?fields=id,first_name,last_name,email,department,job_title${filter}`,
+          `${process.env.DIRECTUS_URL}/items/employee?fields=id,first_name,last_name,email,department,job_title,manager_id${filter}`,
           { headers: { Authorization: `Bearer ${process.env.DIRECTUS_TOKEN}` }, timeout: 5000 }
         );
         const employees = resp.data?.data ?? [];
         // Upsert into snapshot
         for (const e of employees) {
           await pool.query(
-            `INSERT INTO project.employee_snapshot (id, first_name, last_name, email, department, job_title, synced_at)
-             VALUES ($1,$2,$3,$4,$5,$6,NOW())
+            `INSERT INTO project.employee_snapshot (id, first_name, last_name, email, department, job_title, manager_id, synced_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())
              ON CONFLICT (id) DO UPDATE SET
                first_name=EXCLUDED.first_name, last_name=EXCLUDED.last_name,
                email=EXCLUDED.email, department=EXCLUDED.department,
-               job_title=EXCLUDED.job_title, synced_at=NOW()`,
-            [e.id, e.first_name, e.last_name, e.email, e.department, e.job_title]
+               job_title=EXCLUDED.job_title, manager_id=EXCLUDED.manager_id, synced_at=NOW()`,
+            [e.id, e.first_name, e.last_name, e.email, e.department, e.job_title, e.manager_id ?? null]
           );
         }
         return res.json(employees);
@@ -59,19 +59,19 @@ router.post('/sync', async (req, res) => {
   }
   try {
     const resp = await axios.get(
-      `${process.env.DIRECTUS_URL}/items/employee?fields=id,first_name,last_name,email,department,job_title&limit=500`,
+      `${process.env.DIRECTUS_URL}/items/employee?fields=id,first_name,last_name,email,department,job_title,manager_id&limit=500`,
       { headers: { Authorization: `Bearer ${process.env.DIRECTUS_TOKEN}` }, timeout: 10000 }
     );
     const employees = resp.data?.data ?? [];
     for (const e of employees) {
       await pool.query(
-        `INSERT INTO project.employee_snapshot (id, first_name, last_name, email, department, job_title, synced_at)
-         VALUES ($1,$2,$3,$4,$5,$6,NOW())
+        `INSERT INTO project.employee_snapshot (id, first_name, last_name, email, department, job_title, manager_id, synced_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())
          ON CONFLICT (id) DO UPDATE SET
            first_name=EXCLUDED.first_name, last_name=EXCLUDED.last_name,
            email=EXCLUDED.email, department=EXCLUDED.department,
-           job_title=EXCLUDED.job_title, synced_at=NOW()`,
-        [e.id, e.first_name, e.last_name, e.email, e.department, e.job_title]
+           job_title=EXCLUDED.job_title, manager_id=EXCLUDED.manager_id, synced_at=NOW()`,
+        [e.id, e.first_name, e.last_name, e.email, e.department, e.job_title, e.manager_id ?? null]
       );
     }
     res.json({ message: `Synced ${employees.length} employees from Directus.` });

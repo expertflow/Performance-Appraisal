@@ -2,7 +2,6 @@ import { Component } from '@angular/core';
 
 @Component({
   selector: 'app-organogram',
-  standalone: true,
   template: `
     <div class="page-header">
       <div>
