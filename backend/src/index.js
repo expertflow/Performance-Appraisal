@@ -17,6 +17,7 @@ const authLocalRouter      = require('./routes/auth-local');
 const appUsersRouter          = require('./routes/app-users');
 const jobRequisitionsRouter   = require('./routes/job-requisitions');
 const sendEmailRouter         = require('./routes/send-email');
+const notificationsRouter     = require('./routes/notifications');
 const { runSync }          = require('./services/sync');
 
 const app = express();
@@ -54,6 +55,7 @@ app.use('/api/v1/auth-local',       authLocalRouter);
 app.use('/api/v1/app-users',        appUsersRouter);
 app.use('/api/v1/job-requisitions', jobRequisitionsRouter);
 app.use('/api/v1/send-email',       sendEmailRouter);
+app.use('/api/v1/notifications',    notificationsRouter);
 
 // ── 404 handler ───────────────────────────────────────────────────────────
 app.use((req, res) => {

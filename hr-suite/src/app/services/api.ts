@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { AppNotification } from './notification';
 import { environment } from '../../environments/environment';
 import { Project, Task, TimeEntry, Employee, ApiResponse, SyncStatus } from '../models';
 import { JobPosting, JobApplication, ApplicationStatus } from './job-store';
@@ -136,5 +137,23 @@ export class ApiService {
 
   deleteAppUser(id: string): Observable<{ deleted: string }> {
     return this.http.delete<{ deleted: string }>(`${this.base}/app-users/${id}`);
+  }
+
+  // ── App Notifications (backend-persisted, cross-user) ─────────────────────
+  getNotifications(role: string, userId: string): Observable<AppNotification[]> {
+    const params = new HttpParams().set('role', role).set('userId', userId);
+    return this.http.get<AppNotification[]>(`${this.base}/notifications`, { params });
+  }
+
+  postNotification(notif: { target_role: string; type: string; title: string; body: string }): Observable<AppNotification> {
+    return this.http.post<AppNotification>(`${this.base}/notifications`, notif);
+  }
+
+  markNotificationRead(id: string, userId: string): Observable<{ ok: boolean }> {
+    return this.http.patch<{ ok: boolean }>(`${this.base}/notifications/${id}/read`, { userId });
+  }
+
+  markAllNotificationsRead(userId: string, role: string): Observable<{ ok: boolean }> {
+    return this.http.patch<{ ok: boolean }>(`${this.base}/notifications/read-all`, { userId, role });
   }
 }

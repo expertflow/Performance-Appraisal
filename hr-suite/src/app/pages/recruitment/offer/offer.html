@@ -87,10 +87,8 @@
             </td>
             <td>
               <div style="display:flex;gap:6px;">
-                <button class="btn btn-secondary btn-sm">View</button>
-                @if (offer.status === 'Pending' || offer.status === 'Negotiating') {
-                  <button class="btn btn-secondary btn-sm">Revise</button>
-                }
+                <button class="btn btn-secondary btn-sm" (click)="openEdit(offer)">✏️ Edit</button>
+                <button class="btn btn-danger btn-sm" (click)="deleteOffer(offer)">🗑️ Delete</button>
               </div>
             </td>
           </tr>
@@ -106,6 +104,58 @@
     </table>
   </div>
 </div>
+
+<!-- Edit Offer Modal -->
+@if (showEditModal) {
+  <div class="modal-overlay" (click)="closeEdit()">
+    <div class="modal" style="max-width:480px;" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>✏️ Edit Offer</h2>
+        <button class="btn btn-icon" (click)="closeEdit()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Candidate Name *</label>
+          <input class="form-control" title="Candidate name" [(ngModel)]="editForm.candidate" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Role / Position *</label>
+          <input class="form-control" title="Role" [(ngModel)]="editForm.role" />
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Department</label>
+            <select class="form-control" title="Department" [(ngModel)]="editForm.dept">
+              <option>Engineering</option>
+              <option>Product</option>
+              <option>Design</option>
+              <option>Operations</option>
+              <option>Infrastructure</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select class="form-control" title="Status" [(ngModel)]="editForm.status">
+              <option>Pending</option>
+              <option>Accepted</option>
+              <option>Negotiating</option>
+              <option>Declined</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Salary Package *</label>
+          <input class="form-control" title="Salary" [(ngModel)]="editForm.salary" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeEdit()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveEdit()"
+          [disabled]="!editForm.candidate || !editForm.role || !editForm.salary">Save Changes</button>
+      </div>
+    </div>
+  </div>
+}
 
 <!-- Create Offer Modal -->
 @if (showModal) {

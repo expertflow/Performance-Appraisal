@@ -146,6 +146,59 @@ export class Offer {
     this.newOffer = { candidate: '', role: '', dept: 'Engineering', salary: '', expiryDays: 7 };
   }
 
+  // ── Edit ──────────────────────────────────────────────────────────────────
+  showEditModal = false;
+  editingOffer: OfferItem | null = null;
+  editForm = { candidate: '', role: '', dept: '', salary: '', status: '' };
+
+  openEdit(offer: OfferItem): void {
+    this.editingOffer = offer;
+    this.editForm = {
+      candidate: offer.candidate,
+      role:      offer.role,
+      dept:      offer.dept,
+      salary:    offer.salary,
+      status:    offer.status,
+    };
+    this.showEditModal = true;
+  }
+
+  closeEdit(): void {
+    this.showEditModal = false;
+    this.editingOffer = null;
+  }
+
+  saveEdit(): void {
+    if (!this.editingOffer) return;
+    const statusClassMap: Record<string, string> = {
+      Pending:     'badge-orange',
+      Accepted:    'badge-green',
+      Negotiating: 'badge-blue',
+      Declined:    'badge-red',
+    };
+    const idx = this.offers.findIndex(o => o.id === this.editingOffer!.id);
+    if (idx !== -1) {
+      this.offers[idx] = {
+        ...this.offers[idx],
+        candidate:   this.editForm.candidate,
+        role:        this.editForm.role,
+        dept:        this.editForm.dept,
+        salary:      this.editForm.salary,
+        status:      this.editForm.status,
+        statusClass: statusClassMap[this.editForm.status] ?? 'badge-orange',
+        initials:    this.editForm.candidate.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2),
+      };
+    }
+    this.closeEdit();
+  }
+
+  // ── Delete ────────────────────────────────────────────────────────────────
+  deleteOffer(offer: OfferItem): void {
+    if (confirm(`Delete offer ${offer.id} for ${offer.candidate}?`)) {
+      this.offers = this.offers.filter(o => o.id !== offer.id);
+    }
+  }
+
   submitOffer() {
     if (!this.newOffer.candidate || !this.newOffer.role || !this.newOffer.salary) return;
     const initials = this.newOffer.candidate.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);

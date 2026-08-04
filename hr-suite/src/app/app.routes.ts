@@ -68,7 +68,7 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/notifications/notifications').then(m => m.Notifications)
       },
 
-      // ── Recruitment module (AppAdmin, HR only) ──────────────────────────────
+      // ── Recruitment module ───────────────────────────────────────────────────
       {
         path: 'recruitment',
         canActivate: [roleGuard(['AppAdmin', 'HR'])],
@@ -76,7 +76,7 @@ export const routes: Routes = [
       },
       {
         path: 'recruitment/requisitions',
-        canActivate: [roleGuard(['AppAdmin', 'HR'])],
+        canActivate: [roleGuard(['AppAdmin', 'HR', 'Manager'])],
         loadComponent: () => import('./pages/recruitment/requisitions/requisitions').then(m => m.Requisitions)
       },
       {

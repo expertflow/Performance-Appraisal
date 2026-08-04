@@ -73,6 +73,12 @@ export class Shell {
       this.profileMenuOpen.set(false); // close sidebar profile popup on navigation
     });
     this.autoExpand();
+
+    // Load backend notifications for HR and AppAdmin roles
+    const u = this.auth.currentUser();
+    if (u && (u.role === 'HR' || u.role === 'AppAdmin')) {
+      this.notif.loadFromBackend(u.role, u.id);
+    }
   }
 
   private autoExpand() {

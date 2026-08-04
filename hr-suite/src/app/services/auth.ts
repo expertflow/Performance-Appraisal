@@ -70,8 +70,8 @@ export class AuthService {
   /** Can see all employees synced from BS4 */
   canViewEmployees(): boolean { return this.hasRole('AppAdmin', 'HR'); }
 
-  /** Can access Recruitment module */
-  canAccessRecruitment(): boolean { return this.hasRole('AppAdmin', 'HR'); }
+  /** Can access Recruitment module (Manager sees only Job Requisitions) */
+  canAccessRecruitment(): boolean { return this.hasRole('AppAdmin', 'HR', 'Manager'); }
 
   /** Can access Performance Appraisal module */
   canAccessAppraisal(): boolean { return this.hasRole('AppAdmin', 'HR', 'Manager', 'Employee'); }

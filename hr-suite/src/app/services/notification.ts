@@ -1,4 +1,6 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../environments/environment';
 
 export type NotifType = 'info' | 'success' | 'warning' | 'error';
 
@@ -11,25 +13,7 @@ export interface AppNotification {
   read: boolean;
 }
 
-const STORAGE_KEY = 'ef_notif_read_ids';
-
-/** Load the set of already-read notification IDs from localStorage */
-function loadReadIds(): Set<string> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return new Set<string>(JSON.parse(raw));
-  } catch { /* ignore */ }
-  return new Set<string>();
-}
-
-/** Persist the set of read IDs to localStorage */
-function saveReadIds(ids: Set<string>): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...ids]));
-  } catch { /* ignore */ }
-}
-
-// ── Static notification catalogue ─────────────────────────────────────────────
+// ── Static catalogue (always shown, localStorage-read-tracked) ────────────────
 const CATALOGUE: Omit<AppNotification, 'read'>[] = [
   {
     id: 'n1',
@@ -89,11 +73,30 @@ const CATALOGUE: Omit<AppNotification, 'read'>[] = [
   },
 ];
 
+const STORAGE_KEY = 'ef_notif_read_ids';
+
+function loadReadIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return new Set<string>(JSON.parse(raw));
+  } catch { /* ignore */ }
+  return new Set<string>();
+}
+
+function saveReadIds(ids: Set<string>): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...ids]));
+  } catch { /* ignore */ }
+}
+
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
+  private http = inject(HttpClient);
+  private base = environment.apiUrl;
 
   private _readIds = loadReadIds();
 
+  // Start with static catalogue; backend notifications prepended on load
   private _notifications = signal<AppNotification[]>(
     CATALOGUE.map(n => ({ ...n, read: this._readIds.has(n.id) }))
   );
@@ -104,24 +107,58 @@ export class NotificationService {
     this._notifications().filter(n => !n.read).length
   );
 
-  /** Push a new dynamic notification (e.g. new candidate application) */
+  // ── Load backend notifications for a given role/userId ────────────────────
+  loadFromBackend(role: string, userId: string): void {
+    if (!role || !userId) return;
+    this.http.get<AppNotification[]>(
+      `${this.base}/notifications`,
+      { params: { role, userId } }
+    ).subscribe({
+      next: backendNotifs => {
+        // Prepend backend notifications before the static catalogue
+        this._notifications.update(current => {
+          // Remove any previously loaded backend notifs (ids that are numeric strings)
+          const staticOnly = current.filter(n => n.id.startsWith('n'));
+          return [...backendNotifs, ...staticOnly];
+        });
+      },
+      error: () => { /* backend unavailable — static catalogue still shown */ }
+    });
+  }
+
+  // ── Push a new dynamic notification (in-memory only, e.g. from pipeline) ──
   push(notif: Omit<AppNotification, 'read'>): void {
     this._notifications.update(list => [{ ...notif, read: false }, ...list]);
   }
 
-  markRead(id: string): void {
+  // ── Push a notification to the backend (cross-user, persisted) ────────────
+  pushToBackend(notif: { target_role: string; type: string; title: string; body: string }): void {
+    this.http.post<AppNotification>(`${this.base}/notifications`, notif).subscribe({
+      error: err => console.warn('[NotificationService] pushToBackend failed:', err.message)
+    });
+  }
+
+  markRead(id: string, userId?: string): void {
     this._readIds.add(id);
     saveReadIds(this._readIds);
     this._notifications.update(list =>
       list.map(n => n.id === id ? { ...n, read: true } : n)
     );
+    // Persist to backend for backend-sourced notifications (numeric ids)
+    if (userId && !id.startsWith('n')) {
+      this.http.patch(`${this.base}/notifications/${id}/read`, { userId }).subscribe();
+    }
   }
 
-  markAllRead(): void {
+  markAllRead(userId?: string, role?: string): void {
     this._notifications().forEach(n => this._readIds.add(n.id));
     saveReadIds(this._readIds);
     this._notifications.update(list =>
       list.map(n => ({ ...n, read: true }))
     );
+    // Persist to backend
+    if (userId && role) {
+      this.http.patch(`${this.base}/notifications/read-all`, { userId, role }).subscribe();
+    }
   }
 }

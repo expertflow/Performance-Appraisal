@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -12,6 +12,8 @@ import {
 import { JobStoreService, JobApplication } from '../../../services/job-store';
 import { ApiService } from '../../../services/api';
 import { Employee } from '../../../models';
+import { AuthService } from '../../../services/auth';
+import { NotificationService } from '../../../services/notification';
 
 const PAGE_SIZE = 5;
 
@@ -25,6 +27,14 @@ export class Requisitions implements OnInit {
   private store    = inject(RequisitionStoreService);
   private jobStore = inject(JobStoreService);
   private api      = inject(ApiService);
+  private auth     = inject(AuthService);
+  private notif    = inject(NotificationService);
+
+  /** True for AppAdmin and HR — false for Manager/Employee */
+  readonly isHrOrAdmin = computed(() => {
+    const r = this.auth.role();
+    return r === 'AppAdmin' || r === 'HR';
+  });
 
   // ── Employees (from Directus/BS4 via backend) ─────────────────────────────
   employees = signal<Employee[]>([]);
@@ -177,12 +187,100 @@ export class Requisitions implements OnInit {
       next: () => {
         this.newReqSaving.set(false);
         this.newReqSuccess.set(true);
+
+        // Notify all HR users about the new requisition
+        const submitter = this.auth.currentUser();
+        const submitterName = submitter?.name ?? 'A Manager';
+        this.notif.pushToBackend({
+          target_role: 'HR',
+          type: 'info',
+          title: '📋 New Job Requisition Submitted',
+          body: `${submitterName} submitted a new requisition: "${f.title.trim()}" (${f.department.trim()}, ${f.priority} priority). Pending your approval.`,
+        });
+
         setTimeout(() => this.closeNewModal(), 1200);
       },
       error: err => {
         this.newReqSaving.set(false);
         this.newReqError.set(err?.error?.error || 'Failed to create requisition. Please try again.');
       }
+    });
+  }
+
+  // ── Edit Requisition ──────────────────────────────────────────────────────
+  showEditModal  = signal(false);
+  editingReq: JobRequisition | null = null;
+  editReqSaving  = signal(false);
+  editReqError   = signal('');
+
+  editReqForm = {
+    title:         '',
+    department:    '',
+    location:      '',
+    type:          'Full-time' as ReqType,
+    priority:      'Medium' as ReqPriority,
+    headcount:     1,
+    hiringManager: '',
+    notes:         '',
+  };
+
+  openEditReq(req: JobRequisition): void {
+    this.editingReq = req;
+    this.editReqForm = {
+      title:         req.title,
+      department:    req.department,
+      location:      req.location,
+      type:          req.type,
+      priority:      req.priority,
+      headcount:     req.headcount,
+      hiringManager: req.hiringManager ?? '',
+      notes:         req.notes ?? '',
+    };
+    this.editReqError.set('');
+    this.showEditModal.set(true);
+  }
+
+  closeEditReq(): void {
+    this.showEditModal.set(false);
+    this.editingReq = null;
+  }
+
+  saveEditReq(): void {
+    if (!this.editingReq) return;
+    const f = this.editReqForm;
+    if (!f.title.trim() || !f.department.trim() || !f.location.trim()) {
+      this.editReqError.set('Title, Department and Location are required.');
+      return;
+    }
+    this.editReqSaving.set(true);
+    this.store.update(this.editingReq.id, {
+      title:         f.title.trim(),
+      department:    f.department.trim(),
+      location:      f.location.trim(),
+      type:          f.type,
+      priority:      f.priority,
+      headcount:     f.headcount,
+      hiringManager: f.hiringManager.trim(),
+      notes:         f.notes.trim(),
+    }).subscribe({
+      next: () => {
+        this.editReqSaving.set(false);
+        this.closeEditReq();
+        this.loadPage(this.currentPage());
+      },
+      error: err => {
+        this.editReqSaving.set(false);
+        this.editReqError.set(err?.error?.error || 'Failed to update requisition.');
+      }
+    });
+  }
+
+  // ── Delete Requisition ────────────────────────────────────────────────────
+  deleteReq(req: JobRequisition): void {
+    if (!confirm(`Delete requisition "${req.title}" (${req.reqNumber})?`)) return;
+    this.store.delete(req.id).subscribe({
+      next: () => this.loadPage(this.currentPage()),
+      error: err => alert(err?.error?.error || 'Failed to delete requisition.'),
     });
   }
 }
