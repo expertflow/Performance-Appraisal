@@ -1,0 +1,131 @@
+<!-- Toast -->
+@if (toast()) {
+  <div class="alert alert-success" style="margin-bottom:12px;">{{ toast() }}</div>
+}
+
+<div class="page-header">
+  <div>
+    <h1>Candidate Applications</h1>
+    <p>All applications submitted via the Careers Portal</p>
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="stat-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom:20px;">
+  @for (s of stats; track s.label) {
+    <div class="stat-card">
+      <div class="stat-label">{{ s.label }}</div>
+      <div class="stat-value" [style.color]="s.color">{{ s.value }}</div>
+    </div>
+  }
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+  <input class="form-control" style="width:260px;" placeholder="🔍 Search by name, email or job…"
+    [(ngModel)]="searchText" title="Search applications" />
+  <select class="form-control" style="width:200px;" [(ngModel)]="filterJob" title="Filter by job">
+    @for (j of jobTitles; track j) {
+      <option [value]="j">{{ j }}</option>
+    }
+  </select>
+  <select class="form-control" style="width:160px;" [(ngModel)]="filterStatus" title="Filter by status">
+    <option value="All Statuses">All Statuses</option>
+    @for (s of statuses; track s) {
+      <option [value]="s">{{ s }}</option>
+    }
+  </select>
+</div>
+
+<!-- Table -->
+<div class="card" style="padding:0;">
+  @if (filteredApplications.length === 0) {
+    <div style="text-align:center;padding:48px;color:var(--color-text-muted);">
+      <div style="font-size:40px;margin-bottom:8px;">📭</div>
+      <p>No applications match your filters.</p>
+    </div>
+  } @else {
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Candidate</th>
+            <th>Job Applied For</th>
+            <th>Contact</th>
+            <th>Links</th>
+            <th>Applied</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (app of filteredApplications; track app.id) {
+            <tr style="vertical-align:top;">
+              <!-- Candidate -->
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div style="width:36px;height:36px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">
+                    {{ initials(app.candidateName) }}
+                  </div>
+                  <div>
+                    <div style="font-weight:600;font-size:13px;">{{ app.candidateName }}</div>
+                    <div style="font-size:11px;color:var(--color-text-secondary);">{{ app.candidateEmail }}</div>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Job -->
+              <td>
+                <div style="font-size:13px;font-weight:500;">{{ app.jobTitle }}</div>
+              </td>
+
+              <!-- Contact -->
+              <td>
+                @if (app.candidatePhone) {
+                  <div style="font-size:12px;color:var(--color-text-secondary);">📞 {{ app.candidatePhone }}</div>
+                }
+                @if (app.candidateAddress) {
+                  <div style="font-size:12px;color:var(--color-text-secondary);">📍 {{ app.candidateAddress }}</div>
+                }
+              </td>
+
+              <!-- Links -->
+              <td>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                  @if (app.resumeLink) {
+                    <a [href]="app.resumeLink" [download]="app.resumeFileName || 'resume.pdf'"
+                       class="btn btn-secondary btn-sm" style="font-size:11px;padding:2px 8px;">📄 Resume</a>
+                  }
+                  @if (app.linkedinUrl) {
+                    <a [href]="app.linkedinUrl" target="_blank" rel="noopener"
+                       class="btn btn-secondary btn-sm" style="font-size:11px;padding:2px 8px;">🔗 LinkedIn</a>
+                  }
+                  @if (app.githubUrl) {
+                    <a [href]="app.githubUrl" target="_blank" rel="noopener"
+                       class="btn btn-secondary btn-sm" style="font-size:11px;padding:2px 8px;">🐙 GitHub</a>
+                  }
+                </div>
+              </td>
+
+              <!-- Applied Date -->
+              <td>
+                <div style="font-size:12px;color:var(--color-text-secondary);">{{ app.appliedDate }}</div>
+              </td>
+
+              <!-- Status -->
+              <td>
+                <select class="form-control" style="font-size:12px;padding:4px 8px;width:140px;"
+                  [value]="app.status"
+                  (change)="updateStatus(app, $any($event.target).value)"
+                  title="Update application status">
+                  @for (s of statuses; track s) {
+                    <option [value]="s" [selected]="app.status === s">{{ s }}</option>
+                  }
+                </select>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

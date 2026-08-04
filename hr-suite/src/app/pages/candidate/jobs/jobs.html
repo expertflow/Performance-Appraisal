@@ -1,0 +1,187 @@
+<!-- ── Page header ──────────────────────────────────────────────────────────── -->
+<div class="page-header">
+  <div>
+    <h1>Open Positions</h1>
+    <p>{{ openJobs().length }} open role{{ openJobs().length !== 1 ? 's' : '' }} at ExpertFlow</p>
+  </div>
+</div>
+
+<!-- ── Filters ──────────────────────────────────────────────────────────────── -->
+<div class="filter-bar">
+  <input
+    type="text"
+    class="form-control search-input"
+    placeholder="Search by title, department, location…"
+    [(ngModel)]="searchQuery">
+
+  <select class="form-control" [(ngModel)]="filterDepartment" title="Filter by department">
+    <option value="">All Departments</option>
+    @for (dept of departments; track dept) {
+      <option [value]="dept">{{ dept }}</option>
+    }
+  </select>
+
+  <select class="form-control" [(ngModel)]="filterType" title="Filter by type">
+    <option value="">All Types</option>
+    <option value="Full-time">Full-time</option>
+    <option value="Part-time">Part-time</option>
+    <option value="Contract">Contract</option>
+    <option value="Internship">Internship</option>
+  </select>
+</div>
+
+<!-- ── Job cards ────────────────────────────────────────────────────────────── -->
+@if (filteredJobs.length === 0) {
+  <div class="empty-state">
+    <div class="empty-icon">🔍</div>
+    <h3>No positions found</h3>
+    <p>Try adjusting your search or filters.</p>
+  </div>
+}
+
+<div class="jobs-grid">
+  @for (job of filteredJobs; track job.id) {
+    <div class="job-card" [class.applied]="hasApplied(job.id)">
+      <div class="job-card-header">
+        <div class="job-dept-badge">{{ job.department }}</div>
+        @if (hasApplied(job.id)) {
+          <span class="applied-badge">✅ Applied</span>
+        }
+      </div>
+
+      <h2 class="job-title">{{ job.title }}</h2>
+
+      <div class="job-meta">
+        <span class="job-meta-item">📍 {{ job.location }}</span>
+        <span class="job-meta-item">⏱️ {{ job.type }}</span>
+        <span class="job-meta-item" [class.deadline-urgent]="daysLeft(job.deadline) <= 5">
+          📅 {{ daysLeft(job.deadline) }} day{{ daysLeft(job.deadline) !== 1 ? 's' : '' }} left
+        </span>
+      </div>
+
+      <p class="job-description">{{ job.description }}</p>
+
+      <div class="job-requirements">
+        <h4>Requirements</h4>
+        <ul>
+          @for (req of job.requirements; track req) {
+            <li>{{ req }}</li>
+          }
+        </ul>
+      </div>
+
+      <div class="job-card-footer">
+        <span class="job-posted">Posted {{ job.postedDate }}</span>
+        @if (hasApplied(job.id)) {
+          <button class="btn-applied" disabled>✅ Already Applied</button>
+        } @else {
+          <button class="btn-apply" (click)="openApply(job)">Apply Now →</button>
+        }
+      </div>
+    </div>
+  }
+</div>
+
+<!-- ── Apply modal ───────────────────────────────────────────────────────────── -->
+@if (selectedJob) {
+  <div class="modal-overlay" (click)="closeApply()">
+    <div class="modal apply-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h3>Apply for {{ selectedJob.title }}</h3>
+          <p style="font-size:13px;color:#64748b;margin:2px 0 0;">{{ selectedJob.department }} · {{ selectedJob.location }}</p>
+        </div>
+        <button class="modal-close" (click)="closeApply()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        @if (applySuccess()) {
+          <div class="alert alert-success">
+            ✅ Application submitted! Our HR team will review it and get back to you.
+          </div>
+          <button class="btn btn-primary" style="width:100%;margin-top:12px;" (click)="closeApply()">Close</button>
+        } @else {
+          @if (applyError()) {
+            <div class="alert alert-error">{{ applyError() }}</div>
+          }
+
+          @if (!jobStore.hasApplied(user()?.id ?? '', selectedJob.id)) {
+
+            <!-- Cover Letter (required) -->
+            <div class="form-group">
+              <label class="form-label">Cover Letter <span style="color:#dc2626">*</span></label>
+              <textarea
+                class="form-control"
+                rows="5"
+                placeholder="Tell us why you're a great fit for this role…"
+                [(ngModel)]="applyForm.coverLetter"
+                style="resize:vertical;"></textarea>
+            </div>
+
+            <!-- Resume PDF upload (required) -->
+            <div class="form-group">
+              <label class="form-label">
+                Resume <span style="color:#dc2626">*</span>
+                <span style="font-weight:400;color:#64748b;font-size:12px;margin-left:6px;">PDF only · max 5 MB</span>
+              </label>
+              <div class="file-upload-wrap">
+                <label class="file-upload-label" [class.has-file]="resumeFileName()">
+                  <input
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    class="file-upload-input"
+                    (change)="onResumeSelected($event)">
+                  @if (resumeFileName()) {
+                    <span class="file-upload-icon">📄</span>
+                    <span class="file-upload-name">{{ resumeFileName() }}</span>
+                    <span class="file-upload-change">Change</span>
+                  } @else {
+                    <span class="file-upload-icon">📎</span>
+                    <span class="file-upload-placeholder">Click to attach your resume (PDF)</span>
+                  }
+                </label>
+              </div>
+            </div>
+
+            <!-- LinkedIn (optional) -->
+            <div class="form-group">
+              <label class="form-label">
+                LinkedIn Profile
+                <span style="font-weight:400;color:#64748b;font-size:12px;margin-left:6px;">(optional)</span>
+              </label>
+              <input
+                type="url"
+                class="form-control"
+                placeholder="https://linkedin.com/in/yourprofile"
+                [(ngModel)]="applyForm.linkedinUrl">
+            </div>
+
+            <!-- GitHub (optional) -->
+            <div class="form-group">
+              <label class="form-label">
+                GitHub Profile
+                <span style="font-weight:400;color:#64748b;font-size:12px;margin-left:6px;">(optional)</span>
+              </label>
+              <input
+                type="url"
+                class="form-control"
+                placeholder="https://github.com/yourusername"
+                [(ngModel)]="applyForm.githubUrl">
+            </div>
+
+            <div class="modal-footer">
+              <button class="btn btn-secondary" (click)="closeApply()">Cancel</button>
+              <button class="btn btn-primary" (click)="submitApplication()" [disabled]="applying()">
+                @if (applying()) {
+                  <span class="spinner-sm"></span> Submitting…
+                } @else {
+                  Submit Application
+                }
+              </button>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </div>
+}

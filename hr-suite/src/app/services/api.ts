@@ -3,6 +3,16 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Project, Task, TimeEntry, Employee, ApiResponse, SyncStatus } from '../models';
+import { JobPosting, JobApplication, ApplicationStatus } from './job-store';
+import { AppUserRecord } from './user-store';
+
+// ── Auth-local shapes ─────────────────────────────────────────────────────────
+export interface LocalLoginRequest  { email: string; password: string; }
+export interface LocalRegisterRequest {
+  firstName: string; lastName: string; email: string;
+  phone?: string; address?: string; password: string;
+}
+export interface LocalAuthResponse  { token: string; user: import('../models').AppUser; }
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -65,5 +75,66 @@ export class ApiService {
 
   triggerSync(): Observable<{ message: string }> {
     return this.http.post<{ message: string }>(`${this.base}/sync/trigger`, {});
+  }
+
+  // ── Job Postings ──────────────────────────────────────────────────────────
+  getJobPostings(status?: string): Observable<JobPosting[]> {
+    let params = new HttpParams();
+    if (status) params = params.set('status', status);
+    return this.http.get<JobPosting[]>(`${this.base}/job-postings`, { params });
+  }
+
+  getJobPosting(id: string): Observable<JobPosting> {
+    return this.http.get<JobPosting>(`${this.base}/job-postings/${id}`);
+  }
+
+  createJobPosting(posting: Omit<JobPosting, 'id' | 'postedDate'>): Observable<JobPosting> {
+    return this.http.post<JobPosting>(`${this.base}/job-postings`, posting);
+  }
+
+  updateJobPosting(id: string, patch: Partial<JobPosting>): Observable<JobPosting> {
+    return this.http.patch<JobPosting>(`${this.base}/job-postings/${id}`, patch);
+  }
+
+  deleteJobPosting(id: string): Observable<{ deleted: string }> {
+    return this.http.delete<{ deleted: string }>(`${this.base}/job-postings/${id}`);
+  }
+
+  // ── Job Applications ──────────────────────────────────────────────────────
+  getJobApplications(filters?: { candidate_id?: string; job_id?: string }): Observable<JobApplication[]> {
+    let params = new HttpParams();
+    if (filters?.candidate_id) params = params.set('candidate_id', filters.candidate_id);
+    if (filters?.job_id)       params = params.set('job_id',       filters.job_id);
+    return this.http.get<JobApplication[]>(`${this.base}/job-applications`, { params });
+  }
+
+  submitJobApplication(app: Omit<JobApplication, 'id' | 'appliedDate' | 'status'>): Observable<JobApplication> {
+    return this.http.post<JobApplication>(`${this.base}/job-applications`, app);
+  }
+
+  updateApplicationStatus(id: string, status: ApplicationStatus): Observable<JobApplication> {
+    return this.http.patch<JobApplication>(`${this.base}/job-applications/${id}`, { status });
+  }
+
+  // ── Local Auth ────────────────────────────────────────────────────────────
+  localLogin(req: LocalLoginRequest): Observable<LocalAuthResponse> {
+    return this.http.post<LocalAuthResponse>(`${this.base}/auth-local/login`, req);
+  }
+
+  localRegister(req: LocalRegisterRequest): Observable<LocalAuthResponse> {
+    return this.http.post<LocalAuthResponse>(`${this.base}/auth-local/register`, req);
+  }
+
+  // ── App Users ─────────────────────────────────────────────────────────────
+  getAppUsers(): Observable<AppUserRecord[]> {
+    return this.http.get<AppUserRecord[]>(`${this.base}/app-users`);
+  }
+
+  updateAppUser(id: string, patch: Partial<AppUserRecord>): Observable<AppUserRecord> {
+    return this.http.patch<AppUserRecord>(`${this.base}/app-users/${id}`, patch);
+  }
+
+  deleteAppUser(id: string): Observable<{ deleted: string }> {
+    return this.http.delete<{ deleted: string }>(`${this.base}/app-users/${id}`);
   }
 }

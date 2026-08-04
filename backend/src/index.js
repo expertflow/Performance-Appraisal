@@ -6,12 +6,18 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const cron = require('node-cron');
 
-const projectsRouter    = require('./routes/projects');
-const tasksRouter       = require('./routes/tasks');
-const employeesRouter   = require('./routes/employees');
-const timeEntriesRouter = require('./routes/time-entries');
-const syncRouter        = require('./routes/sync');
-const { runSync }       = require('./services/sync');
+const projectsRouter       = require('./routes/projects');
+const tasksRouter          = require('./routes/tasks');
+const employeesRouter      = require('./routes/employees');
+const timeEntriesRouter    = require('./routes/time-entries');
+const syncRouter           = require('./routes/sync');
+const jobPostingsRouter    = require('./routes/job-postings');
+const jobApplicationsRouter = require('./routes/job-applications');
+const authLocalRouter      = require('./routes/auth-local');
+const appUsersRouter          = require('./routes/app-users');
+const jobRequisitionsRouter   = require('./routes/job-requisitions');
+const sendEmailRouter         = require('./routes/send-email');
+const { runSync }          = require('./services/sync');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -19,12 +25,17 @@ const PORT = process.env.PORT || 3000;
 // ── Middleware ────────────────────────────────────────────────────────────
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:4200',
+  origin: [
+    process.env.CORS_ORIGIN || 'http://localhost:4200',
+    'http://localhost:4201',
+    'http://localhost:4202',
+  ],
   methods: ['GET','POST','PATCH','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization']
 }));
 app.use(morgan('dev'));
-app.use(express.json());
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
 // ── Health check ──────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
@@ -32,11 +43,17 @@ app.get('/health', (req, res) => {
 });
 
 // ── API routes ────────────────────────────────────────────────────────────
-app.use('/api/v1/projects',      projectsRouter);
-app.use('/api/v1/tasks',         tasksRouter);
-app.use('/api/v1/employees',     employeesRouter);
-app.use('/api/v1/time-entries',  timeEntriesRouter);
-app.use('/api/v1/sync',          syncRouter);
+app.use('/api/v1/projects',         projectsRouter);
+app.use('/api/v1/tasks',            tasksRouter);
+app.use('/api/v1/employees',        employeesRouter);
+app.use('/api/v1/time-entries',     timeEntriesRouter);
+app.use('/api/v1/sync',             syncRouter);
+app.use('/api/v1/job-postings',     jobPostingsRouter);
+app.use('/api/v1/job-applications', jobApplicationsRouter);
+app.use('/api/v1/auth-local',       authLocalRouter);
+app.use('/api/v1/app-users',        appUsersRouter);
+app.use('/api/v1/job-requisitions', jobRequisitionsRouter);
+app.use('/api/v1/send-email',       sendEmailRouter);
 
 // ── 404 handler ───────────────────────────────────────────────────────────
 app.use((req, res) => {

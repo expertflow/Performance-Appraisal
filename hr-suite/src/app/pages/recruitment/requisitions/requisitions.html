@@ -1,40 +1,42 @@
 <div class="page-header">
   <div>
     <h1>Job Requisitions</h1>
-    <p>Manage and track all open hiring requests</p>
+    <p>Internal hiring requests — candidate applications from the Careers Portal</p>
   </div>
   <div class="flex gap-2">
     <button class="btn btn-secondary btn-sm" (click)="exportData()">Export</button>
-    <button class="btn btn-primary btn-sm" (click)="openModal()">+ New Requisition</button>
+    <button class="btn btn-primary btn-sm" (click)="openNewModal()">+ New Requisition</button>
   </div>
 </div>
 
 <!-- Export Toast -->
-@if (exportToast) {
+@if (exportToast()) {
   <div class="alert alert-success" style="margin-bottom:12px;">
-    ✓ Requisitions exported successfully (CSV download started)
+    ✓ Requisitions exported successfully
   </div>
 }
 
 <!-- Filter Bar -->
 <div class="filter-bar">
   <input class="form-control" style="width:240px;" placeholder="🔍 Search requisitions..."
-    [(ngModel)]="searchText" />
-  <select class="form-control" style="width:160px;" [(ngModel)]="filterDept">
+    [(ngModel)]="searchText" title="Search requisitions" />
+  <select class="form-control" style="width:160px;" [(ngModel)]="filterDept" title="Filter by department">
     <option>All Departments</option>
     <option>Engineering</option>
     <option>Product</option>
     <option>Design</option>
     <option>Operations</option>
     <option>Infrastructure</option>
+    <option>Human Resources</option>
+    <option>Marketing</option>
   </select>
-  <select class="form-control" style="width:140px;" [(ngModel)]="filterLocation">
+  <select class="form-control" style="width:140px;" [(ngModel)]="filterLocation" title="Filter by location">
     <option>All Locations</option>
     <option>Lahore</option>
     <option>Karachi</option>
     <option>Islamabad</option>
   </select>
-  <select class="form-control" style="width:140px;" [(ngModel)]="filterPriority">
+  <select class="form-control" style="width:140px;" [(ngModel)]="filterPriority" title="Filter by priority">
     <option>All Priorities</option>
     <option>Urgent</option>
     <option>High</option>
@@ -42,155 +44,184 @@
   </select>
 </div>
 
-<!-- Tabs -->
-<div class="tabs">
-  @for (tab of tabs; track tab) {
-    <button class="tab" [class.active]="activeTab === tab" (click)="setTab(tab)">{{ tab }}</button>
-  }
-</div>
-
 <!-- Table -->
 <div class="card" style="padding:0;">
-  <div class="table-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <th>Requisition</th>
-          <th>Approval Status</th>
-          <th>Hiring Manager</th>
-          <th>Priority / Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (req of filteredRequisitions; track req.id) {
-          <tr class="req-row" [routerLink]="['/recruitment/pipeline']" style="cursor:pointer;">
-            <td>
-              <div style="font-weight:600;font-size:13px;">{{ req.title }}</div>
-              <div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px;">
-                {{ req.id }} · {{ req.dept }} · {{ req.location }} · {{ req.type }} · {{ req.headcount }} HC
-              </div>
-              <div style="font-size:11px;color:var(--color-text-muted);margin-top:1px;">Posted {{ req.posted }}</div>
-            </td>
-            <td>
-              <div class="approval-steps">
-                @for (step of req.approvalSteps; track step.label) {
-                  <div class="approval-step" [class.done]="step.done" [class.pending]="!step.done">
-                    <span class="step-icon">{{ step.done ? '✓' : '○' }}</span>
-                    <span>{{ step.label }}</span>
-                  </div>
-                }
-              </div>
-            </td>
-            <td>
-              <div class="td-user">
-                <div class="user-avatar-sm">{{ req.hiringManagerInitial }}</div>
-                <span>{{ req.hiringManager }}</span>
-              </div>
-            </td>
-            <td>
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <span class="badge" [class]="req.priorityClass">{{ req.priority }}</span>
-                <span class="badge" [class]="req.statusClass">{{ req.status }}</span>
-              </div>
-            </td>
-            <td>
-              <div style="display:flex;gap:6px;">
-                <button class="btn btn-secondary btn-sm" (click)="$event.stopPropagation()">Edit</button>
-                <button class="btn btn-secondary btn-sm" (click)="$event.stopPropagation()">View</button>
-              </div>
-            </td>
-          </tr>
-        }
-        @if (filteredRequisitions.length === 0) {
+  @if (loading()) {
+    <div style="text-align:center;padding:32px;color:var(--color-text-muted);">Loading…</div>
+  } @else {
+    <div class="table-wrapper">
+      <table>
+        <thead>
           <tr>
-            <td colspan="5" style="text-align:center;padding:32px;color:var(--color-text-muted);">
-              No requisitions match your filters.
-            </td>
+            <th>Requisition</th>
+            <th>Priority</th>
+            <th>Hiring Manager</th>
+            <th>Action</th>
           </tr>
-        }
-      </tbody>
-    </table>
-  </div>
+        </thead>
+        <tbody>
+          @for (req of filteredRequisitions; track req.id) {
+            <tr class="req-row" style="vertical-align:top;">
+              <td>
+                <div style="font-weight:600;font-size:13px;">{{ req.title }}</div>
+                <div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px;">
+                  {{ req.reqNumber }} · {{ req.department }} · {{ req.location }} · {{ req.type }} · {{ req.headcount }} HC
+                </div>
+                <div style="font-size:11px;color:var(--color-text-muted);margin-top:1px;">Posted {{ req.postedDate }}</div>
+                @if (req.notes) {
+                  <div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px;font-style:italic;">{{ req.notes }}</div>
+                }
+              </td>
+              <td>
+                <span class="badge" [class]="priorityClass(req.priority)">{{ req.priority }}</span>
+              </td>
+              <td>
+                @if (req.hiringManager) {
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="width:32px;height:32px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">
+                      {{ req.hiringManager.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) }}
+                    </div>
+                    <span style="font-size:13px;font-weight:500;">{{ req.hiringManager }}</span>
+                  </div>
+                } @else {
+                  <span style="font-size:12px;color:var(--color-text-muted);">—</span>
+                }
+              </td>
+              <td>
+                <a [routerLink]="['/recruitment/pipeline']" class="btn btn-primary btn-sm">View in Pipeline</a>
+              </td>
+            </tr>
+          }
+          @if (filteredRequisitions.length === 0) {
+            <tr>
+              <td colspan="4" style="text-align:center;padding:32px;color:var(--color-text-muted);">
+                No requisitions match your filters.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Pagination -->
   <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;font-size:13px;color:var(--color-text-secondary);border-top:1px solid var(--color-border);">
-    <span>Showing {{ filteredRequisitions.length }} of {{ requisitions.length }} requisitions</span>
+    <span>Showing {{ filteredRequisitions.length }} of {{ total() }} requisitions</span>
     <div style="display:flex;gap:4px;">
-      <button class="btn btn-secondary btn-sm">← Prev</button>
-      <button class="btn btn-primary btn-sm">1</button>
-      <button class="btn btn-secondary btn-sm">2</button>
-      <button class="btn btn-secondary btn-sm">3</button>
-      <button class="btn btn-secondary btn-sm">Next →</button>
+      <button class="btn btn-secondary btn-sm" (click)="prevPage()" [disabled]="currentPage() === 1">← Prev</button>
+      @for (p of pageNumbers; track p) {
+        <button class="btn btn-sm" [class.btn-primary]="currentPage() === p" [class.btn-secondary]="currentPage() !== p"
+          (click)="goToPage(p)">{{ p }}</button>
+      }
+      <button class="btn btn-secondary btn-sm" (click)="nextPage()" [disabled]="currentPage() === totalPages">Next →</button>
     </div>
   </div>
 </div>
 
-<!-- New Requisition Modal -->
-@if (showModal) {
-  <div class="modal-overlay" (click)="closeModal()">
-    <div class="modal" (click)="$event.stopPropagation()">
+<!-- ── New Requisition Modal ──────────────────────────────────────────────── -->
+@if (showNewModal()) {
+  <div class="modal-overlay" (click)="closeNewModal()">
+    <div class="modal" style="max-width:540px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h2>New Job Requisition</h2>
-        <button class="btn btn-icon" (click)="closeModal()">✕</button>
+        <h3>New Internal Requisition</h3>
+        <button class="modal-close" (click)="closeNewModal()">✕</button>
       </div>
       <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">Job Title *</label>
-          <input class="form-control" placeholder="e.g. Senior Angular Developer" [(ngModel)]="newReq.title" />
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div class="form-group">
-            <label class="form-label">Department *</label>
-            <select class="form-control" [(ngModel)]="newReq.dept">
-              <option>Engineering</option>
-              <option>Product</option>
-              <option>Design</option>
-              <option>Operations</option>
-              <option>Infrastructure</option>
-            </select>
+
+        @if (newReqSuccess()) {
+          <div style="text-align:center;padding:24px 0;">
+            <div style="font-size:40px;margin-bottom:8px;">✅</div>
+            <p style="font-weight:600;color:var(--color-success);">Requisition submitted successfully!</p>
           </div>
+        } @else {
+
+          @if (newReqError()) {
+            <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;color:#dc2626;font-size:13px;margin-bottom:12px;">
+              {{ newReqError() }}
+            </div>
+          }
+
           <div class="form-group">
-            <label class="form-label">Location</label>
-            <select class="form-control" [(ngModel)]="newReq.location">
-              <option>Lahore · Hybrid</option>
-              <option>Karachi · Remote</option>
-              <option>Islamabad · On-site</option>
-              <option>Karachi · Hybrid</option>
-            </select>
+            <label class="form-label">Job Title <span style="color:red">*</span></label>
+            <input class="form-control" type="text" [(ngModel)]="newReqForm.title"
+              placeholder="e.g. Senior Backend Developer" title="Job title" />
           </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+
           <div class="form-group">
-            <label class="form-label">Employment Type</label>
-            <select class="form-control" [(ngModel)]="newReq.type">
-              <option>Full-time</option>
-              <option>Part-time</option>
-              <option>Contract</option>
-              <option>Internship</option>
-            </select>
+            <label class="form-label">Hiring Manager <span style="color:red">*</span></label>
+            @if (employeesLoading()) {
+              <div class="form-control" style="color:var(--color-text-muted);pointer-events:none;">Loading employees…</div>
+            } @else {
+              <select class="form-control" [(ngModel)]="newReqForm.hiringManager" title="Select hiring manager">
+                <option value="">— Select employee —</option>
+                @for (emp of employees(); track emp.id) {
+                  <option [value]="employeeFullName(emp)">
+                    {{ emp.first_name }} {{ emp.last_name }}
+                    @if (emp.job_title) { — {{ emp.job_title }} }
+                    @if (emp.department) { ({{ emp.department }}) }
+                  </option>
+                }
+              </select>
+            }
           </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label class="form-label">Department <span style="color:red">*</span></label>
+              <input class="form-control" type="text" [(ngModel)]="newReqForm.department"
+                placeholder="e.g. Engineering" title="Department" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Location <span style="color:red">*</span></label>
+              <input class="form-control" type="text" [(ngModel)]="newReqForm.location"
+                placeholder="e.g. Lahore" title="Location" />
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label class="form-label">Type</label>
+              <select class="form-control" [(ngModel)]="newReqForm.type" title="Employment type">
+                <option value="Full-time">Full-time</option>
+                <option value="Part-time">Part-time</option>
+                <option value="Contract">Contract</option>
+                <option value="Internship">Internship</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Priority</label>
+              <select class="form-control" [(ngModel)]="newReqForm.priority" title="Priority level">
+                <option value="Urgent">Urgent</option>
+                <option value="High">High</option>
+                <option value="Normal">Normal</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Headcount</label>
+              <input class="form-control" type="number" min="1" [(ngModel)]="newReqForm.headcount" title="Number of positions" />
+            </div>
+          </div>
+
           <div class="form-group">
-            <label class="form-label">Headcount</label>
-            <input class="form-control" type="number" min="1" [(ngModel)]="newReq.headcount" />
+            <label class="form-label">Notes / Justification</label>
+            <textarea class="form-control" rows="3" [(ngModel)]="newReqForm.notes"
+              placeholder="Reason for this requisition, budget notes, etc." title="Notes" style="resize:vertical;"></textarea>
           </div>
-          <div class="form-group">
-            <label class="form-label">Priority</label>
-            <select class="form-control" [(ngModel)]="newReq.priority">
-              <option>Urgent</option>
-              <option>High</option>
-              <option>Normal</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Hiring Manager *</label>
-          <input class="form-control" placeholder="e.g. Fatima Malik" [(ngModel)]="newReq.hiringManager" />
-        </div>
+
+        }
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" (click)="closeModal()">Cancel</button>
-        <button class="btn btn-primary" (click)="submitRequisition()"
-          [disabled]="!newReq.title || !newReq.hiringManager">Submit for Approval</button>
-      </div>
+      @if (!newReqSuccess()) {
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="closeNewModal()">Cancel</button>
+          <button class="btn btn-primary" (click)="submitRequisition()" [disabled]="newReqSaving()">
+            @if (newReqSaving()) {
+              <span class="spinner-sm"></span> Submitting…
+            } @else {
+              Submit Requisition
+            }
+          </button>
+        </div>
+      }
     </div>
   </div>
 }

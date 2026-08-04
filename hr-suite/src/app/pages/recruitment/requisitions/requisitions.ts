@@ -1,209 +1,188 @@
-import { Component } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import {
+  RequisitionStoreService,
+  JobRequisition,
+  ReqStatus,
+  ReqPriority,
+  ReqType,
+} from '../../../services/requisition-store';
+import { JobStoreService, JobApplication } from '../../../services/job-store';
+import { ApiService } from '../../../services/api';
+import { Employee } from '../../../models';
 
-interface Requisition {
-  id: string;
-  title: string;
-  dept: string;
-  location: string;
-  type: string;
-  headcount: number;
-  approvalSteps: { label: string; done: boolean }[];
-  hiringManager: string;
-  hiringManagerInitial: string;
-  posted: string;
-  status: string;
-  statusClass: string;
-  priority: string;
-  priorityClass: string;
-}
+const PAGE_SIZE = 5;
 
 @Component({
   selector: 'app-requisitions',
-  imports: [RouterLink, FormsModule],
+  imports: [RouterLink, FormsModule, CommonModule],
   templateUrl: './requisitions.html',
   styleUrl: './requisitions.scss'
 })
-export class Requisitions {
-  activeTab = 'All';
-  tabs = ['All', 'Open', 'Pending Approval', 'On Hold', 'Closed'];
+export class Requisitions implements OnInit {
+  private store    = inject(RequisitionStoreService);
+  private jobStore = inject(JobStoreService);
+  private api      = inject(ApiService);
 
-  // Filter state
-  searchText = '';
-  filterDept = 'All Departments';
+  // ── Employees (from Directus/BS4 via backend) ─────────────────────────────
+  employees = signal<Employee[]>([]);
+  employeesLoading = signal(false);
+
+  // ── Filters ───────────────────────────────────────────────────────────────
+  searchText     = '';
+  filterDept     = 'All Departments';
   filterLocation = 'All Locations';
   filterPriority = 'All Priorities';
 
-  // Modal state
-  showModal = false;
-  exportToast = false;
+  // ── Pagination ────────────────────────────────────────────────────────────
+  currentPage = signal(1);
+  pageSize    = PAGE_SIZE;
 
-  newReq = {
-    title: '',
-    dept: 'Engineering',
-    location: 'Lahore · Hybrid',
-    type: 'Full-time',
-    headcount: 1,
-    priority: 'Normal',
-    hiringManager: '',
-  };
+  readonly allRequisitions = this.store.requisitions;
+  readonly total           = this.store.total;
+  readonly loading         = this.store.loading;
 
-  requisitions: Requisition[] = [
-    {
-      id: 'REQ-2025-041',
-      title: 'Senior Angular Developer',
-      dept: 'Engineering',
-      location: 'Lahore · Hybrid',
-      type: 'Full-time',
-      headcount: 2,
-      approvalSteps: [
-        { label: 'HOD', done: true },
-        { label: 'HR', done: true },
-        { label: 'CFO', done: false },
-      ],
-      hiringManager: 'Fatima Malik',
-      hiringManagerInitial: 'FM',
-      posted: 'Jul 28, 2025',
-      status: 'Open',
-      statusClass: 'badge-green',
-      priority: 'Urgent',
-      priorityClass: 'badge-red',
-    },
-    {
-      id: 'REQ-2025-040',
-      title: 'Product Manager',
-      dept: 'Product',
-      location: 'Karachi · Remote',
-      type: 'Full-time',
-      headcount: 1,
-      approvalSteps: [
-        { label: 'HOD', done: true },
-        { label: 'HR', done: true },
-        { label: 'CFO', done: true },
-      ],
-      hiringManager: 'Omar Sheikh',
-      hiringManagerInitial: 'OS',
-      posted: 'Jul 22, 2025',
-      status: 'Open',
-      statusClass: 'badge-green',
-      priority: 'High',
-      priorityClass: 'badge-orange',
-    },
-    {
-      id: 'REQ-2025-039',
-      title: 'UX Designer',
-      dept: 'Design',
-      location: 'Islamabad · On-site',
-      type: 'Full-time',
-      headcount: 1,
-      approvalSteps: [
-        { label: 'HOD', done: true },
-        { label: 'HR', done: false },
-        { label: 'CFO', done: false },
-      ],
-      hiringManager: 'Zara Hussain',
-      hiringManagerInitial: 'ZH',
-      posted: 'Jul 18, 2025',
-      status: 'Pending Approval',
-      statusClass: 'badge-orange',
-      priority: 'Normal',
-      priorityClass: 'badge-gray',
-    },
-    {
-      id: 'REQ-2025-038',
-      title: 'DevOps Engineer',
-      dept: 'Infrastructure',
-      location: 'Lahore · Hybrid',
-      type: 'Full-time',
-      headcount: 1,
-      approvalSteps: [
-        { label: 'HOD', done: true },
-        { label: 'HR', done: true },
-        { label: 'CFO', done: true },
-      ],
-      hiringManager: 'Ahmed Raza',
-      hiringManagerInitial: 'AR',
-      posted: 'Jul 15, 2025',
-      status: 'Open',
-      statusClass: 'badge-green',
-      priority: 'High',
-      priorityClass: 'badge-orange',
-    },
-    {
-      id: 'REQ-2025-037',
-      title: 'Business Analyst',
-      dept: 'Operations',
-      location: 'Karachi · Hybrid',
-      type: 'Contract',
-      headcount: 2,
-      approvalSteps: [
-        { label: 'HOD', done: true },
-        { label: 'HR', done: true },
-        { label: 'CFO', done: false },
-      ],
-      hiringManager: 'Khalid Mahmood',
-      hiringManagerInitial: 'KM',
-      posted: 'Jul 10, 2025',
-      status: 'On Hold',
-      statusClass: 'badge-gray',
-      priority: 'Normal',
-      priorityClass: 'badge-gray',
-    },
-  ];
+  // Applications from career portal (all, loaded once)
+  readonly allApplications = this.jobStore.applications;
 
-  setTab(tab: string) {
-    this.activeTab = tab;
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.total() / this.pageSize));
   }
 
-  get filteredRequisitions(): Requisition[] {
-    return this.requisitions.filter(r => {
-      const matchTab = this.activeTab === 'All' || r.status === this.activeTab;
+  get pageNumbers(): number[] {
+    return Array.from({ length: this.totalPages }, (_, i) => i + 1);
+  }
+
+  get filteredRequisitions(): JobRequisition[] {
+    return this.allRequisitions().filter(r => {
       const matchSearch = !this.searchText ||
         r.title.toLowerCase().includes(this.searchText.toLowerCase()) ||
-        r.id.toLowerCase().includes(this.searchText.toLowerCase()) ||
-        r.hiringManager.toLowerCase().includes(this.searchText.toLowerCase());
-      const matchDept = this.filterDept === 'All Departments' || r.dept === this.filterDept;
-      const matchLocation = this.filterLocation === 'All Locations' ||
-        r.location.toLowerCase().includes(this.filterLocation.toLowerCase());
-      const matchPriority = this.filterPriority === 'All Priorities' || r.priority === this.filterPriority;
-      return matchTab && matchSearch && matchDept && matchLocation && matchPriority;
+        r.reqNumber.toLowerCase().includes(this.searchText.toLowerCase());
+      const matchDept     = this.filterDept     === 'All Departments' || r.department === this.filterDept;
+      const matchLocation = this.filterLocation === 'All Locations'   || r.location.toLowerCase().includes(this.filterLocation.toLowerCase());
+      const matchPriority = this.filterPriority === 'All Priorities'  || r.priority === this.filterPriority;
+      return matchSearch && matchDept && matchLocation && matchPriority;
     });
   }
 
-  openModal() { this.showModal = true; }
-  closeModal() { this.showModal = false; this.resetForm(); }
-
-  resetForm() {
-    this.newReq = { title: '', dept: 'Engineering', location: 'Lahore · Hybrid', type: 'Full-time', headcount: 1, priority: 'Normal', hiringManager: '' };
+  /** Applications for a given job title (matched by title since requisitions don't have job_id) */
+  applicationsForReq(req: JobRequisition): JobApplication[] {
+    return this.allApplications().filter(a =>
+      a.jobTitle.toLowerCase() === req.title.toLowerCase()
+    );
   }
 
-  submitRequisition() {
-    if (!this.newReq.title || !this.newReq.hiringManager) return;
-    const initials = this.newReq.hiringManager.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-    const priorityClassMap: Record<string, string> = { Urgent: 'badge-red', High: 'badge-orange', Normal: 'badge-gray' };
-    const nextId = `REQ-2025-0${42 + this.requisitions.length - 5}`;
-    this.requisitions.unshift({
-      id: nextId,
-      title: this.newReq.title,
-      dept: this.newReq.dept,
-      location: this.newReq.location,
-      type: this.newReq.type,
-      headcount: this.newReq.headcount,
-      approvalSteps: [{ label: 'HOD', done: false }, { label: 'HR', done: false }, { label: 'CFO', done: false }],
-      hiringManager: this.newReq.hiringManager,
-      hiringManagerInitial: initials,
-      posted: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      status: 'Pending Approval',
-      statusClass: 'badge-orange',
-      priority: this.newReq.priority,
-      priorityClass: priorityClassMap[this.newReq.priority] || 'badge-gray',
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
+  ngOnInit(): void {
+    this.loadPage(1);
+    this.jobStore.reloadAllApplications();
+    this.loadEmployees();
+  }
+
+  loadEmployees(): void {
+    this.employeesLoading.set(true);
+    this.api.getEmployees().subscribe({
+      next: list => {
+        this.employees.set(list);
+        this.employeesLoading.set(false);
+      },
+      error: () => this.employeesLoading.set(false),
     });
-    this.closeModal();
   }
 
-  exportData() {
-    this.exportToast = true;
-    setTimeout(() => this.exportToast = false, 3000);
+  employeeFullName(e: Employee): string {
+    return `${e.first_name} ${e.last_name}`.trim();
+  }
+
+  loadPage(page: number): void {
+    this.currentPage.set(page);
+    this.store.load(page, this.pageSize);
+  }
+
+  prevPage(): void {
+    if (this.currentPage() > 1) this.loadPage(this.currentPage() - 1);
+  }
+
+  nextPage(): void {
+    if (this.currentPage() < this.totalPages) this.loadPage(this.currentPage() + 1);
+  }
+
+  goToPage(p: number): void {
+    this.loadPage(p);
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  priorityClass(p: ReqPriority): string { return this.store.priorityClass(p); }
+  statusClass(s: ReqStatus): string     { return this.store.statusClass(s); }
+
+  exportToast = signal(false);
+  exportData(): void {
+    this.exportToast.set(true);
+    setTimeout(() => this.exportToast.set(false), 3000);
+  }
+
+  // ── New Requisition Modal ─────────────────────────────────────────────────
+  showNewModal  = signal(false);
+  newReqSaving  = signal(false);
+  newReqError   = signal('');
+  newReqSuccess = signal(false);
+
+  newReqForm = {
+    title:          '',
+    hiringManager:  '',
+    department:     '',
+    location:       '',
+    type:           'Full-time' as ReqType,
+    priority:       'Normal' as ReqPriority,
+    headcount:      1,
+    notes:          '',
+  };
+
+  openNewModal(): void {
+    this.newReqForm = {
+      title: '', hiringManager: '', department: '', location: '',
+      type: 'Full-time', priority: 'Normal', headcount: 1, notes: '',
+    };
+    this.newReqError.set('');
+    this.newReqSuccess.set(false);
+    this.showNewModal.set(true);
+  }
+
+  closeNewModal(): void {
+    this.showNewModal.set(false);
+  }
+
+  submitRequisition(): void {
+    const f = this.newReqForm;
+    if (!f.title.trim() || !f.hiringManager.trim() || !f.department.trim() || !f.location.trim()) {
+      this.newReqError.set('Title, Hiring Manager, Department and Location are required.');
+      return;
+    }
+    this.newReqSaving.set(true);
+    this.newReqError.set('');
+
+    this.store.create({
+      title:         f.title.trim(),
+      department:    f.department.trim(),
+      location:      f.location.trim(),
+      type:          f.type,
+      priority:      f.priority,
+      headcount:     f.headcount,
+      status:        'Pending Approval' as ReqStatus,
+      hiringManager: f.hiringManager.trim(),
+      notes:         f.notes.trim(),
+    }).subscribe({
+      next: () => {
+        this.newReqSaving.set(false);
+        this.newReqSuccess.set(true);
+        setTimeout(() => this.closeNewModal(), 1200);
+      },
+      error: err => {
+        this.newReqSaving.set(false);
+        this.newReqError.set(err?.error?.error || 'Failed to create requisition. Please try again.');
+      }
+    });
   }
 }

@@ -104,6 +104,11 @@ export class NotificationService {
     this._notifications().filter(n => !n.read).length
   );
 
+  /** Push a new dynamic notification (e.g. new candidate application) */
+  push(notif: Omit<AppNotification, 'read'>): void {
+    this._notifications.update(list => [{ ...notif, read: false }, ...list]);
+  }
+
   markRead(id: string): void {
     this._readIds.add(id);
     saveReadIds(this._readIds);

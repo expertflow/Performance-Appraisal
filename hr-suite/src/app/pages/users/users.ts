@@ -101,10 +101,11 @@ export class Users {
   // ── Helpers ───────────────────────────────────────────────────────────────
   roleClass(role: AppRole): string {
     const map: Record<AppRole, string> = {
-      AppAdmin: 'role-appadmin',
-      HR:       'role-hr',
-      Manager:  'role-manager',
-      Employee: 'role-employee',
+      AppAdmin:  'role-appadmin',
+      HR:        'role-hr',
+      Manager:   'role-manager',
+      Employee:  'role-employee',
+      Candidate: 'role-candidate',
     };
     return map[role] ?? '';
   }

@@ -1,4 +1,6 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../environments/environment';
 import { AppRole } from '../models';
 
 // ── Data shape ────────────────────────────────────────────────────────────────
@@ -12,134 +14,70 @@ export interface AppUserRecord {
   employee_id: string;
   status: 'Active' | 'Inactive';
   lastLogin: string;
-}
-
-const STORAGE_KEY = 'ef_users_v1';
-
-// ── Seed data (used only on first run / when localStorage is empty) ───────────
-const SEED_USERS: AppUserRecord[] = [
-  {
-    id: 'u-zaeem',
-    name: 'Zaeem Ahmad',
-    email: 'zaeem.ahmad@expertflow.com',
-    role: 'AppAdmin',
-    department: 'Engineering',
-    designation: 'Senior Software Engineer',
-    employee_id: 'emp-zaeem',
-    status: 'Active',
-    lastLogin: '2 minutes ago',
-  },
-  {
-    id: 'u-sara',
-    name: 'Sara Ahmed',
-    email: 'sara.ahmed@expertflow.com',
-    role: 'HR',
-    department: 'Human Resources',
-    designation: 'HR Manager',
-    employee_id: 'emp-002',
-    status: 'Active',
-    lastLogin: '1 hour ago',
-  },
-  {
-    id: 'u-ali',
-    name: 'Ali Hassan',
-    email: 'ali.hassan@expertflow.com',
-    role: 'Manager',
-    department: 'Engineering',
-    designation: 'Engineering Manager',
-    employee_id: 'emp-003',
-    status: 'Active',
-    lastLogin: '3 hours ago',
-  },
-  {
-    id: 'u-fatima',
-    name: 'Fatima Khan',
-    email: 'fatima.khan@expertflow.com',
-    role: 'Employee',
-    department: 'Engineering',
-    designation: 'Software Engineer',
-    employee_id: 'emp-001',
-    status: 'Active',
-    lastLogin: '1 day ago',
-  },
-  {
-    id: 'u-omar',
-    name: 'Omar Farooq',
-    email: 'omar.farooq@expertflow.com',
-    role: 'Employee',
-    department: 'Product',
-    designation: 'Product Designer',
-    employee_id: 'emp-004',
-    status: 'Active',
-    lastLogin: '2 days ago',
-  },
-  {
-    id: 'u-hina',
-    name: 'Hina Malik',
-    email: 'hina.malik@expertflow.com',
-    role: 'Employee',
-    department: 'Marketing',
-    designation: 'Marketing Specialist',
-    employee_id: 'emp-005',
-    status: 'Inactive',
-    lastLogin: '2 weeks ago',
-  },
-];
-
-// ── localStorage helpers ──────────────────────────────────────────────────────
-function load(): AppUserRecord[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as AppUserRecord[];
-  } catch { /* ignore */ }
-  return SEED_USERS;
-}
-
-function save(users: AppUserRecord[]): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-  } catch { /* ignore */ }
+  phone?: string;
+  address?: string;
 }
 
 // ── Service ───────────────────────────────────────────────────────────────────
 @Injectable({ providedIn: 'root' })
 export class UserStoreService {
+  private http = inject(HttpClient);
+  private base = `${environment.apiUrl}/app-users`;
 
-  private _users = signal<AppUserRecord[]>(load());
+  private _users = signal<AppUserRecord[]>([]);
 
   /** Read-only computed list */
   readonly users = computed(() => this._users());
 
-  /** Persist + update signal */
-  private commit(list: AppUserRecord[]): void {
-    save(list);
-    this._users.set(list);
+  constructor() {
+    this.loadUsers();
+  }
+
+  loadUsers(): void {
+    this.http.get<AppUserRecord[]>(this.base).subscribe({
+      next:  users => this._users.set(users),
+      error: err   => console.error('[UserStore] Failed to load users:', err.message)
+    });
   }
 
   addUser(user: AppUserRecord): void {
-    this.commit([...this._users(), user]);
+    // User is already persisted in DB via auth-local/register — just update local signal
+    this._users.update(list => [...list, user]);
   }
 
   updateUser(updated: AppUserRecord): void {
-    this.commit(this._users().map(u => u.id === updated.id ? updated : u));
+    this.http.patch<AppUserRecord>(`${this.base}/${updated.id}`, {
+      name:        updated.name,
+      role:        updated.role,
+      department:  updated.department,
+      designation: updated.designation,
+      employee_id: updated.employee_id,
+      status:      updated.status,
+    }).subscribe({
+      next:  saved => this._users.update(list => list.map(u => u.id === saved.id ? saved : u)),
+      error: err   => console.error('[UserStore] Failed to update user:', err.message)
+    });
   }
 
   deleteUser(id: string): void {
-    this.commit(this._users().filter(u => u.id !== id));
+    this.http.delete<{ deleted: string }>(`${this.base}/${id}`).subscribe({
+      next:  () => this._users.update(list => list.filter(u => u.id !== id)),
+      error: err => console.error('[UserStore] Failed to delete user:', err.message)
+    });
   }
 
   toggleStatus(id: string): void {
-    this.commit(
-      this._users().map(u =>
-        u.id === id
-          ? { ...u, status: u.status === 'Active' ? 'Inactive' : 'Active' }
-          : u
-      )
-    );
+    const user = this._users().find(u => u.id === id);
+    if (!user) return;
+    const newStatus = user.status === 'Active' ? 'Inactive' : 'Active';
+    this.http.patch<AppUserRecord>(`${this.base}/${id}`, { status: newStatus }).subscribe({
+      next:  saved => this._users.update(list => list.map(u => u.id === id ? saved : u)),
+      error: err   => console.error('[UserStore] Failed to toggle status:', err.message)
+    });
   }
 
-  /** Wipe localStorage and reset to seed data (useful for dev/testing) */
+  /** Reload from DB */
   resetToSeed(): void {
-    this.commit([...SEED_USERS]);
+    this.loadUsers();
   }
 }

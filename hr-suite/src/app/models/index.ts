@@ -1,6 +1,6 @@
 // ── Shared models ──────────────────────────────────────────────────────────
 
-export type AppRole = 'AppAdmin' | 'HR' | 'Manager' | 'Employee';
+export type AppRole = 'AppAdmin' | 'HR' | 'Manager' | 'Employee' | 'Candidate';
 
 export interface AppUser {
   id: string;
@@ -10,6 +10,8 @@ export interface AppUser {
   employee_id?: string;   // linked BS4/Directus employee record
   manager_id?: string;    // for Employee role: their manager's employee_id
   avatar_url?: string;
+  phone?: string;         // stored for candidates
+  address?: string;       // stored for candidates
 }
 
 export interface LoginRequest {

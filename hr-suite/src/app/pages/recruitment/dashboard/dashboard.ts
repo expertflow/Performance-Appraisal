@@ -1,97 +1,241 @@
-import { Component } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { JobStoreService, JobPosting, JobApplication, ApplicationStatus, JobType, JobStatus } from '../../../services/job-store';
 
 @Component({
   selector: 'app-recruitment-dashboard',
-  imports: [RouterLink, CommonModule],
+  imports: [RouterLink, CommonModule, FormsModule],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss'
 })
-export class RecruitmentDashboard {
-  jobTabs = ['All Jobs', 'Active', 'On Hold', 'Closed'];
-  activeJobTab = 'All Jobs';
+export class RecruitmentDashboard implements OnInit {
+  private jobStore = inject(JobStoreService);
+
+  jobTabs = ['All', 'Open', 'Draft', 'Closed'];
+  activeJobTab = 'All';
+
+  ngOnInit(): void {
+    this.jobStore.loadJobs();
+    this.jobStore.reloadAllApplications();
+  }
+
+  // ── Real DB jobs ───────────────────────────────────────────────────────────
+  readonly allDbJobs = this.jobStore.jobs;
+
+  get filteredJobs(): JobPosting[] {
+    const jobs = this.allDbJobs();
+    if (this.activeJobTab === 'All') return jobs;
+    return jobs.filter(j => j.status === this.activeJobTab);
+  }
 
   setJobTab(tab: string) {
     this.activeJobTab = tab;
   }
 
-  stats = [
-    { label: 'Open Positions', value: '24', sub: '8 urgent' },
-    { label: 'Active Candidates', value: '187', sub: '+12 this week' },
-    { label: 'Interviews Today', value: '9', sub: '3 pending confirm' },
-    { label: 'Offers Pending', value: '6', sub: '2 expiring soon' },
-    { label: 'Hired This Month', value: '11', sub: 'vs 8 last month' },
-  ];
+  jobStatusClass(status: JobStatus): string {
+    const map: Record<JobStatus, string> = {
+      'Open':   'badge-green',
+      'Draft':  'badge-orange',
+      'Closed': 'badge-gray',
+    };
+    return map[status] ?? '';
+  }
 
-  funnelStages = [
-    { label: 'Applied', count: 187, color: '#0066CC', pct: 100 },
-    { label: 'Screened', count: 94, color: '#5B21B6', pct: 50 },
-    { label: 'Technical', count: 41, color: '#00A3A3', pct: 22 },
-    { label: 'HR Interview', count: 18, color: '#D97706', pct: 10 },
-    { label: 'Offer', count: 6, color: '#059669', pct: 3 },
-  ];
+  daysLeft(deadline: string): number {
+    if (!deadline) return 0;
+    return Math.max(0, Math.ceil((new Date(deadline).getTime() - Date.now()) / 86400000));
+  }
 
-  allJobs = [
-    {
-      title: 'Senior Angular Developer',
-      dept: 'Engineering',
-      location: 'Lahore · Hybrid',
-      type: 'Full-time',
-      posted: '3 days ago',
-      applicants: 34,
-      interviews: 5,
-      status: 'Active',
-      statusClass: 'badge-green',
-    },
-    {
-      title: 'Product Manager',
-      dept: 'Product',
-      location: 'Karachi · Remote',
-      type: 'Full-time',
-      posted: '1 week ago',
-      applicants: 28,
-      interviews: 3,
-      status: 'Active',
-      statusClass: 'badge-green',
-    },
-    {
-      title: 'UX Designer',
-      dept: 'Design',
-      location: 'Islamabad · On-site',
-      type: 'Full-time',
-      posted: '2 weeks ago',
-      applicants: 19,
-      interviews: 2,
-      status: 'On Hold',
-      statusClass: 'badge-orange',
-    },
-    {
-      title: 'DevOps Engineer',
-      dept: 'Infrastructure',
-      location: 'Lahore · Hybrid',
-      type: 'Full-time',
-      posted: '5 days ago',
-      applicants: 12,
-      interviews: 1,
-      status: 'Active',
-      statusClass: 'badge-green',
-    },
-    {
-      title: 'QA Engineer',
-      dept: 'Engineering',
-      location: 'Lahore · Remote',
-      type: 'Full-time',
-      posted: '1 month ago',
-      applicants: 8,
-      interviews: 0,
-      status: 'Closed',
-      statusClass: 'badge-gray',
-    },
-  ];
+  // ── Post Job Modal ─────────────────────────────────────────────────────────
+  showPostJobModal = signal(false);
+  postJobSaving    = signal(false);
+  postJobError     = signal('');
+  postJobSuccess   = signal(false);
 
-  get jobs() {
-    if (this.activeJobTab === 'All Jobs') return this.allJobs;
-    return this.allJobs.filter(j => j.status === this.activeJobTab);
+  postJobForm = {
+    title:        '',
+    department:   '',
+    location:     '',
+    type:         'Full-time' as JobType,
+    status:       'Open' as JobStatus,
+    description:  '',
+    requirementsRaw: '',
+    deadline:     '',
+  };
+
+  openPostJobModal(): void {
+    this.postJobForm = {
+      title: '', department: '', location: '',
+      type: 'Full-time', status: 'Open',
+      description: '', requirementsRaw: '', deadline: '',
+    };
+    this.postJobError.set('');
+    this.postJobSuccess.set(false);
+    this.showPostJobModal.set(true);
+  }
+
+  closePostJobModal(): void {
+    this.showPostJobModal.set(false);
+  }
+
+  submitPostJob(): void {
+    const f = this.postJobForm;
+    if (!f.title.trim() || !f.department.trim() || !f.location.trim() || !f.type) {
+      this.postJobError.set('Title, Department, Location and Type are required.');
+      return;
+    }
+    const requirements = f.requirementsRaw
+      .split(/[\n,]+/)
+      .map(r => r.trim())
+      .filter(r => r.length > 0);
+
+    this.postJobSaving.set(true);
+    this.postJobError.set('');
+
+    this.jobStore.createJobPosting({
+      title:        f.title.trim(),
+      department:   f.department.trim(),
+      location:     f.location.trim(),
+      type:         f.type,
+      status:       f.status,
+      description:  f.description.trim(),
+      requirements,
+      deadline:     f.deadline || '',
+    }).subscribe({
+      next: () => {
+        this.postJobSaving.set(false);
+        this.postJobSuccess.set(true);
+        setTimeout(() => this.closePostJobModal(), 1200);
+      },
+      error: err => {
+        this.postJobSaving.set(false);
+        this.postJobError.set(err?.error?.error || 'Failed to post job. Please try again.');
+      }
+    });
+  }
+
+  // ── Edit Job Modal ─────────────────────────────────────────────────────────
+  showEditJobModal = signal(false);
+  editJobSaving    = signal(false);
+  editJobError     = signal('');
+  editJobSuccess   = signal(false);
+  editingJobId     = '';
+
+  editJobForm = {
+    title:           '',
+    department:      '',
+    location:        '',
+    type:            'Full-time' as JobType,
+    status:          'Open' as JobStatus,
+    description:     '',
+    requirementsRaw: '',
+    deadline:        '',
+  };
+
+  openEditJobModal(job: JobPosting, event: Event): void {
+    event.stopPropagation();
+    this.editingJobId = job.id;
+    this.editJobForm = {
+      title:           job.title,
+      department:      job.department,
+      location:        job.location,
+      type:            job.type,
+      status:          job.status,
+      description:     job.description,
+      requirementsRaw: job.requirements.join('\n'),
+      deadline:        job.deadline || '',
+    };
+    this.editJobError.set('');
+    this.editJobSuccess.set(false);
+    this.showEditJobModal.set(true);
+  }
+
+  closeEditJobModal(): void {
+    this.showEditJobModal.set(false);
+  }
+
+  saveEditJob(): void {
+    const f = this.editJobForm;
+    if (!f.title.trim() || !f.department.trim() || !f.location.trim()) {
+      this.editJobError.set('Title, Department and Location are required.');
+      return;
+    }
+    const requirements = f.requirementsRaw
+      .split(/[\n,]+/)
+      .map(r => r.trim())
+      .filter(r => r.length > 0);
+
+    this.editJobSaving.set(true);
+    this.editJobError.set('');
+
+    this.jobStore.updateJobPosting(this.editingJobId, {
+      title:        f.title.trim(),
+      department:   f.department.trim(),
+      location:     f.location.trim(),
+      type:         f.type,
+      status:       f.status,
+      description:  f.description.trim(),
+      requirements,
+      deadline:     f.deadline || '',
+    }).subscribe({
+      next: () => {
+        this.editJobSaving.set(false);
+        this.editJobSuccess.set(true);
+        setTimeout(() => this.closeEditJobModal(), 1200);
+      },
+      error: err => {
+        this.editJobSaving.set(false);
+        this.editJobError.set(err?.error?.error || 'Failed to update job. Please try again.');
+      }
+    });
+  }
+
+  // ── Requirements Popup ─────────────────────────────────────────────────────
+  requirementsJobId = signal<string | null>(null);
+
+  toggleRequirements(job: JobPosting, event: Event): void {
+    event.stopPropagation();
+    this.requirementsJobId.update(id => id === job.id ? null : job.id);
+  }
+
+  closeRequirements(): void {
+    this.requirementsJobId.set(null);
+  }
+
+  // ── Delete Job ─────────────────────────────────────────────────────────────
+  deleteJob(job: JobPosting, event: Event): void {
+    event.stopPropagation();
+    if (!confirm(`Delete "${job.title}"? This cannot be undone.`)) return;
+    this.jobStore.deleteJobPosting(job.id).subscribe({
+      error: err => alert('Failed to delete: ' + (err?.error?.error || err.message))
+    });
+  }
+
+  // ── Stats ──────────────────────────────────────────────────────────────────
+  readonly allApplications = this.jobStore.applications;
+
+  get stats() {
+    const jobs = this.allDbJobs();
+    const apps = this.allApplications();
+    return [
+      { label: 'Open Positions',     value: String(jobs.filter(j => j.status === 'Open').length),                    sub: 'from database' },
+      { label: 'Total Applications', value: String(apps.length),                                                      sub: 'all time' },
+      { label: 'Shortlisted',        value: String(apps.filter(a => a.status === 'Shortlisted').length),              sub: 'candidates' },
+      { label: 'Hired',              value: String(apps.filter(a => a.status === 'Hired').length),                    sub: 'this cycle' },
+      { label: 'Rejected',           value: String(apps.filter(a => a.status === 'Rejected').length),                 sub: 'candidates' },
+    ];
+  }
+
+  get funnelData() {
+    const apps = this.allApplications();
+    const total = apps.length || 1;
+    return [
+      { label: 'Applied',      count: apps.length,                                              color: '#0066CC', pct: 100 },
+      { label: 'Under Review', count: apps.filter(a => a.status === 'Under Review').length,     color: '#5B21B6', pct: Math.round(apps.filter(a => a.status === 'Under Review').length / total * 100) },
+      { label: 'Shortlisted',  count: apps.filter(a => a.status === 'Shortlisted').length,      color: '#00A3A3', pct: Math.round(apps.filter(a => a.status === 'Shortlisted').length / total * 100) },
+      { label: 'Hired',        count: apps.filter(a => a.status === 'Hired').length,             color: '#059669', pct: Math.round(apps.filter(a => a.status === 'Hired').length / total * 100) },
+    ];
   }
 }

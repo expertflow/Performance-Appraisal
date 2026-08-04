@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { Shell } from './shell/shell';
+import { CandidateShell } from './candidate-shell/candidate-shell';
 import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
 
@@ -10,7 +11,25 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/auth/login/login').then(m => m.Login)
   },
 
-  // ── Protected shell ────────────────────────────────────────────────────────
+  // ── Candidate portal (external users) ─────────────────────────────────────
+  {
+    path: 'candidate',
+    component: CandidateShell,
+    canActivate: [authGuard, roleGuard(['Candidate'])],
+    children: [
+      { path: '', redirectTo: 'jobs', pathMatch: 'full' },
+      {
+        path: 'jobs',
+        loadComponent: () => import('./pages/candidate/jobs/jobs').then(m => m.CandidateJobs)
+      },
+      {
+        path: 'my-applications',
+        loadComponent: () => import('./pages/candidate/my-applications/my-applications').then(m => m.MyApplications)
+      },
+    ]
+  },
+
+  // ── Protected shell (internal staff) ──────────────────────────────────────
   {
     path: '',
     component: Shell,
@@ -18,19 +37,19 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
 
-      // ── Overview (all roles) ──
+      // ── Overview (all internal roles) ──
       {
         path: 'dashboard',
         loadComponent: () => import('./pages/dashboard/dashboard').then(m => m.Dashboard)
       },
 
-      // ── Change password (all roles) ──
+      // ── Change password (all internal roles) ──
       {
         path: 'change-password',
         loadComponent: () => import('./pages/auth/change-password/change-password').then(m => m.ChangePassword)
       },
 
-      // ── Settings (all roles) ──
+      // ── Settings (all internal roles) ──
       {
         path: 'settings',
         loadComponent: () => import('./pages/settings/settings').then(m => m.Settings)
@@ -43,7 +62,7 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/users/users').then(m => m.Users)
       },
 
-      // ── Notifications (all roles) ──
+      // ── Notifications (all internal roles) ──
       {
         path: 'notifications',
         loadComponent: () => import('./pages/notifications/notifications').then(m => m.Notifications)
@@ -71,6 +90,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/recruitment/agencies/agencies').then(m => m.Agencies)
       },
       {
+        path: 'recruitment/applications',
+        canActivate: [roleGuard(['AppAdmin', 'HR'])],
+        loadComponent: () => import('./pages/recruitment/applications/applications').then(m => m.Applications)
+      },
+      {
         path: 'recruitment/offer',
         canActivate: [roleGuard(['AppAdmin', 'HR'])],
         loadComponent: () => import('./pages/recruitment/offer/offer').then(m => m.Offer)
@@ -83,7 +107,7 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/employees/employees').then(m => m.Employees)
       },
 
-      // ── Performance Appraisal module (all roles, scoped by role in component) ─
+      // ── Performance Appraisal module (all internal roles) ───────────────────
       {
         path: 'appraisal',
         canActivate: [roleGuard(['AppAdmin', 'HR', 'Manager', 'Employee'])],
@@ -110,7 +134,7 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/performance-appraisal/organogram/organogram').then(m => m.Organogram)
       },
 
-      // ── Project Management module (all roles, Employee is read-only for projects) ─
+      // ── Project Management module (all internal roles) ──────────────────────
       {
         path: 'projects',
         canActivate: [roleGuard(['AppAdmin', 'HR', 'Manager', 'Employee'])],
@@ -145,5 +169,5 @@ export const routes: Routes = [
   },
 
   // ── Fallback ───────────────────────────────────────────────────────────────
-  { path: '**', redirectTo: '' }
+  { path: '**', redirectTo: 'login' }
 ];

@@ -5,7 +5,7 @@
   </div>
   <div class="flex gap-2">
     <button class="btn btn-secondary btn-sm">Export</button>
-    <a routerLink="/recruitment/requisitions" class="btn btn-primary btn-sm">+ New Requisition</a>
+    <button class="btn btn-primary btn-sm" (click)="openPostJobModal()">+ Post Job</button>
   </div>
 </div>
 
@@ -24,28 +24,37 @@
 <div class="card" style="margin-bottom: 24px;">
   <div class="card-header">
     <h3>Hiring Funnel</h3>
-    <span class="text-secondary" style="font-size:12px;">Last 30 days</span>
+    <span class="text-secondary" style="font-size:12px;">All time</span>
   </div>
-  <div class="funnel-bar">
-    @for (stage of funnelStages; track stage.label) {
-      <div class="funnel-segment" [style.width.%]="stage.pct" [style.background]="stage.color">
-        <span>{{ stage.label }} ({{ stage.count }})</span>
+
+  <!-- Funnel stages as cards with colored numbers -->
+  <div style="display:flex;align-items:stretch;gap:0;margin:8px 0 4px;">
+    @for (stage of funnelData; track stage.label; let last = $last) {
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:16px 8px;
+                  border-right:1px solid var(--color-border,#e2e8f0);"
+           [style.border-right]="last ? 'none' : '1px solid var(--color-border,#e2e8f0)'">
+        <div style="font-size:28px;font-weight:800;line-height:1;"
+             [style.color]="stage.color">{{ stage.count }}</div>
+        <div style="font-size:12px;color:var(--color-text-secondary,#64748b);margin-top:6px;text-align:center;font-weight:500;">
+          {{ stage.label }}
+        </div>
+        <!-- mini progress bar under each stage -->
+        <div style="width:100%;height:4px;background:var(--color-border,#e2e8f0);border-radius:2px;margin-top:10px;">
+          <div style="height:4px;border-radius:2px;transition:width .4s;"
+               [style.width.%]="stage.pct || 0"
+               [style.background]="stage.color"></div>
+        </div>
       </div>
-    }
-  </div>
-  <div class="flex gap-3 mt-2" style="font-size:12px; color: var(--color-text-secondary);">
-    @for (stage of funnelStages; track stage.label) {
-      <span style="display:flex;align-items:center;gap:4px;">
-        <span style="width:10px;height:10px;border-radius:2px;display:inline-block;" [style.background]="stage.color"></span>
-        {{ stage.label }}
-      </span>
+      @if (!last) {
+        <div style="display:flex;align-items:center;color:var(--color-text-muted,#94a3b8);font-size:18px;padding:0 2px;">›</div>
+      }
     }
   </div>
 </div>
 
-<!-- Job Cards -->
+<!-- Job Cards (real DB data) -->
 <div class="card-header" style="margin-bottom:12px;">
-  <h3>Active Job Openings</h3>
+  <h3>Job Openings</h3>
   <div class="tabs" style="margin-bottom:0;">
     @for (tab of jobTabs; track tab) {
       <button class="tab" [class.active]="activeJobTab === tab" (click)="setJobTab(tab)">{{ tab }}</button>
@@ -53,33 +62,266 @@
   </div>
 </div>
 
-@for (job of jobs; track job.title) {
-  <div class="job-card" [routerLink]="['/recruitment/pipeline']">
-    <div class="job-info">
+@if (filteredJobs.length === 0) {
+  <div class="card" style="padding:32px;text-align:center;color:var(--color-text-muted);margin-bottom:24px;">
+    <div style="font-size:32px;margin-bottom:8px;">📋</div>
+    <p>No job postings yet. Click <strong>+ Post Job</strong> to create one.</p>
+  </div>
+}
+
+@for (job of filteredJobs; track job.id) {
+  <div class="job-card" (click)="closeRequirements()">
+    <div class="job-info" style="cursor:pointer;" [routerLink]="['/recruitment/pipeline']">
       <div class="job-title">{{ job.title }}</div>
       <div class="job-meta">
-        <span>{{ job.dept }}</span>
+        <span>{{ job.department }}</span>
         <span class="sep">·</span>
         <span>{{ job.location }}</span>
         <span class="sep">·</span>
         <span>{{ job.type }}</span>
         <span class="sep">·</span>
-        <span>Posted {{ job.posted }}</span>
+        <span>Posted {{ job.postedDate }}</span>
+        @if (job.deadline) {
+          <span class="sep">·</span>
+          <span style="color:var(--color-warning);">{{ daysLeft(job.deadline) }}d left</span>
+        }
       </div>
     </div>
-    <div class="job-stats">
-      <div class="job-stat">
-        <span class="job-stat-value">{{ job.applicants }}</span>
-        <span class="job-stat-label">Applicants</span>
+    <div class="job-stats" style="position:relative;">
+      <div class="job-stat" style="cursor:pointer;user-select:none;"
+           (click)="toggleRequirements(job, $event)"
+           [title]="job.requirements.length ? 'Click to view requirements' : 'No requirements'">
+        <span class="job-stat-value" [style.color]="job.requirements.length ? 'var(--color-primary)' : 'inherit'">
+          {{ job.requirements.length }}
+        </span>
+        <span class="job-stat-label">Requirements</span>
       </div>
-      <div class="job-stat">
-        <span class="job-stat-value">{{ job.interviews }}</span>
-        <span class="job-stat-label">Interviews</span>
-      </div>
+
+      <!-- Requirements dropdown popup -->
+      @if (requirementsJobId() === job.id) {
+        <div style="position:absolute;right:0;top:calc(100% + 8px);z-index:200;
+                    background:var(--color-bg-card,#fff);border:1px solid var(--color-border);
+                    border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);
+                    min-width:280px;max-width:360px;padding:12px 0;"
+             (click)="$event.stopPropagation()">
+          <div style="padding:8px 16px 10px;border-bottom:1px solid var(--color-border);
+                      display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-weight:600;font-size:13px;">Requirements</span>
+            <button style="background:none;border:none;cursor:pointer;font-size:16px;
+                           color:var(--color-text-muted);line-height:1;" (click)="closeRequirements()">✕</button>
+          </div>
+          @if (job.requirements.length === 0) {
+            <div style="padding:16px;text-align:center;color:var(--color-text-muted);font-size:13px;">
+              No requirements listed for this job.
+            </div>
+          } @else {
+            <ul style="margin:0;padding:8px 16px;list-style:none;">
+              @for (req of job.requirements; track req; let i = $index) {
+                <li style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;
+                           border-bottom:1px solid var(--color-border);font-size:13px;">
+                  <span style="min-width:20px;height:20px;border-radius:50%;background:var(--color-primary);
+                               color:#fff;display:flex;align-items:center;justify-content:center;
+                               font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px;">
+                    {{ i + 1 }}
+                  </span>
+                  <span>{{ req }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
     </div>
     <div class="job-actions">
-      <span class="badge" [class]="job.statusClass">{{ job.status }}</span>
-      <button class="btn btn-secondary btn-sm">View Pipeline</button>
+      <span class="badge" [class]="jobStatusClass(job.status)">{{ job.status }}</span>
+      <button class="btn btn-secondary btn-sm" (click)="openEditJobModal(job, $event)">✏️ Edit</button>
+      <button class="btn btn-danger btn-sm" (click)="deleteJob(job, $event)">🗑️ Delete</button>
+    </div>
+  </div>
+}
+
+<!-- ── Post Job Modal ──────────────────────────────────────────────────────── -->
+@if (showPostJobModal()) {
+  <div class="modal-overlay" (click)="closePostJobModal()">
+    <div class="modal" style="max-width:560px;" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Post a New Job</h3>
+        <button class="modal-close" (click)="closePostJobModal()">✕</button>
+      </div>
+      <div class="modal-body">
+
+        @if (postJobSuccess()) {
+          <div style="text-align:center;padding:24px 0;">
+            <div style="font-size:40px;margin-bottom:8px;">✅</div>
+            <p style="font-weight:600;color:var(--color-success);">Job posted successfully!</p>
+          </div>
+        } @else {
+
+          @if (postJobError()) {
+            <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;color:#dc2626;font-size:13px;margin-bottom:12px;">
+              {{ postJobError() }}
+            </div>
+          }
+
+          <div class="form-group">
+            <label class="form-label">Job Title <span style="color:red">*</span></label>
+            <input class="form-control" type="text" [(ngModel)]="postJobForm.title" placeholder="e.g. Senior Angular Developer" />
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label class="form-label">Department <span style="color:red">*</span></label>
+              <input class="form-control" type="text" [(ngModel)]="postJobForm.department" placeholder="e.g. Engineering" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Type <span style="color:red">*</span></label>
+              <select class="form-control" [(ngModel)]="postJobForm.type" title="Job type">
+                <option value="Full-time">Full-time</option>
+                <option value="Part-time">Part-time</option>
+                <option value="Contract">Contract</option>
+                <option value="Internship">Internship</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label class="form-label">Location <span style="color:red">*</span></label>
+              <input class="form-control" type="text" [(ngModel)]="postJobForm.location" placeholder="e.g. Lahore, Pakistan (Hybrid)" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Status</label>
+              <select class="form-control" [(ngModel)]="postJobForm.status" title="Job status">
+                <option value="Open">Open</option>
+                <option value="Draft">Draft</option>
+                <option value="Closed">Closed</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Application Deadline</label>
+            <input class="form-control" type="date" [(ngModel)]="postJobForm.deadline" title="Application deadline" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Job Description</label>
+            <textarea class="form-control" rows="3" [(ngModel)]="postJobForm.description" placeholder="Describe the role…" style="resize:vertical;"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Requirements</label>
+            <textarea class="form-control" rows="4" [(ngModel)]="postJobForm.requirementsRaw" placeholder="One requirement per line or comma-separated" style="resize:vertical;"></textarea>
+            <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">One requirement per line, or comma-separated.</div>
+          </div>
+
+        }
+      </div>
+      @if (!postJobSuccess()) {
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="closePostJobModal()">Cancel</button>
+          <button class="btn btn-primary" (click)="submitPostJob()" [disabled]="postJobSaving()">
+            @if (postJobSaving()) {
+              <span class="spinner-sm"></span> Posting…
+            } @else {
+              Post Job
+            }
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- ── Edit Job Modal ──────────────────────────────────────────────────────── -->
+@if (showEditJobModal()) {
+  <div class="modal-overlay" (click)="closeEditJobModal()">
+    <div class="modal" style="max-width:560px;" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Edit Job Posting</h3>
+        <button class="modal-close" (click)="closeEditJobModal()">✕</button>
+      </div>
+      <div class="modal-body">
+
+        @if (editJobSuccess()) {
+          <div style="text-align:center;padding:24px 0;">
+            <div style="font-size:40px;margin-bottom:8px;">✅</div>
+            <p style="font-weight:600;color:var(--color-success);">Job updated successfully!</p>
+          </div>
+        } @else {
+
+          @if (editJobError()) {
+            <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;color:#dc2626;font-size:13px;margin-bottom:12px;">
+              {{ editJobError() }}
+            </div>
+          }
+
+          <div class="form-group">
+            <label class="form-label">Job Title <span style="color:red">*</span></label>
+            <input class="form-control" type="text" [(ngModel)]="editJobForm.title" />
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label class="form-label">Department <span style="color:red">*</span></label>
+              <input class="form-control" type="text" [(ngModel)]="editJobForm.department" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Type</label>
+              <select class="form-control" [(ngModel)]="editJobForm.type" title="Job type">
+                <option value="Full-time">Full-time</option>
+                <option value="Part-time">Part-time</option>
+                <option value="Contract">Contract</option>
+                <option value="Internship">Internship</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label class="form-label">Location <span style="color:red">*</span></label>
+              <input class="form-control" type="text" [(ngModel)]="editJobForm.location" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Status</label>
+              <select class="form-control" [(ngModel)]="editJobForm.status" title="Job status">
+                <option value="Open">Open</option>
+                <option value="Draft">Draft</option>
+                <option value="Closed">Closed</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Application Deadline</label>
+            <input class="form-control" type="date" [(ngModel)]="editJobForm.deadline" title="Application deadline" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Job Description</label>
+            <textarea class="form-control" rows="3" [(ngModel)]="editJobForm.description" style="resize:vertical;"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Requirements</label>
+            <textarea class="form-control" rows="4" [(ngModel)]="editJobForm.requirementsRaw" placeholder="One requirement per line or comma-separated" style="resize:vertical;"></textarea>
+            <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">One requirement per line, or comma-separated.</div>
+          </div>
+
+        }
+      </div>
+      @if (!editJobSuccess()) {
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="closeEditJobModal()">Cancel</button>
+          <button class="btn btn-primary" (click)="saveEditJob()" [disabled]="editJobSaving()">
+            @if (editJobSaving()) {
+              <span class="spinner-sm"></span> Saving…
+            } @else {
+              Save Changes
+            }
+          </button>
+        </div>
+      }
     </div>
   </div>
 }

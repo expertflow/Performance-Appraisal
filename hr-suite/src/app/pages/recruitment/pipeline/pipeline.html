@@ -5,25 +5,23 @@
 <div class="pipeline-header">
   <div class="job-selector">
     <label style="font-size:12px;color:var(--color-text-secondary);margin-bottom:4px;display:block;">Job Opening</label>
-    <select class="form-control" title="Select job" style="width:280px;" [(ngModel)]="selectedJob">
-      @for (job of jobs; track job) {
+    <select class="form-control" title="Select job" style="width:280px;" [(ngModel)]="selectedJobTitle">
+      @for (job of jobTitles; track job) {
         <option [value]="job">{{ job }}</option>
       }
     </select>
   </div>
   <div class="flex gap-3" style="font-size:12px;color:var(--color-text-secondary);align-items:center;">
-    <span>Total: <strong>14</strong> candidates</span>
-    <span>Active: <strong>11</strong></span>
-    <span>Avg. time: <strong>18 days</strong></span>
+    <span>Total: <strong>{{ totalCandidates }}</strong> candidates</span>
+    <span>Active: <strong>{{ activeCandidates }}</strong></span>
   </div>
   <div class="flex gap-2">
-    <button class="btn btn-secondary btn-sm">Filter</button>
     <a routerLink="/recruitment/requisitions" class="btn btn-secondary btn-sm">← Requisitions</a>
     <a routerLink="/recruitment/offer" class="btn btn-primary btn-sm">View Offers</a>
   </div>
 </div>
 
-<div class="pipeline-body">
+<div class="pipeline-body" (click)="closeStagePicker()">
   <!-- Kanban Board -->
   <div class="kanban-scroll">
     <div class="kanban-board">
@@ -33,28 +31,29 @@
             <span class="col-label">{{ col.label }}</span>
             <span class="col-count" [style.background]="col.color">{{ col.candidates.length }}</span>
           </div>
-          @for (candidate of col.candidates; track candidate.name) {
+
+          @if (col.candidates.length === 0) {
+            <div style="padding:16px;text-align:center;font-size:12px;color:var(--color-text-muted);">No candidates</div>
+          }
+
+          @for (app of col.candidates; track app.id) {
             <div class="candidate-card"
-                 [class.selected]="selectedCandidate === candidate"
-                 [class.highlight]="candidate.highlight"
-                 (click)="selectCandidate(candidate, col)">
+                 [class.selected]="selectedApp?.id === app.id"
+                 (click)="selectCandidate(app, col.color)">
               <div class="candidate-header">
-                <div class="candidate-avatar" [class]="'avatar-' + candidate.color">{{ candidate.initials }}</div>
+                <div class="candidate-avatar avatar-teal">{{ initials(app.candidateName) }}</div>
                 <div>
-                  <div class="candidate-name">{{ candidate.name }}</div>
-                  <div class="candidate-role">{{ candidate.role }}</div>
+                  <div class="candidate-name">{{ app.candidateName }}</div>
+                  <div class="candidate-role">{{ app.jobTitle }}</div>
                 </div>
               </div>
               <div class="candidate-tags">
-                @for (tag of candidate.tags; track tag) {
-                  <span class="tag">{{ tag }}</span>
-                }
+                @if (app.linkedinUrl) { <span class="tag">LinkedIn</span> }
+                @if (app.githubUrl)   { <span class="tag">GitHub</span> }
+                @if (app.resumeLink)  { <span class="tag">Resume</span> }
               </div>
               <div class="candidate-footer">
-                <span style="font-size:11px;color:var(--color-text-muted);">{{ candidate.date }}</span>
-                @if (candidate.score) {
-                  <span class="score-badge">{{ candidate.score }}%</span>
-                }
+                <span style="font-size:11px;color:var(--color-text-muted);">{{ app.appliedDate }}</span>
               </div>
             </div>
           }
@@ -64,46 +63,167 @@
   </div>
 
   <!-- Detail Panel -->
-  <div class="detail-panel">
-    <div class="detail-header">
-      <div class="detail-avatar" [class]="'avatar-' + selectedCandidate.color">{{ selectedCandidate.initials }}</div>
-      <div>
-        <div style="font-weight:700;font-size:15px;">{{ selectedCandidate.name }}</div>
-        <div style="font-size:12px;color:var(--color-text-secondary);">{{ selectedCandidate.role }}</div>
+  @if (selectedApp) {
+    <div class="detail-panel">
+      <div class="detail-header">
+        <div class="detail-avatar avatar-teal">{{ initials(selectedApp.candidateName) }}</div>
+        <div>
+          <div style="font-weight:700;font-size:15px;">{{ selectedApp.candidateName }}</div>
+          <div style="font-size:12px;color:var(--color-text-secondary);">{{ selectedApp.jobTitle }}</div>
+        </div>
       </div>
-    </div>
 
-    <div class="stage-badge" [style.background]="selectedColumn.color + '20'" [style.color]="selectedColumn.color">
-      {{ selectedColumn.label }}
-    </div>
-
-    @if (selectedCandidate.score) {
-      <div class="score-ring">
-        <div class="score-ring-value">{{ selectedCandidate.score }}%</div>
-        <div class="score-ring-label">AI Match Score</div>
+      <div class="stage-badge" [style.background]="selectedColColor + '20'" [style.color]="selectedColColor">
+        {{ selectedApp.status }}
       </div>
-    }
 
-    <div class="detail-section">
-      <div class="detail-section-title">Competency Scores</div>
-      @for (comp of competencies; track comp.label) {
-        <div class="competency-row">
-          <span class="comp-label">{{ comp.label }}</span>
-          <div class="comp-bar-wrap">
-            <div class="comp-bar" [style.width.%]="comp.score" [style.background]="comp.score >= 85 ? '#059669' : comp.score >= 70 ? '#D97706' : '#DC2626'"></div>
-          </div>
-          <span class="comp-score">{{ comp.score }}%</span>
+      <!-- Contact Info -->
+      <div class="detail-section">
+        <div class="detail-section-title">Contact</div>
+        <div style="font-size:13px;margin-bottom:4px;">📧 {{ selectedApp.candidateEmail }}</div>
+        @if (selectedApp.candidatePhone) {
+          <div style="font-size:13px;margin-bottom:4px;">📞 {{ selectedApp.candidatePhone }}</div>
+        }
+        @if (selectedApp.candidateAddress) {
+          <div style="font-size:13px;margin-bottom:4px;">📍 {{ selectedApp.candidateAddress }}</div>
+        }
+      </div>
+
+      <!-- Links -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+        @if (selectedApp.resumeLink) {
+          <a [href]="selectedApp.resumeLink" [download]="selectedApp.resumeFileName || 'resume.pdf'" class="btn btn-primary btn-sm">📄 Resume</a>
+        }
+        @if (selectedApp.linkedinUrl) {
+          <a [href]="selectedApp.linkedinUrl" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">🔗 LinkedIn</a>
+        }
+        @if (selectedApp.githubUrl) {
+          <a [href]="selectedApp.githubUrl" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">🐙 GitHub</a>
+        }
+      </div>
+
+      <!-- Cover Letter -->
+      @if (selectedApp.coverLetter) {
+        <div class="detail-section">
+          <div class="detail-section-title">Cover Letter</div>
+          <div style="font-size:12px;line-height:1.6;color:var(--color-text-secondary);white-space:pre-wrap;max-height:120px;overflow-y:auto;">{{ selectedApp.coverLetter }}</div>
         </div>
       }
-    </div>
 
-    <div class="detail-actions">
-      <button class="btn btn-primary btn-sm" style="flex:1;" (click)="scheduleInterview()">Schedule Interview</button>
-      <button class="btn btn-secondary btn-sm" style="flex:1;" (click)="moveStage()">Move Stage</button>
+      <div class="detail-actions">
+        <button class="btn btn-primary btn-sm" style="flex:1;" (click)="openInterviewModal()">📅 Schedule Interview</button>
+        <!-- Move Stage button with inline picker -->
+        <div style="position:relative;flex:1;" (click)="$event.stopPropagation()">
+          <button class="btn btn-secondary btn-sm" style="width:100%;" (click)="openStagePicker()">Move Stage →</button>
+          @if (showStagePicker()) {
+            <div style="position:absolute;left:0;top:calc(100% + 4px);z-index:300;
+                        background:var(--color-bg-card,#fff);border:1px solid var(--color-border,#e2e8f0);
+                        border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);
+                        min-width:180px;overflow:hidden;"
+                 (click)="$event.stopPropagation()">
+              <div style="padding:8px 12px;font-size:11px;font-weight:700;color:var(--color-text-muted,#94a3b8);
+                          text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--color-border,#e2e8f0);">
+                Move to stage
+              </div>
+              @for (stage of stageOptions; track stage) {
+                <button (click)="selectStage(stage)"
+                        style="display:flex;align-items:center;gap:8px;width:100%;padding:9px 14px;
+                               background:none;border:none;cursor:pointer;font-size:13px;text-align:left;
+                               transition:background .12s;"
+                        [style.color]="stage === 'Rejected' ? '#dc2626' : stage === 'Hired' ? '#059669' : 'inherit'"
+                        [style.font-weight]="selectedApp?.status === stage ? '700' : '400'"
+                        [style.background]="selectedApp?.status === stage ? 'rgba(0,102,204,.06)' : 'transparent'">
+                  <span style="font-size:14px;">
+                    @switch (stage) {
+                      @case ('Submitted')    { 📥 }
+                      @case ('Under Review') { 🔍 }
+                      @case ('Shortlisted')  { ⭐ }
+                      @case ('Hired')        { ✅ }
+                      @case ('Rejected')     { ❌ }
+                    }
+                  </span>
+                  {{ stage }}
+                  @if (selectedApp?.status === stage) {
+                    <span style="margin-left:auto;font-size:11px;color:var(--color-primary,#0066cc);">current</span>
+                  }
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+      <div class="detail-actions" style="margin-top:6px;">
+        <a routerLink="/recruitment/offer" class="btn btn-secondary btn-sm" style="flex:1;" (click)="notifyOffer()">Create Offer</a>
+        <button class="btn btn-danger btn-sm" style="flex:1;" (click)="rejectCandidate()">Reject</button>
+      </div>
     </div>
-    <div class="detail-actions" style="margin-top:6px;">
-      <a routerLink="/recruitment/offer" class="btn btn-secondary btn-sm" style="flex:1;">Create Offer</a>
-      <button class="btn btn-danger btn-sm" style="flex:1;" (click)="rejectCandidate()">Reject</button>
+  } @else {
+    <div class="detail-panel" style="display:flex;align-items:center;justify-content:center;color:var(--color-text-muted);font-size:13px;">
+      Select a candidate to view details
+    </div>
+  }
+</div>
+
+<!-- ── Schedule Interview Modal ─────────────────────────────────────────────── -->
+@if (showInterviewModal()) {
+  <div class="modal-overlay" (click)="closeInterviewModal()">
+    <div class="modal" style="max-width:480px;" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>📅 Schedule Interview</h3>
+        <button class="modal-close" (click)="closeInterviewModal()">✕</button>
+      </div>
+      <div class="modal-body">
+
+        @if (selectedApp) {
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;
+                      background:var(--color-bg-secondary,#f8fafc);border-radius:8px;margin-bottom:16px;">
+            <div style="width:36px;height:36px;border-radius:50%;background:#00A3A3;color:#fff;
+                        display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">
+              {{ initials(selectedApp.candidateName) }}
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:13px;">{{ selectedApp.candidateName }}</div>
+              <div style="font-size:12px;color:var(--color-text-secondary);">{{ selectedApp.jobTitle }}</div>
+            </div>
+          </div>
+        }
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Date <span style="color:red">*</span></label>
+            <input class="form-control" type="date" [(ngModel)]="interviewForm.date" title="Interview date" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Time <span style="color:red">*</span></label>
+            <input class="form-control" type="time" [(ngModel)]="interviewForm.time" title="Interview time" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Location / Meeting Link</label>
+          <input class="form-control" type="text" [(ngModel)]="interviewForm.location"
+                 placeholder="e.g. Google Meet, Office Room 3" title="Interview location" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Notes for Candidate</label>
+          <textarea class="form-control" rows="3" [(ngModel)]="interviewForm.notes"
+                    placeholder="e.g. Please bring your portfolio, dress code is business casual…"
+                    title="Interview notes" style="resize:vertical;"></textarea>
+        </div>
+
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;font-size:12px;color:#1d4ed8;">
+          📧 An email notification will be sent to <strong>{{ selectedApp?.candidateEmail }}</strong> and an in-app notification will appear in their Careers Portal.
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeInterviewModal()">Cancel</button>
+        <button class="btn btn-primary" (click)="confirmInterview()"
+                [disabled]="!interviewForm.date || !interviewForm.time">
+          📅 Confirm & Notify
+        </button>
+      </div>
     </div>
   </div>
-</div>
+}

@@ -1,0 +1,74 @@
+<!-- ── Page header ──────────────────────────────────────────────────────────── -->
+<div class="page-header">
+  <div>
+    <h1>My Applications</h1>
+    <p>Track the status of your job applications at ExpertFlow</p>
+  </div>
+  <a routerLink="/candidate/jobs" class="btn-browse">💼 Browse More Jobs</a>
+</div>
+
+<!-- ── Empty state ──────────────────────────────────────────────────────────── -->
+@if (myApps.length === 0) {
+  <div class="empty-state">
+    <div class="empty-icon">📋</div>
+    <h3>No applications yet</h3>
+    <p>Browse open positions and apply to get started.</p>
+    <a routerLink="/candidate/jobs" class="btn-browse" style="margin-top:16px;">Browse Open Jobs →</a>
+  </div>
+}
+
+<!-- ── Applications list ─────────────────────────────────────────────────────── -->
+@if (myApps.length > 0) {
+  <div class="apps-summary">
+    <div class="summary-card">
+      <span class="summary-num">{{ myApps.length }}</span>
+      <span class="summary-label">Total Applied</span>
+    </div>
+    <div class="summary-card">
+      <span class="summary-num">{{ countByStatus('Shortlisted') }}</span>
+      <span class="summary-label">Shortlisted</span>
+    </div>
+    <div class="summary-card">
+      <span class="summary-num">{{ countByStatus('Under Review') }}</span>
+      <span class="summary-label">Under Review</span>
+    </div>
+    <div class="summary-card">
+      <span class="summary-num">{{ countByStatus('Hired') }}</span>
+      <span class="summary-label">Hired</span>
+    </div>
+  </div>
+
+  <div class="apps-list">
+    @for (app of myApps; track app.id) {
+      <div class="app-card">
+        <div class="app-icon">{{ statusIcon(app.status) }}</div>
+
+        <div class="app-info">
+          <h3 class="app-title">{{ app.jobTitle }}</h3>
+          <p class="app-date">Applied on {{ app.appliedDate }}</p>
+          <div class="app-links">
+            @if (app.resumeLink) {
+              <a [href]="app.resumeLink" [download]="app.resumeFileName || 'resume.pdf'" class="app-link">📄 {{ app.resumeFileName || 'Resume (PDF)' }}</a>
+            }
+            @if (app.linkedinUrl) {
+              <a [href]="app.linkedinUrl" target="_blank" rel="noopener" class="app-link">🔗 LinkedIn</a>
+            }
+            @if (app.githubUrl) {
+              <a [href]="app.githubUrl" target="_blank" rel="noopener" class="app-link">🐙 GitHub</a>
+            }
+          </div>
+        </div>
+
+        <div class="app-status-wrap">
+          <span class="app-status" [class]="statusClass(app.status)">
+            {{ app.status }}
+          </span>
+        </div>
+      </div>
+    }
+  </div>
+
+  <p class="privacy-note">
+    🔒 Your application data is private. Other candidates cannot see your applications.
+  </p>
+}

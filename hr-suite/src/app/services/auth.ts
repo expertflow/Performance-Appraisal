@@ -121,6 +121,10 @@ export class AuthService {
       Employee: {
         id: 'u4', email: 'employee@ef.com', name: 'John Employee',
         role: 'Employee', employee_id: 'emp-001', manager_id: 'emp-mgr'
+      },
+      Candidate: {
+        id: 'u5', email: 'candidate@external.com', name: 'External Candidate',
+        role: 'Candidate'
       }
     };
     const user = mockUsers[role];

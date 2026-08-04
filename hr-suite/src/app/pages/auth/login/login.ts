@@ -1,25 +1,11 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../services/auth';
-import { AppUser } from '../../../models';
+import { UserStoreService } from '../../../services/user-store';
+import { ApiService } from '../../../services/api';
 
-// ── Hardcoded accounts (replace with real API when backend is ready) ──────────
-const LOCAL_ACCOUNTS: Array<{ email: string; password: string; user: AppUser; token: string }> = [
-  {
-    email: 'zaeem.ahmad@expertflow.com',
-    password: '12345',
-    token: 'local-token-appadmin',
-    user: {
-      id: 'u-zaeem',
-      email: 'zaeem.ahmad@expertflow.com',
-      name: 'Zaeem Ahmad',
-      role: 'AppAdmin',
-      employee_id: 'emp-zaeem',
-    }
-  }
-];
-
+// ── Component ─────────────────────────────────────────────────────────────────
 @Component({
   selector: 'app-login',
   imports: [FormsModule],
@@ -27,6 +13,11 @@ const LOCAL_ACCOUNTS: Array<{ email: string; password: string; user: AppUser; to
   styleUrl: './login.scss'
 })
 export class Login {
+  private auth      = inject(AuthService);
+  private router    = inject(Router);
+  private userStore = inject(UserStoreService);
+  private api       = inject(ApiService);
+
   // ── Sign-in fields ──────────────────────────────────────────────────────────
   email        = '';
   password     = '';
@@ -36,7 +27,7 @@ export class Login {
   showPass     = signal(false);
 
   // ── View toggle ─────────────────────────────────────────────────────────────
-  showRegister = signal(false);
+  showRegister    = signal(false);
   registerSuccess = signal(false);
 
   // ── Registration fields ─────────────────────────────────────────────────────
@@ -54,9 +45,14 @@ export class Login {
   regError       = signal('');
   regLoading     = signal(false);
 
-  constructor(private auth: AuthService, private router: Router) {
+  constructor() {
     if (this.auth.isLoggedIn()) {
-      this.router.navigate(['/dashboard'], { replaceUrl: true });
+      const role = this.auth.role();
+      if (role === 'Candidate') {
+        this.router.navigate(['/candidate/jobs'], { replaceUrl: true });
+      } else {
+        this.router.navigate(['/dashboard'], { replaceUrl: true });
+      }
     }
   }
 
@@ -70,37 +66,40 @@ export class Login {
     this.loading.set(true);
     this.error.set('');
 
-    const match = LOCAL_ACCOUNTS.find(
-      a => a.email.toLowerCase() === this.email.toLowerCase() && a.password === this.password
-    );
-
-    if (match) {
-      this.auth.mockLoginWithUser(match.user, match.token);
-      this.loading.set(false);
-      this.router.navigate(['/dashboard']);
-      return;
-    }
-
-    if (!this.email.toLowerCase().endsWith('@expertflow.com')) {
-      this.loading.set(false);
-      this.error.set('Access restricted to ExpertFlow personnel only. Please use your @expertflow.com account.');
-      return;
-    }
-
-    this.auth.login({ email: this.email, password: this.password }).subscribe({
-      next: () => {
+    // Try local DB login first (covers all roles including Candidate)
+    this.api.localLogin({ email: this.email, password: this.password }).subscribe({
+      next: res => {
         this.loading.set(false);
-        this.router.navigate(['/dashboard']);
+        this.auth.mockLoginWithUser(res.user, res.token);
+        if (res.user.role === 'Candidate') {
+          this.router.navigate(['/candidate/jobs']);
+        } else {
+          this.router.navigate(['/dashboard']);
+        }
       },
-      error: (err) => {
-        this.loading.set(false);
-        this.error.set(err?.error?.message || 'Invalid email or password.');
+      error: localErr => {
+        // If local login fails and it's an @expertflow.com email, try real backend
+        if (this.email.toLowerCase().endsWith('@expertflow.com')) {
+          this.auth.login({ email: this.email, password: this.password }).subscribe({
+            next: () => {
+              this.loading.set(false);
+              this.router.navigate(['/dashboard']);
+            },
+            error: err => {
+              this.loading.set(false);
+              this.error.set(err?.error?.message || 'Invalid email or password.');
+            }
+          });
+        } else {
+          this.loading.set(false);
+          this.error.set(localErr?.error?.error || 'Invalid email or password. Please create an account first.');
+        }
       }
     });
   }
 
   googleSignIn() {
-    this.error.set('Google SSO is not yet configured. Please sign in with your email and password.');
+    this.error.set('Google SSO is not yet configured. Only @expertflow.com accounts will be permitted. Please sign in with your email and password for now.');
   }
 
   // ── Registration ────────────────────────────────────────────────────────────
@@ -119,16 +118,13 @@ export class Login {
   register() {
     const r = this.reg;
 
+    // Validate required fields
     if (!r.firstName.trim() || !r.lastName.trim()) {
       this.regError.set('First name and last name are required.');
       return;
     }
     if (!r.email.trim()) {
-      this.regError.set('Work email is required.');
-      return;
-    }
-    if (!r.email.toLowerCase().endsWith('@expertflow.com')) {
-      this.regError.set('Only @expertflow.com email addresses are allowed.');
+      this.regError.set('Email address is required.');
       return;
     }
     if (!r.phone.trim()) {
@@ -148,44 +144,49 @@ export class Login {
       return;
     }
 
-    // Check duplicate
-    const exists = LOCAL_ACCOUNTS.find(a => a.email.toLowerCase() === r.email.toLowerCase());
-    if (exists) {
-      this.regError.set('An account with this email already exists.');
-      return;
-    }
-
     this.regLoading.set(true);
     this.regError.set('');
 
-    // Simulate async registration
-    setTimeout(() => {
-      const newId = 'u-' + Date.now();
-      const newUser: AppUser = {
-        id: newId,
-        email: r.email.trim().toLowerCase(),
-        name: `${r.firstName.trim()} ${r.lastName.trim()}`,
-        role: 'Employee',
-        employee_id: 'emp-' + newId,
-      };
-      LOCAL_ACCOUNTS.push({
-        email: newUser.email,
-        password: r.password,
-        token: 'local-token-' + newId,
-        user: newUser,
-      });
+    this.api.localRegister({
+      firstName: r.firstName.trim(),
+      lastName:  r.lastName.trim(),
+      email:     r.email.trim(),
+      phone:     r.phone.trim()   || undefined,
+      address:   r.address.trim() || undefined,
+      password:  r.password,
+    }).subscribe({
+      next: res => {
+        this.regLoading.set(false);
+        this.registerSuccess.set(true);
 
-      this.regLoading.set(false);
-      this.registerSuccess.set(true);
+        // If internal employee, add to UserStore (for All Users page)
+        if (res.user.role !== 'Candidate') {
+          this.userStore.addUser({
+            id:          res.user.id,
+            name:        res.user.name,
+            email:       res.user.email,
+            role:        res.user.role,
+            department:  '—',
+            designation: '—',
+            employee_id: res.user.employee_id || '',
+            status:      'Active',
+            lastLogin:   'Just now',
+          });
+        }
 
-      // Auto-switch to login after 2 s
-      setTimeout(() => {
-        this.email    = r.email.trim().toLowerCase();
-        this.password = '';
-        this.reg = { firstName: '', lastName: '', email: '', phone: '', address: '', password: '', confirmPassword: '' };
-        this.registerSuccess.set(false);
-        this.showRegister.set(false);
-      }, 2000);
-    }, 600);
+        // Auto-switch back to sign-in after 2 s, pre-fill email
+        setTimeout(() => {
+          this.email    = res.user.email;
+          this.password = '';
+          this.reg = { firstName: '', lastName: '', email: '', phone: '', address: '', password: '', confirmPassword: '' };
+          this.registerSuccess.set(false);
+          this.showRegister.set(false);
+        }, 2000);
+      },
+      error: err => {
+        this.regLoading.set(false);
+        this.regError.set(err?.error?.error || 'Registration failed. Please try again.');
+      }
+    });
   }
 }

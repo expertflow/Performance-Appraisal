@@ -65,7 +65,7 @@
 
         <div class="form-header">
           <h1>Welcome back</h1>
-          <p>Sign in to your ExpertFlow HR Suite account</p>
+          <p>Sign in with your ExpertFlow or personal account</p>
         </div>
 
         <!-- Google SSO button -->
@@ -87,12 +87,12 @@
 
         <form (ngSubmit)="submit()" #loginForm="ngForm">
           <div class="form-group">
-            <label class="form-label" for="email">Work Email</label>
+            <label class="form-label" for="email">Email Address</label>
             <input
               id="email"
               type="email"
               class="form-control"
-              placeholder="sarah.hr@expertflow.com"
+              placeholder="you@example.com"
               [(ngModel)]="email"
               name="email"
               autocomplete="email"
@@ -138,7 +138,7 @@
 
         <!-- Create Account link -->
         <p class="register-prompt">
-          New to ExpertFlow HR Suite?
+          Don't have an account?
           <button type="button" class="link-btn" (click)="switchToRegister()">Create an account</button>
         </p>
 
@@ -147,7 +147,7 @@
           By signing in you agree to ExpertFlow's
           <a href="#" class="terms-link">Terms of Service</a> and
           <a href="#" class="terms-link">Privacy Policy</a>.<br>
-          Access restricted to authorised ExpertFlow personnel only.
+          ExpertFlow employees use @expertflow.com · External candidates use personal email.
         </p>
 
         <!-- Trust badges -->
@@ -166,7 +166,7 @@
 
         <div class="form-header">
           <h1>Create Account</h1>
-          <p>Register your ExpertFlow HR Suite account</p>
+          <p>ExpertFlow employees use @expertflow.com · External candidates use any email</p>
         </div>
 
         @if (registerSuccess()) {
@@ -208,14 +208,14 @@
               </div>
             </div>
 
-            <!-- Work Email -->
+            <!-- Email -->
             <div class="form-group">
-              <label class="form-label" for="reg-email">Work Email</label>
+              <label class="form-label" for="reg-email">Email Address</label>
               <input
                 id="reg-email"
                 type="email"
                 class="form-control"
-                placeholder="sarah.khan@expertflow.com"
+                placeholder="you@example.com or you@expertflow.com"
                 [(ngModel)]="reg.email"
                 name="reg-email"
                 autocomplete="off"

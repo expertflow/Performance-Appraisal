@@ -111,6 +111,195 @@ CREATE TABLE IF NOT EXISTS project.directus_sync_log (
   error_message   TEXT,
   created_at      TIMESTAMPTZ DEFAULT NOW()
 );
+-- ── Recruitment schema ────────────────────────────────────────────────────────
+CREATE SCHEMA IF NOT EXISTS recruitment;
+
+-- ── Job postings ──────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS recruitment.job_posting (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title        TEXT NOT NULL,
+  department   TEXT NOT NULL,
+  location     TEXT NOT NULL,
+  type         TEXT NOT NULL,
+  status       TEXT NOT NULL DEFAULT 'Open',
+  description  TEXT DEFAULT '',
+  requirements JSONB DEFAULT '[]',
+  posted_date  DATE DEFAULT CURRENT_DATE,
+  deadline     DATE,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ── Job applications ──────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS recruitment.job_application (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_id            UUID NOT NULL REFERENCES recruitment.job_posting(id) ON DELETE CASCADE,
+  job_title         TEXT NOT NULL,
+  candidate_id      TEXT NOT NULL,
+  candidate_name    TEXT NOT NULL,
+  candidate_email   TEXT NOT NULL,
+  candidate_phone   TEXT DEFAULT '',
+  candidate_address TEXT DEFAULT '',
+  cover_letter      TEXT NOT NULL,
+  resume_link       TEXT NOT NULL,
+  resume_file_name  TEXT DEFAULT '',
+  linkedin_url      TEXT DEFAULT '',
+  github_url        TEXT DEFAULT '',
+  status            TEXT NOT NULL DEFAULT 'Submitted',
+  applied_date      DATE DEFAULT CURRENT_DATE,
+  created_at        TIMESTAMPTZ DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ja_job       ON recruitment.job_application(job_id);
+CREATE INDEX IF NOT EXISTS idx_ja_candidate ON recruitment.job_application(candidate_id);
+
+-- ── App users (local accounts for HR suite) ───────────────────────────────────
+CREATE SCHEMA IF NOT EXISTS auth_local;
+
+CREATE TABLE IF NOT EXISTS auth_local.account (
+  id           TEXT PRIMARY KEY,
+  email        TEXT NOT NULL UNIQUE,
+  password     TEXT NOT NULL,
+  token        TEXT NOT NULL,
+  role         TEXT NOT NULL DEFAULT 'Candidate',
+  name         TEXT NOT NULL,
+  phone        TEXT DEFAULT '',
+  address      TEXT DEFAULT '',
+  employee_id  TEXT DEFAULT '',
+  manager_id   TEXT DEFAULT '',
+  avatar_url   TEXT DEFAULT '',
+  status       TEXT NOT NULL DEFAULT 'Active',
+  department   TEXT DEFAULT '',
+  designation  TEXT DEFAULT '',
+  last_login   TIMESTAMPTZ,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seed default admin account (password: 12345)
+INSERT INTO auth_local.account (id, email, password, token, role, name, employee_id, status, department, designation)
+VALUES (
+  'u-zaeem',
+  'zaeem.ahmad@expertflow.com',
+  '12345',
+  'local-token-appadmin',
+  'AppAdmin',
+  'Zaeem Ahmad',
+  'emp-zaeem',
+  'Active',
+  'Engineering',
+  'Senior Software Engineer'
+) ON CONFLICT (email) DO NOTHING;
+
+-- Seed default HR account
+INSERT INTO auth_local.account (id, email, password, token, role, name, employee_id, status, department, designation)
+VALUES (
+  'u-sara',
+  'sara.ahmed@expertflow.com',
+  '12345',
+  'local-token-hr',
+  'HR',
+  'Sara Ahmed',
+  'emp-002',
+  'Active',
+  'Human Resources',
+  'HR Manager'
+) ON CONFLICT (email) DO NOTHING;
+
+-- Seed default Manager account
+INSERT INTO auth_local.account (id, email, password, token, role, name, employee_id, status, department, designation)
+VALUES (
+  'u-ali',
+  'ali.hassan@expertflow.com',
+  '12345',
+  'local-token-manager',
+  'Manager',
+  'Ali Hassan',
+  'emp-003',
+  'Active',
+  'Engineering',
+  'Engineering Manager'
+) ON CONFLICT (email) DO NOTHING;
+
+-- Seed default Employee account
+INSERT INTO auth_local.account (id, email, password, token, role, name, employee_id, status, department, designation)
+VALUES (
+  'u-fatima',
+  'fatima.khan@expertflow.com',
+  '12345',
+  'local-token-employee',
+  'Employee',
+  'Fatima Khan',
+  'emp-001',
+  'Active',
+  'Engineering',
+  'Software Engineer'
+) ON CONFLICT (email) DO NOTHING;
+
+-- Seed job postings
+INSERT INTO recruitment.job_posting (id, title, department, location, type, status, description, requirements, posted_date, deadline)
+VALUES
+  (gen_random_uuid(), 'Senior Software Engineer', 'Engineering', 'Lahore, Pakistan (Hybrid)', 'Full-time', 'Open',
+   'We are looking for a Senior Software Engineer to join our Engineering team.',
+   '["5+ years of software development experience","Proficiency in Angular, TypeScript, and Node.js","Experience with cloud platforms (GCP/AWS)","Strong understanding of REST APIs and microservices","Excellent communication skills"]',
+   '2026-07-20', '2026-08-31'),
+  (gen_random_uuid(), 'HR Business Partner', 'Human Resources', 'Lahore, Pakistan (On-site)', 'Full-time', 'Open',
+   'Join our HR team as an HR Business Partner.',
+   '["3+ years of HR experience","Knowledge of Pakistani labour law","Experience with HRIS systems","Strong interpersonal and negotiation skills","MBA or equivalent in HR preferred"]',
+   '2026-07-25', '2026-08-25'),
+  (gen_random_uuid(), 'Product Designer (UX/UI)', 'Product', 'Remote (Pakistan)', 'Full-time', 'Open',
+   'We are seeking a talented Product Designer to craft intuitive user experiences.',
+   '["3+ years of UX/UI design experience","Proficiency in Figma","Strong portfolio demonstrating end-to-end design process","Experience with design systems","Familiarity with front-end development is a plus"]',
+   '2026-07-28', '2026-09-05'),
+  (gen_random_uuid(), 'Marketing Specialist', 'Marketing', 'Lahore, Pakistan (Hybrid)', 'Full-time', 'Open',
+   'ExpertFlow is looking for a creative and data-driven Marketing Specialist.',
+   '["2+ years of digital marketing experience","Experience with SEO, SEM, and social media marketing","Proficiency in Google Analytics","Strong copywriting and content creation skills","Bachelor degree in Marketing or related field"]',
+   '2026-08-01', '2026-09-01'),
+  (gen_random_uuid(), 'Software Engineering Intern', 'Engineering', 'Lahore, Pakistan (On-site)', 'Internship', 'Open',
+   'Gain hands-on experience working alongside our engineering team on real projects.',
+   '["Currently enrolled in a CS or related degree program","Basic knowledge of JavaScript/TypeScript","Eagerness to learn and collaborate","Available for 3-6 months"]',
+   '2026-08-02', '2026-08-20')
+ON CONFLICT DO NOTHING;
+`;
+
+// ── Job Requisitions ──────────────────────────────────────────────────────────
+const reqSchema = `
+CREATE TABLE IF NOT EXISTS recruitment.job_requisition (
+  id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  req_number      TEXT        NOT NULL UNIQUE,
+  title           TEXT        NOT NULL,
+  department      TEXT        NOT NULL,
+  location        TEXT        NOT NULL DEFAULT '',
+  type            TEXT        NOT NULL DEFAULT 'Full-time',
+  headcount       INT         NOT NULL DEFAULT 1,
+  priority        TEXT        NOT NULL DEFAULT 'Normal',
+  status          TEXT        NOT NULL DEFAULT 'Pending Approval',
+  hiring_manager  TEXT        NOT NULL DEFAULT '',
+  approval_hod    BOOLEAN     NOT NULL DEFAULT FALSE,
+  approval_hr     BOOLEAN     NOT NULL DEFAULT FALSE,
+  approval_cfo    BOOLEAN     NOT NULL DEFAULT FALSE,
+  posted_date     DATE        DEFAULT CURRENT_DATE,
+  notes           TEXT        DEFAULT '',
+  created_at      TIMESTAMPTZ DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+INSERT INTO recruitment.job_requisition
+  (req_number, title, department, location, type, headcount, priority, status,
+   hiring_manager, approval_hod, approval_hr, approval_cfo, posted_date)
+VALUES
+  ('REQ-2025-041','Senior Angular Developer','Engineering','Lahore · Hybrid','Full-time',2,'Urgent','Open',
+   'Fatima Malik',TRUE,TRUE,FALSE,'2025-07-28'),
+  ('REQ-2025-040','Product Manager','Product','Karachi · Remote','Full-time',1,'High','Open',
+   'Omar Sheikh',TRUE,TRUE,TRUE,'2025-07-22'),
+  ('REQ-2025-039','UX Designer','Design','Islamabad · On-site','Full-time',1,'Normal','Pending Approval',
+   'Zara Hussain',TRUE,FALSE,FALSE,'2025-07-18'),
+  ('REQ-2025-038','DevOps Engineer','Infrastructure','Lahore · Hybrid','Full-time',1,'High','Open',
+   'Ahmed Raza',TRUE,TRUE,TRUE,'2025-07-15'),
+  ('REQ-2025-037','Business Analyst','Operations','Karachi · Hybrid','Contract',2,'Normal','On Hold',
+   'Khalid Mahmood',TRUE,TRUE,FALSE,'2025-07-10')
+ON CONFLICT DO NOTHING;
 `;
 
 async function migrate() {
@@ -118,6 +307,7 @@ async function migrate() {
   try {
     console.log('Running migrations…');
     await client.query(schema);
+    await client.query(reqSchema);
     console.log('✅ Migrations complete.');
   } catch (err) {
     console.error('❌ Migration failed:', err.message);

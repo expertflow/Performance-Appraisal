@@ -124,11 +124,12 @@ export class Shell {
 
   get currentPage(): string {
     const url = this.currentUrl();
-    if (url.startsWith('/recruitment/requisitions')) return 'Job Requisitions';
-    if (url.startsWith('/recruitment/pipeline'))    return 'Pipeline';
-    if (url.startsWith('/recruitment/agencies'))    return 'Agencies';
-    if (url.startsWith('/recruitment/offer'))       return 'Offers';
-    if (url.startsWith('/recruitment'))             return 'Recruitment';
+    if (url.startsWith('/recruitment/requisitions'))  return 'Job Requisitions';
+    if (url.startsWith('/recruitment/applications'))  return 'Candidate Applications';
+    if (url.startsWith('/recruitment/pipeline'))      return 'Pipeline';
+    if (url.startsWith('/recruitment/agencies'))      return 'Agencies';
+    if (url.startsWith('/recruitment/offer'))         return 'Offers';
+    if (url.startsWith('/recruitment'))               return 'Recruitment';
     if (url.startsWith('/appraisal/cycles'))        return 'Review Cycles';
     if (url.startsWith('/appraisal/goals'))         return 'Goals';
     if (url.startsWith('/appraisal/feedback'))      return 'Feedback';

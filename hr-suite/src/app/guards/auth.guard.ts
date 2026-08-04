@@ -6,10 +6,19 @@ export const authGuard: CanActivateFn = () => {
   const auth   = inject(AuthService);
   const router = inject(Router);
 
-  if (auth.isLoggedIn()) return true;
+  if (!auth.isLoggedIn()) {
+    router.navigate(['/login'], { replaceUrl: true });
+    return false;
+  }
 
-  // replaceUrl: true ensures the protected route is NOT added to browser history,
-  // so the back button after logout cannot return to the app.
-  router.navigate(['/login'], { replaceUrl: true });
-  return false;
+  // Candidates must stay in the /candidate portal — block access to internal shell
+  const role = auth.role();
+  const url  = router.getCurrentNavigation()?.extractedUrl.toString() ?? '';
+
+  if (role === 'Candidate' && !url.startsWith('/candidate')) {
+    router.navigate(['/candidate/jobs'], { replaceUrl: true });
+    return false;
+  }
+
+  return true;
 };
