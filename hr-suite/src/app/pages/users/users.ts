@@ -1,20 +1,12 @@
-import { Component, inject, computed, signal } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth';
+import { UserStoreService, AppUserRecord } from '../../services/user-store';
 import { AppRole } from '../../models';
 
-export interface AppUserRecord {
-  id: string;
-  name: string;
-  email: string;
-  role: AppRole;
-  department: string;
-  designation: string;
-  employee_id: string;
-  status: 'Active' | 'Inactive';
-  lastLogin: string;
-}
+// Re-export so templates / other files that imported from here still work
+export type { AppUserRecord } from '../../services/user-store';
 
 @Component({
   selector: 'app-users',
@@ -23,79 +15,13 @@ export interface AppUserRecord {
   styleUrl: './users.scss'
 })
 export class Users {
-  private auth = inject(AuthService);
+  private auth      = inject(AuthService);
+  private userStore = inject(UserStoreService);
 
   readonly isAppAdmin = computed(() => this.auth.isAppAdmin());
 
-  // ── Mock user data ────────────────────────────────────────────────────────
-  allUsers = signal<AppUserRecord[]>([
-    {
-      id: 'u-zaeem',
-      name: 'Zaeem Ahmad',
-      email: 'zaeem.ahmad@expertflow.com',
-      role: 'AppAdmin',
-      department: 'Engineering',
-      designation: 'Senior Software Engineer',
-      employee_id: 'emp-zaeem',
-      status: 'Active',
-      lastLogin: '2 minutes ago',
-    },
-    {
-      id: 'u-sara',
-      name: 'Sara Ahmed',
-      email: 'sara.ahmed@expertflow.com',
-      role: 'HR',
-      department: 'Human Resources',
-      designation: 'HR Manager',
-      employee_id: 'emp-002',
-      status: 'Active',
-      lastLogin: '1 hour ago',
-    },
-    {
-      id: 'u-ali',
-      name: 'Ali Hassan',
-      email: 'ali.hassan@expertflow.com',
-      role: 'Manager',
-      department: 'Engineering',
-      designation: 'Engineering Manager',
-      employee_id: 'emp-003',
-      status: 'Active',
-      lastLogin: '3 hours ago',
-    },
-    {
-      id: 'u-fatima',
-      name: 'Fatima Khan',
-      email: 'fatima.khan@expertflow.com',
-      role: 'Employee',
-      department: 'Engineering',
-      designation: 'Software Engineer',
-      employee_id: 'emp-001',
-      status: 'Active',
-      lastLogin: '1 day ago',
-    },
-    {
-      id: 'u-omar',
-      name: 'Omar Farooq',
-      email: 'omar.farooq@expertflow.com',
-      role: 'Employee',
-      department: 'Product',
-      designation: 'Product Designer',
-      employee_id: 'emp-004',
-      status: 'Active',
-      lastLogin: '2 days ago',
-    },
-    {
-      id: 'u-hina',
-      name: 'Hina Malik',
-      email: 'hina.malik@expertflow.com',
-      role: 'Employee',
-      department: 'Marketing',
-      designation: 'Marketing Specialist',
-      employee_id: 'emp-005',
-      status: 'Inactive',
-      lastLogin: '2 weeks ago',
-    },
-  ]);
+  // ── Expose the persisted list ─────────────────────────────────────────────
+  readonly allUsers = this.userStore.users;
 
   // ── Filters ───────────────────────────────────────────────────────────────
   filterRole   = '';
@@ -144,23 +70,15 @@ export class Users {
   saveEdit(): void {
     if (!this.editingUser) return;
     this.saving = true;
-    // Simulate async save
     setTimeout(() => {
-      this.allUsers.update(list =>
-        list.map(u => u.id === this.editingUser!.id ? { ...u, ...this.editForm } as AppUserRecord : u)
-      );
+      this.userStore.updateUser({ ...this.editingUser!, ...this.editForm } as AppUserRecord);
       this.saving = false;
       this.closeEdit();
     }, 400);
   }
 
   toggleStatus(user: AppUserRecord): void {
-    this.allUsers.update(list =>
-      list.map(u => u.id === user.id
-        ? { ...u, status: u.status === 'Active' ? 'Inactive' : 'Active' }
-        : u
-      )
-    );
+    this.userStore.toggleStatus(user.id);
   }
 
   // ── Delete ────────────────────────────────────────────────────────────────
@@ -176,10 +94,11 @@ export class Users {
 
   deleteUser(): void {
     if (!this.deletingUser) return;
-    this.allUsers.update(list => list.filter(u => u.id !== this.deletingUser!.id));
+    this.userStore.deleteUser(this.deletingUser.id);
     this.deletingUser = null;
   }
 
+  // ── Helpers ───────────────────────────────────────────────────────────────
   roleClass(role: AppRole): string {
     const map: Record<AppRole, string> = {
       AppAdmin: 'role-appadmin',
