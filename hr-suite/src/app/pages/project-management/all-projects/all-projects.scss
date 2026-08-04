@@ -1,0 +1,7 @@
+.alert {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  &.alert-success { background: #F0FDF4; color: #166534; border: 1px solid #BBF7D0; }
+  &.alert-error   { background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; }
+}

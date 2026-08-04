@@ -1,0 +1,10 @@
+✅ HR Suite backend running on http://localhost:3000
+   Directus: https://bs4.expertflow.com
+   DB: localhost:5432/hr_suite
+   Sync cron: daily at 00:00 Asia/Karachi
+[0mGET /health [32m200[0m 2.298 ms - 54[0m
+[0mGET /api/v1/projects [32m200[0m 49.200 ms - 2[0m
+[0mPOST /api/v1/projects [32m201[0m 23.411 ms - 387[0m
+[0mGET /api/v1/projects [32m200[0m 37.365 ms - 389[0m
+[0mGET /api/v1/notifications?role=AppAdmin&userId=u-zaeem [32m200[0m 17.220 ms - 2[0m
+[0mGET /api/v1/projects [32m200[0m 3.045 ms - 389[0m

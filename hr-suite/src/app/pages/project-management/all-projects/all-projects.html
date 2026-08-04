@@ -1,0 +1,236 @@
+<div class="page-header">
+  <div>
+    <h1>All Projects</h1>
+    <p>{{ isEmployee() ? 'Projects you are assigned to' : 'Browse and manage all active projects' }}</p>
+  </div>
+  @if (canMutate()) {
+    <button class="btn btn-primary" (click)="openNew()">+ New Project</button>
+  }
+</div>
+
+@if (success) {
+  <div class="alert alert-success" style="margin-bottom:16px;">{{ success }}</div>
+}
+
+<!-- Filters -->
+<div class="filter-bar" style="margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+  <input class="form-control" style="width:220px;" placeholder="Search projects…" [(ngModel)]="searchText" />
+  <select class="form-control" style="width:160px;" title="Filter by status" [(ngModel)]="filterStatus">
+    <option value="">All Statuses</option>
+    <option value="active">Active</option>
+    <option value="on_hold">On Hold</option>
+    <option value="completed">Completed</option>
+    <option value="cancelled">Cancelled</option>
+  </select>
+  <select class="form-control" style="width:160px;" title="Filter by type" [(ngModel)]="filterType">
+    <option value="">All Types</option>
+    <option value="client">Client</option>
+    <option value="internal">Internal</option>
+    <option value="operational">Operational</option>
+  </select>
+</div>
+
+<div class="card" style="padding:0;">
+  @if (loading) {
+    <div style="padding:40px;text-align:center;color:var(--color-text-muted);">
+      <div class="spinner"></div><span style="margin-left:8px;">Loading projects…</span>
+    </div>
+  } @else if (filtered.length === 0) {
+    <div style="padding:48px;text-align:center;color:var(--color-text-secondary);">
+      <div style="font-size:48px;margin-bottom:16px;">📁</div>
+      <h3>No Projects Found</h3>
+      <p>{{ projects.length === 0 ? 'No projects yet. Create your first project.' : 'No projects match your filters.' }}</p>
+    </div>
+  } @else {
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Project Name</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Health</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Budget (hrs)</th>
+            @if (canMutate()) { <th>Actions</th> }
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of filtered; track p.id) {
+            <tr>
+              <td>
+                <strong>{{ p.name }}</strong>
+                @if (p.bs4_project_id) {
+                  <div style="font-size:11px;color:var(--color-text-muted);">BS4: {{ p.bs4_project_id }}</div>
+                }
+              </td>
+              <td><span class="badge badge-gray">{{ p.type }}</span></td>
+              <td><span class="badge" [class]="statusClass(p.status)">{{ p.status | titlecase }}</span></td>
+              <td>
+                @if (p.health_status) {
+                  <span class="badge" [class]="healthClass(p.health_status)">{{ p.health_status | titlecase }}</span>
+                } @else {
+                  <span class="text-muted">—</span>
+                }
+              </td>
+              <td>{{ p.start_date ? (p.start_date | date:'dd MMM yyyy') : '—' }}</td>
+              <td>{{ p.end_date   ? (p.end_date   | date:'dd MMM yyyy') : '—' }}</td>
+              <td>{{ p.budget_hours ?? '—' }}</td>
+              @if (canMutate()) {
+                <td>
+                  <button class="btn btn-sm btn-secondary" (click)="openEdit(p)">Edit</button>
+                  <a [routerLink]="['/tasks']" [queryParams]="{project_id: p.id}" class="btn btn-sm btn-secondary" style="margin-left:4px;">Tasks</a>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+
+<!-- New Project Modal -->
+@if (showModal) {
+  <div class="modal-overlay" (click)="closeNew()">
+    <div class="modal" style="max-width:520px;" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>New Project</h3>
+        <button class="modal-close" (click)="closeNew()">✕</button>
+      </div>
+      <div class="modal-body">
+        @if (error) { <div class="alert alert-error" style="margin-bottom:12px;">{{ error }}</div> }
+        <div class="form-group">
+          <label class="form-label">Project Name *</label>
+          <input class="form-control" [(ngModel)]="newForm.name" placeholder="e.g. CRM Integration" />
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Type</label>
+            <select class="form-control" title="Project type" [(ngModel)]="newForm.type">
+              <option value="internal">Internal</option>
+              <option value="client">Client</option>
+              <option value="operational">Operational</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select class="form-control" title="Project status" [(ngModel)]="newForm.status">
+              <option value="active">Active</option>
+              <option value="on_hold">On Hold</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Health Status</label>
+          <select class="form-control" title="Health status" [(ngModel)]="newForm.health_status">
+            <option value="on_track">On Track</option>
+            <option value="at_risk">At Risk</option>
+            <option value="off_track">Off Track</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Start Date</label>
+            <input class="form-control" type="date" [(ngModel)]="newForm.start_date" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">End Date</label>
+            <input class="form-control" type="date" [(ngModel)]="newForm.end_date" />
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Budget Hours</label>
+            <input class="form-control" type="number" [(ngModel)]="newForm.budget_hours" placeholder="e.g. 500" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Budget Amount ($)</label>
+            <input class="form-control" type="number" [(ngModel)]="newForm.budget_amount" placeholder="e.g. 50000" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeNew()">Cancel</button>
+        <button class="btn btn-primary" (click)="submitNew()" [disabled]="saving()">
+          @if (saving()) { <span class="spinner-sm"></span> Saving… } @else { Create Project }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Edit Project Modal -->
+@if (showEditModal) {
+  <div class="modal-overlay" (click)="closeEdit()">
+    <div class="modal" style="max-width:520px;" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Edit Project</h3>
+        <button class="modal-close" (click)="closeEdit()">✕</button>
+      </div>
+      <div class="modal-body">
+        @if (error) { <div class="alert alert-error" style="margin-bottom:12px;">{{ error }}</div> }
+        <div class="form-group">
+          <label class="form-label">Project Name *</label>
+          <input class="form-control" [(ngModel)]="editForm.name" />
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Type</label>
+            <select class="form-control" title="Project type" [(ngModel)]="editForm.type">
+              <option value="internal">Internal</option>
+              <option value="client">Client</option>
+              <option value="operational">Operational</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select class="form-control" title="Project status" [(ngModel)]="editForm.status">
+              <option value="active">Active</option>
+              <option value="on_hold">On Hold</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Health Status</label>
+          <select class="form-control" title="Health status" [(ngModel)]="editForm.health_status">
+            <option value="on_track">On Track</option>
+            <option value="at_risk">At Risk</option>
+            <option value="off_track">Off Track</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Start Date</label>
+            <input class="form-control" type="date" [(ngModel)]="editForm.start_date" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">End Date</label>
+            <input class="form-control" type="date" [(ngModel)]="editForm.end_date" />
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Budget Hours</label>
+            <input class="form-control" type="number" [(ngModel)]="editForm.budget_hours" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Budget Amount ($)</label>
+            <input class="form-control" type="number" [(ngModel)]="editForm.budget_amount" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeEdit()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveEdit()" [disabled]="saving()">
+          @if (saving()) { <span class="spinner-sm"></span> Saving… } @else { Save Changes }
+        </button>
+      </div>
+    </div>
+  </div>
+}

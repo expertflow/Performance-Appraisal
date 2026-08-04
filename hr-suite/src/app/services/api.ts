@@ -30,6 +30,18 @@ export class ApiService {
     return this.http.get<Project>(`${this.base}/projects/${id}`);
   }
 
+  createProject(payload: Partial<Project>): Observable<Project> {
+    return this.http.post<Project>(`${this.base}/projects`, payload);
+  }
+
+  updateProject(id: string, patch: Partial<Project>): Observable<Project> {
+    return this.http.patch<Project>(`${this.base}/projects/${id}`, patch);
+  }
+
+  deleteProject(id: string): Observable<{ deleted: string }> {
+    return this.http.delete<{ deleted: string }>(`${this.base}/projects/${id}`);
+  }
+
   // ── Tasks ─────────────────────────────────────────────────────────────────
   getTasks(projectId?: string): Observable<Task[]> {
     let params = new HttpParams();
