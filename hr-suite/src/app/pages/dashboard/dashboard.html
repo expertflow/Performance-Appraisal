@@ -1,7 +1,7 @@
 <!-- Welcome Banner -->
 <div class="welcome-banner">
   <div>
-    <h1>Welcome back, Admin 👋</h1>
+    <h1>Welcome back, {{ userName }} 👋</h1>
     <p>Here's what's happening across your organization today.</p>
   </div>
   <div class="welcome-actions">
@@ -10,8 +10,8 @@
   </div>
 </div>
 
-<!-- Stat Cards -->
-<div class="stat-grid" style="grid-template-columns: repeat(4, 1fr);">
+<!-- Stat Cards (role-filtered) -->
+<div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
   @for (stat of stats; track stat.label) {
     <div class="stat-card">
       <div class="stat-card-header">
@@ -24,85 +24,121 @@
   }
 </div>
 
-<!-- Module Navigation Cards -->
+<!-- Module Navigation Cards (role-filtered) -->
 <div class="module-cards-grid">
-  <!-- Recruitment -->
-  <a routerLink="/recruitment" class="module-nav-card blue-card">
-    <div class="module-nav-header">
-      <div class="module-nav-icon">👥</div>
-      <div>
-        <div class="module-nav-title">Recruitment</div>
-        <div class="module-nav-sub">Hiring pipeline & offers</div>
-      </div>
-    </div>
-    <div class="module-nav-stats">
-      <div>
-        <div class="module-stat-value">24</div>
-        <div class="module-stat-label">Open Positions</div>
-      </div>
-      <div>
-        <div class="module-stat-value">187</div>
-        <div class="module-stat-label">Candidates</div>
-      </div>
-      <div>
-        <div class="module-stat-value">6</div>
-        <div class="module-stat-label">Offers Pending</div>
-      </div>
-    </div>
-    <div class="module-nav-arrow">→</div>
-  </a>
+
+  <!-- Recruitment: AppAdmin & HR → full dashboard link; Manager → requisitions only -->
+  @if (canRecruit()) {
+    @if (isHrOrAdmin()) {
+      <a routerLink="/recruitment" class="module-nav-card blue-card">
+        <div class="module-nav-header">
+          <div class="module-nav-icon">👥</div>
+          <div>
+            <div class="module-nav-title">Recruitment</div>
+            <div class="module-nav-sub">Hiring pipeline & offers</div>
+          </div>
+        </div>
+        <div class="module-nav-stats">
+          <div>
+            <div class="module-stat-value">24</div>
+            <div class="module-stat-label">Open Positions</div>
+          </div>
+          <div>
+            <div class="module-stat-value">187</div>
+            <div class="module-stat-label">Candidates</div>
+          </div>
+          <div>
+            <div class="module-stat-value">6</div>
+            <div class="module-stat-label">Offers Pending</div>
+          </div>
+        </div>
+        <div class="module-nav-arrow">→</div>
+      </a>
+    } @else {
+      <!-- Manager: only Job Requisitions -->
+      <a routerLink="/recruitment/requisitions" class="module-nav-card blue-card">
+        <div class="module-nav-header">
+          <div class="module-nav-icon">📝</div>
+          <div>
+            <div class="module-nav-title">Job Requisitions</div>
+            <div class="module-nav-sub">Submit & track hiring requests</div>
+          </div>
+        </div>
+        <div class="module-nav-stats">
+          <div>
+            <div class="module-stat-value">{{ managerTotalReqs() }}</div>
+            <div class="module-stat-label">Total Submitted</div>
+          </div>
+          <div>
+            <div class="module-stat-value">{{ managerPendingReqs() }}</div>
+            <div class="module-stat-label">Pending Approval</div>
+          </div>
+          <div>
+            <div class="module-stat-value">{{ managerOpenReqs() }}</div>
+            <div class="module-stat-label">Open</div>
+          </div>
+        </div>
+        <div class="module-nav-arrow">→</div>
+      </a>
+    }
+  }
 
   <!-- Performance Appraisal -->
-  <a routerLink="/appraisal" class="module-nav-card purple-card">
-    <div class="module-nav-header">
-      <div class="module-nav-icon">📊</div>
-      <div>
-        <div class="module-nav-title">Performance Appraisal</div>
-        <div class="module-nav-sub">Reviews, goals & feedback</div>
+  @if (canAppraisal()) {
+    <a routerLink="/appraisal" class="module-nav-card purple-card">
+      <div class="module-nav-header">
+        <div class="module-nav-icon">📊</div>
+        <div>
+          <div class="module-nav-title">Performance Appraisal</div>
+          <div class="module-nav-sub">Reviews, goals & feedback</div>
+        </div>
       </div>
-    </div>
-    <div class="module-nav-stats">
-      <div>
-        <div class="module-stat-value">142</div>
-        <div class="module-stat-label">In Cycle</div>
+      <div class="module-nav-stats">
+        <div>
+          <div class="module-stat-value">142</div>
+          <div class="module-stat-label">In Cycle</div>
+        </div>
+        <div>
+          <div class="module-stat-value">68%</div>
+          <div class="module-stat-label">Completion</div>
+        </div>
+        <div>
+          <div class="module-stat-value">12</div>
+          <div class="module-stat-label">Days Left</div>
+        </div>
       </div>
-      <div>
-        <div class="module-stat-value">68%</div>
-        <div class="module-stat-label">Completion</div>
-      </div>
-      <div>
-        <div class="module-stat-value">12</div>
-        <div class="module-stat-label">Days Left</div>
-      </div>
-    </div>
-    <div class="module-nav-arrow">→</div>
-  </a>
+      <div class="module-nav-arrow">→</div>
+    </a>
+  }
 
   <!-- Project Management -->
-  <a routerLink="/projects" class="module-nav-card teal-card">
-    <div class="module-nav-header">
-      <div class="module-nav-icon">📋</div>
-      <div>
-        <div class="module-nav-title">Project Management</div>
-        <div class="module-nav-sub">Tasks, kanban & timesheets</div>
+  @if (canProjects()) {
+    <a routerLink="/projects" class="module-nav-card teal-card">
+      <div class="module-nav-header">
+        <div class="module-nav-icon">📋</div>
+        <div>
+          <div class="module-nav-title">Project Management</div>
+          <div class="module-nav-sub">Tasks, kanban & timesheets</div>
+        </div>
       </div>
-    </div>
-    <div class="module-nav-stats">
-      <div>
-        <div class="module-stat-value">18</div>
-        <div class="module-stat-label">Active Projects</div>
+      <div class="module-nav-stats">
+        <div>
+          <div class="module-stat-value">18</div>
+          <div class="module-stat-label">Active Projects</div>
+        </div>
+        <div>
+          <div class="module-stat-value">94</div>
+          <div class="module-stat-label">Open Tasks</div>
+        </div>
+        <div>
+          <div class="module-stat-value">3</div>
+          <div class="module-stat-label">At Risk</div>
+        </div>
       </div>
-      <div>
-        <div class="module-stat-value">94</div>
-        <div class="module-stat-label">Open Tasks</div>
-      </div>
-      <div>
-        <div class="module-stat-value">3</div>
-        <div class="module-stat-label">At Risk</div>
-      </div>
-    </div>
-    <div class="module-nav-arrow">→</div>
-  </a>
+      <div class="module-nav-arrow">→</div>
+    </a>
+  }
+
 </div>
 
 <!-- Bottom Grid -->
@@ -112,7 +148,7 @@
     <div class="card-header">
       <div>
         <h3>Recent Activity</h3>
-        <p style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">Latest updates across all modules</p>
+        <p style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">Latest updates across your modules</p>
       </div>
       <button class="btn btn-secondary btn-sm">View All</button>
     </div>
