@@ -112,7 +112,7 @@
             <a routerLink="/projects/all" routerLinkActive="active" class="nav-sub-item">
               <span class="nav-sub-icon">📁</span>All Projects
             </a>
-            <a routerLink="/tasks" routerLinkActive="active" class="nav-sub-item">
+            <a routerLink="/tasks" routerLinkActive="active" [routerLinkActiveOptions]="{exact:false}" class="nav-sub-item">
               <span class="nav-sub-icon">✅</span>Tasks
             </a>
             <a routerLink="/kanban" routerLinkActive="active" class="nav-sub-item">

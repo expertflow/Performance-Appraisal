@@ -7,20 +7,22 @@ const pool    = require('../db/pool');
 async function ensureTable() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS app_notifications (
-      id          SERIAL PRIMARY KEY,
-      target_role TEXT        NOT NULL DEFAULT 'HR',   -- 'HR', 'AppAdmin', 'all'
-      type        TEXT        NOT NULL DEFAULT 'info',  -- info|success|warning|error
-      title       TEXT        NOT NULL,
-      body        TEXT        NOT NULL DEFAULT '',
-      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      read_by     TEXT[]      NOT NULL DEFAULT '{}'     -- array of user_ids who read it
+      id              SERIAL PRIMARY KEY,
+      target_role     TEXT        NOT NULL DEFAULT 'HR',
+      target_user_id  TEXT        DEFAULT NULL,
+      type            TEXT        NOT NULL DEFAULT 'info',
+      title           TEXT        NOT NULL,
+      body            TEXT        NOT NULL DEFAULT '',
+      created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      read_by         TEXT[]      NOT NULL DEFAULT '{}'
     )
   `);
+  // Add target_user_id column for existing deployments (idempotent)
+  await pool.query(`ALTER TABLE app_notifications ADD COLUMN IF NOT EXISTS target_user_id TEXT DEFAULT NULL`);
 }
 
 // ── GET /api/v1/notifications?role=HR&userId=u2 ───────────────────────────────
-// Returns notifications targeted at the given role, newest first.
-// Marks each as read=true if userId is in read_by array.
+// Returns notifications targeted at the given role OR specifically at this userId.
 router.get('/', async (req, res) => {
   try {
     await ensureTable();
@@ -30,7 +32,8 @@ router.get('/', async (req, res) => {
       `SELECT id, type, title, body, created_at,
               ($1 = ANY(read_by)) AS read
        FROM app_notifications
-       WHERE target_role = $2 OR target_role = 'all'
+       WHERE (target_user_id = $1)
+          OR (target_user_id IS NULL AND (target_role = $2 OR target_role = 'all'))
        ORDER BY created_at DESC
        LIMIT 50`,
       [userId, role]
@@ -51,18 +54,19 @@ router.get('/', async (req, res) => {
 });
 
 // ── POST /api/v1/notifications ────────────────────────────────────────────────
-// Body: { target_role, type, title, body }
+// Body: { target_role, target_user_id, type, title, body }
+// If target_user_id is provided, the notification goes only to that user.
 router.post('/', async (req, res) => {
   try {
     await ensureTable();
-    const { target_role = 'HR', type = 'info', title, body = '' } = req.body;
+    const { target_role = 'HR', target_user_id = null, type = 'info', title, body = '' } = req.body;
     if (!title) return res.status(400).json({ error: 'title is required' });
 
     const { rows } = await pool.query(
-      `INSERT INTO app_notifications (target_role, type, title, body)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO app_notifications (target_role, target_user_id, type, title, body)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING id, type, title, body, created_at`,
-      [target_role, type, title, body]
+      [target_role, target_user_id || null, type, title, body]
     );
     const r = rows[0];
     res.status(201).json({
@@ -80,7 +84,6 @@ router.post('/', async (req, res) => {
 });
 
 // ── PATCH /api/v1/notifications/:id/read ─────────────────────────────────────
-// Body: { userId }  — marks notification as read for this user
 router.patch('/:id/read', async (req, res) => {
   try {
     await ensureTable();
@@ -102,7 +105,6 @@ router.patch('/:id/read', async (req, res) => {
 });
 
 // ── PATCH /api/v1/notifications/read-all ─────────────────────────────────────
-// Body: { userId, role }  — marks all notifications for role as read for userId
 router.patch('/read-all', async (req, res) => {
   try {
     await ensureTable();
@@ -112,7 +114,7 @@ router.patch('/read-all', async (req, res) => {
     await pool.query(
       `UPDATE app_notifications
        SET read_by = array_append(read_by, $1::text)
-       WHERE (target_role = $2 OR target_role = 'all')
+       WHERE ((target_user_id = $1) OR (target_user_id IS NULL AND (target_role = $2 OR target_role = 'all')))
          AND NOT ($1 = ANY(read_by))`,
       [userId, role]
     );
@@ -126,8 +128,8 @@ router.patch('/read-all', async (req, res) => {
 // ── Helper ────────────────────────────────────────────────────────────────────
 function formatTime(date) {
   const diff = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
-  if (diff < 60)   return 'Just now';
-  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+  if (diff < 60)    return 'Just now';
+  if (diff < 3600)  return `${Math.floor(diff / 60)} min ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
   return `${Math.floor(diff / 86400)} days ago`;
 }

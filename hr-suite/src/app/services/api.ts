@@ -49,6 +49,35 @@ export class ApiService {
     return this.http.get<Task[]>(`${this.base}/tasks`, { params });
   }
 
+  createTask(payload: {
+    project_id: string;
+    title: string;
+    description?: string;
+    status: string;
+    due_date?: string;
+    assigned_employee_id?: string;
+    created_by?: string;
+  }): Observable<Task> {
+    return this.http.post<Task>(`${this.base}/tasks`, payload);
+  }
+
+  updateTask(id: string, patch: {
+    title?: string;
+    description?: string;
+    status?: string;
+    priority?: string;
+    due_date?: string;
+    estimated_hours?: number;
+    actual_hours?: number;
+    assigned_employee_id?: string;
+  }): Observable<Task> {
+    return this.http.patch<Task>(`${this.base}/tasks/${id}`, patch);
+  }
+
+  deleteTask(id: string): Observable<{ deleted: string }> {
+    return this.http.delete<{ deleted: string }>(`${this.base}/tasks/${id}`);
+  }
+
   getSubtasks(taskId: string): Observable<Task[]> {
     return this.http.get<Task[]>(`${this.base}/tasks/${taskId}/subtasks`);
   }
@@ -165,7 +194,7 @@ export class ApiService {
     return this.http.get<AppNotification[]>(`${this.base}/notifications`, { params });
   }
 
-  postNotification(notif: { target_role: string; type: string; title: string; body: string }): Observable<AppNotification> {
+  postNotification(notif: { target_role: string; target_user_id?: string; type: string; title: string; body: string }): Observable<AppNotification> {
     return this.http.post<AppNotification>(`${this.base}/notifications`, notif);
   }
 

@@ -106,4 +106,17 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
+// DELETE /api/v1/tasks/:id
+router.delete('/:id', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `DELETE FROM project.task WHERE id = $1 RETURNING id`, [req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    res.json({ deleted: rows[0].id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

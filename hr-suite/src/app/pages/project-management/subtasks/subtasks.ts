@@ -7,16 +7,15 @@ import { AuthService } from '../../../services/auth';
 import { Task, Project, Employee } from '../../../models';
 import { AppUserRecord } from '../../../services/user-store';
 
-interface NewTaskForm {
+interface NewSubtaskForm {
   title: string;
   description: string;
-  project_id: string;
   due_date: string;
   status: 'todo' | 'done';
   assigned_employee_id: string;
 }
 
-interface EditTaskForm {
+interface EditSubtaskForm {
   title: string;
   description: string;
   due_date: string;
@@ -31,50 +30,48 @@ interface LogTimeForm {
 }
 
 @Component({
-  selector: 'app-tasks',
+  selector: 'app-subtasks',
   imports: [CommonModule, FormsModule, RouterLink],
-  templateUrl: './tasks.html',
-  styleUrl: './tasks.scss'
+  templateUrl: './subtasks.html',
+  styleUrl: './subtasks.scss'
 })
-export class Tasks implements OnInit {
+export class Subtasks implements OnInit {
   readonly auth   = inject(AuthService);
   readonly router = inject(Router);
   private cdr     = inject(ChangeDetectorRef);
   private route   = inject(ActivatedRoute);
 
-  readonly isEmployee     = computed(() => this.auth.isEmployee());
-  readonly canMutateTasks = computed(() => true);
   readonly currentUserName = computed(() => this.auth.currentUser()?.name || '—');
 
-  tasks: Task[] = [];
+  parentTask: Task | null = null;
+  subtasks: Task[] = [];
   projects: Project[] = [];
   employees: Employee[] = [];
   appUsers: AppUserRecord[] = [];
   loading = true;
-  filterProjectId = '';
-  expandedTasks = new Set<string>();
+  taskId = '';
 
-  // ── New Task modal ──────────────────────────────────────────────────────────
+  // ── New Subtask modal ───────────────────────────────────────────────────────
   showModal = false;
   saving = false;
   saveError = '';
-  form: NewTaskForm = this.emptyForm();
+  form: NewSubtaskForm = this.emptyForm();
 
-  // ── Edit Task modal ─────────────────────────────────────────────────────────
+  // ── Edit Subtask modal ──────────────────────────────────────────────────────
   showEditModal = false;
-  editingTask: Task | null = null;
+  editingSubtask: Task | null = null;
   editSaving = false;
   editError = '';
-  editForm: EditTaskForm = this.emptyEditForm();
+  editForm: EditSubtaskForm = this.emptyEditForm();
 
   // ── Delete confirm ──────────────────────────────────────────────────────────
   showDeleteConfirm = false;
-  deletingTask: Task | null = null;
+  deletingSubtask: Task | null = null;
   deleteInProgress = false;
 
   // ── Log Time modal ──────────────────────────────────────────────────────────
   showLogTimeModal = false;
-  logTimeTask: Task | null = null;
+  logTimeSubtask: Task | null = null;
   logTimeSaving = false;
   logTimeError = '';
   logTimeForm: LogTimeForm = { hours: '', note: '' };
@@ -82,13 +79,9 @@ export class Tasks implements OnInit {
   constructor(private api: ApiService) {}
 
   ngOnInit() {
-    const projectParam = this.route.snapshot.queryParamMap.get('project');
-    if (projectParam) this.filterProjectId = projectParam;
+    this.taskId = this.route.snapshot.paramMap.get('id') || '';
+    if (!this.taskId) { this.router.navigate(['/tasks']); return; }
 
-    this.api.getProjects().subscribe({
-      next: p => { this.projects = p; this.cdr.detectChanges(); },
-      error: () => {}
-    });
     this.api.getEmployees().subscribe({
       next: e => { this.employees = e; this.cdr.detectChanges(); },
       error: () => {}
@@ -97,28 +90,36 @@ export class Tasks implements OnInit {
       next: u => { this.appUsers = u; this.cdr.detectChanges(); },
       error: () => {}
     });
-    this.loadTasks();
+    this.api.getProjects().subscribe({
+      next: p => { this.projects = p; this.cdr.detectChanges(); },
+      error: () => {}
+    });
+
+    this.loadParentTask();
+    this.loadSubtasks();
   }
 
-  loadTasks() {
+  loadParentTask() {
+    this.api.getTasks().subscribe({
+      next: tasks => {
+        this.parentTask = tasks.find(t => t.id === this.taskId) || null;
+        this.cdr.detectChanges();
+      },
+      error: () => {}
+    });
+  }
+
+  loadSubtasks() {
     this.loading = true;
-    this.api.getTasks(this.filterProjectId || undefined).subscribe({
-      next: t => { this.tasks = t.filter(x => !x.parent_task_id); this.loading = false; this.cdr.detectChanges(); },
+    this.api.getSubtasks(this.taskId).subscribe({
+      next: s => { this.subtasks = s; this.loading = false; this.cdr.detectChanges(); },
       error: () => { this.loading = false; this.cdr.detectChanges(); }
     });
   }
 
-  toggleExpand(taskId: string) {
-    if (this.expandedTasks.has(taskId)) this.expandedTasks.delete(taskId);
-    else this.expandedTasks.add(taskId);
-  }
-
-  isExpanded(taskId: string): boolean { return this.expandedTasks.has(taskId); }
-
-  // ── New Task ────────────────────────────────────────────────────────────────
+  // ── New Subtask ─────────────────────────────────────────────────────────────
   openModal() {
     this.form = this.emptyForm();
-    if (this.filterProjectId) this.form.project_id = this.filterProjectId;
     this.saveError = '';
     this.showModal = true;
     this.cdr.detectChanges();
@@ -126,70 +127,70 @@ export class Tasks implements OnInit {
 
   closeModal() { this.showModal = false; this.cdr.detectChanges(); }
 
-  emptyForm(): NewTaskForm {
-    return { title: '', description: '', project_id: '', due_date: '', status: 'todo', assigned_employee_id: '' };
+  emptyForm(): NewSubtaskForm {
+    return { title: '', description: '', due_date: '', status: 'todo', assigned_employee_id: '' };
   }
 
-  submitTask() {
-    if (!this.form.title.trim()) { this.saveError = 'Task name is required.'; return; }
-    if (!this.form.project_id)   { this.saveError = 'Please select a project.'; return; }
+  submitSubtask() {
+    if (!this.form.title.trim()) { this.saveError = 'Subtask name is required.'; return; }
 
     this.saving = true;
     this.saveError = '';
 
     const payload = {
-      project_id:  this.form.project_id,
-      title:       this.form.title.trim(),
-      description: this.form.description.trim() || undefined,
-      status:      this.form.status === 'done' ? 'done' : 'todo',
-      due_date:    this.form.due_date || undefined,
-      created_by:  this.auth.currentUser()?.id,
+      project_id:     this.parentTask?.project_id || '',
+      parent_task_id: this.taskId,
+      title:          this.form.title.trim(),
+      description:    this.form.description.trim() || undefined,
+      status:         this.form.status === 'done' ? 'done' : 'todo',
+      due_date:       this.form.due_date || undefined,
+      created_by:     this.auth.currentUser()?.id,
     };
 
-    this.api.createTask(payload).subscribe({
-      next: task => {
+    this.api.createTask(payload as any).subscribe({
+      next: subtask => {
         this.saving = false;
         this.showModal = false;
         if (this.form.assigned_employee_id) {
-          this.sendAssignmentNotification(task, this.form.assigned_employee_id);
+          this.sendAssignmentNotification(subtask, this.form.assigned_employee_id);
         }
-        this.loadTasks();
+        this.loadSubtasks();
         this.cdr.detectChanges();
       },
       error: err => {
         this.saving = false;
-        this.saveError = err?.error?.error || 'Failed to create task.';
+        this.saveError = err?.error?.error || 'Failed to create subtask.';
         this.cdr.detectChanges();
       }
     });
   }
 
-  // ── Edit Task ───────────────────────────────────────────────────────────────
-  openEditModal(task: Task, event: Event) {
+  // ── Edit Subtask ────────────────────────────────────────────────────────────
+  openEditModal(subtask: Task, event: Event) {
     event.stopPropagation();
-    this.editingTask = task;
+    this.editingSubtask = subtask;
     this.editForm = {
-      title:           task.title,
-      description:     task.description || '',
-      due_date:        task.due_date ? task.due_date.substring(0, 10) : '',
-      status:          task.status,
-      priority:        task.priority || 'medium',
-      estimated_hours: task.estimated_hours != null ? String(task.estimated_hours) : '',
+      title:           subtask.title,
+      description:     subtask.description || '',
+      due_date:        subtask.due_date ? subtask.due_date.substring(0, 10) : '',
+      status:          subtask.status,
+      priority:        subtask.priority || 'medium',
+      estimated_hours: subtask.estimated_hours != null ? String(subtask.estimated_hours) : '',
     };
     this.editError = '';
     this.showEditModal = true;
     this.cdr.detectChanges();
   }
 
-  closeEditModal() { this.showEditModal = false; this.editingTask = null; this.cdr.detectChanges(); }
+  closeEditModal() { this.showEditModal = false; this.editingSubtask = null; this.cdr.detectChanges(); }
 
-  emptyEditForm(): EditTaskForm {
+  emptyEditForm(): EditSubtaskForm {
     return { title: '', description: '', due_date: '', status: 'todo', priority: 'medium', estimated_hours: '' };
   }
 
   submitEdit() {
-    if (!this.editForm.title.trim()) { this.editError = 'Task name is required.'; return; }
-    if (!this.editingTask) return;
+    if (!this.editForm.title.trim()) { this.editError = 'Subtask name is required.'; return; }
+    if (!this.editingSubtask) return;
 
     this.editSaving = true;
     this.editError = '';
@@ -205,41 +206,41 @@ export class Tasks implements OnInit {
       patch.estimated_hours = parseFloat(this.editForm.estimated_hours);
     }
 
-    this.api.updateTask(this.editingTask.id, patch).subscribe({
+    this.api.updateTask(this.editingSubtask.id, patch).subscribe({
       next: () => {
         this.editSaving = false;
         this.showEditModal = false;
-        this.editingTask = null;
-        this.loadTasks();
+        this.editingSubtask = null;
+        this.loadSubtasks();
         this.cdr.detectChanges();
       },
       error: err => {
         this.editSaving = false;
-        this.editError = err?.error?.error || 'Failed to update task.';
+        this.editError = err?.error?.error || 'Failed to update subtask.';
         this.cdr.detectChanges();
       }
     });
   }
 
-  // ── Delete Task ─────────────────────────────────────────────────────────────
-  openDeleteConfirm(task: Task, event: Event) {
+  // ── Delete Subtask ──────────────────────────────────────────────────────────
+  openDeleteConfirm(subtask: Task, event: Event) {
     event.stopPropagation();
-    this.deletingTask = task;
+    this.deletingSubtask = subtask;
     this.showDeleteConfirm = true;
     this.cdr.detectChanges();
   }
 
-  closeDeleteConfirm() { this.showDeleteConfirm = false; this.deletingTask = null; this.cdr.detectChanges(); }
+  closeDeleteConfirm() { this.showDeleteConfirm = false; this.deletingSubtask = null; this.cdr.detectChanges(); }
 
   confirmDelete() {
-    if (!this.deletingTask) return;
+    if (!this.deletingSubtask) return;
     this.deleteInProgress = true;
-    this.api.deleteTask(this.deletingTask.id).subscribe({
+    this.api.deleteTask(this.deletingSubtask.id).subscribe({
       next: () => {
         this.deleteInProgress = false;
         this.showDeleteConfirm = false;
-        this.deletingTask = null;
-        this.loadTasks();
+        this.deletingSubtask = null;
+        this.loadSubtasks();
         this.cdr.detectChanges();
       },
       error: () => {
@@ -250,16 +251,16 @@ export class Tasks implements OnInit {
   }
 
   // ── Log Time ────────────────────────────────────────────────────────────────
-  openLogTimeModal(task: Task, event: Event) {
+  openLogTimeModal(subtask: Task, event: Event) {
     event.stopPropagation();
-    this.logTimeTask = task;
+    this.logTimeSubtask = subtask;
     this.logTimeForm = { hours: '', note: '' };
     this.logTimeError = '';
     this.showLogTimeModal = true;
     this.cdr.detectChanges();
   }
 
-  closeLogTimeModal() { this.showLogTimeModal = false; this.logTimeTask = null; this.cdr.detectChanges(); }
+  closeLogTimeModal() { this.showLogTimeModal = false; this.logTimeSubtask = null; this.cdr.detectChanges(); }
 
   submitLogTime() {
     const h = parseFloat(this.logTimeForm.hours);
@@ -267,18 +268,17 @@ export class Tasks implements OnInit {
       this.logTimeError = 'Please enter valid hours (> 0).';
       return;
     }
-    if (!this.logTimeTask) return;
+    if (!this.logTimeSubtask) return;
 
     this.logTimeSaving = true;
     this.logTimeError = '';
 
-    // Update actual_hours on the task
-    this.api.updateTask(this.logTimeTask.id, { actual_hours: (this.logTimeTask.actual_hours || 0) + h } as any).subscribe({
+    this.api.updateTask(this.logTimeSubtask.id, { actual_hours: (this.logTimeSubtask.actual_hours || 0) + h } as any).subscribe({
       next: () => {
         this.logTimeSaving = false;
         this.showLogTimeModal = false;
-        this.logTimeTask = null;
-        this.loadTasks();
+        this.logTimeSubtask = null;
+        this.loadSubtasks();
         this.cdr.detectChanges();
       },
       error: err => {
@@ -290,25 +290,23 @@ export class Tasks implements OnInit {
   }
 
   // ── Notification helper ─────────────────────────────────────────────────────
-  private sendAssignmentNotification(task: Task, employeeId: string) {
+  private sendAssignmentNotification(subtask: Task, employeeId: string) {
     const appUser = this.appUsers.find(u => u.employee_id === employeeId);
     const emp = this.employees.find(e => e.id === employeeId);
     const empName = emp ? `${emp.first_name} ${emp.last_name}` : 'You';
-    const projectName = this.projects.find(p => p.id === task.project_id)?.name || '';
 
     this.api.postNotification({
       target_role:    'Employee',
       target_user_id: appUser?.id || undefined,
       type:           'info',
-      title:          `New Task Assigned: ${task.title}`,
-      body:           `${empName} has been assigned to task "${task.title}"${projectName ? ` in project "${projectName}"` : ''}.`,
+      title:          `New Subtask Assigned: ${subtask.title}`,
+      body:           `${empName} has been assigned to subtask "${subtask.title}"${this.parentTask ? ` under task "${this.parentTask.title}"` : ''}.`,
     }).subscribe({ error: () => {} });
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
-  priorityClass(p: string): string {
-    const m: Record<string, string> = { critical: 'badge-red', high: 'badge-orange', medium: 'badge-blue', low: 'badge-gray' };
-    return m[p] ?? 'badge-gray';
+  getProjectName(id: string): string {
+    return this.projects.find(p => p.id === id)?.name ?? '—';
   }
 
   statusClass(s: string): string {
@@ -316,7 +314,8 @@ export class Tasks implements OnInit {
     return m[s] ?? 'badge-gray';
   }
 
-  getProjectName(id: string): string {
-    return this.projects.find(p => p.id === id)?.name ?? id;
+  priorityClass(p: string): string {
+    const m: Record<string, string> = { critical: 'badge-red', high: 'badge-orange', medium: 'badge-blue', low: 'badge-gray' };
+    return m[p] ?? 'badge-gray';
   }
 }

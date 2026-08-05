@@ -151,6 +151,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/project-management/tasks/tasks').then(m => m.Tasks)
       },
       {
+        path: 'tasks/:id',
+        canActivate: [roleGuard(['AppAdmin', 'HR', 'Manager', 'Employee'])],
+        loadComponent: () => import('./pages/project-management/subtasks/subtasks').then(m => m.Subtasks)
+      },
+      {
         path: 'kanban',
         canActivate: [roleGuard(['AppAdmin', 'HR', 'Manager', 'Employee'])],
         loadComponent: () => import('./pages/project-management/kanban/kanban').then(m => m.Kanban)

@@ -1,112 +1,110 @@
 <div class="page-header">
   <div>
-    <h1>Tasks</h1>
-    <p>
-      @if (isEmployee()) { Your assigned tasks } @else { All tasks with expandable subtasks }
-    </p>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+      <a routerLink="/tasks" class="btn btn-ghost btn-sm" style="font-size:12px;padding:4px 10px;">← Back to Tasks</a>
+    </div>
+    <h1>Subtasks</h1>
+    @if (parentTask) {
+      <p>Parent task: <strong>{{ parentTask.title }}</strong>
+        @if (parentTask.project_id) { — {{ getProjectName(parentTask.project_id) }} }
+      </p>
+    } @else {
+      <p>Loading parent task…</p>
+    }
   </div>
-  <button class="btn btn-primary" (click)="openModal()">+ New Task</button>
+  <button class="btn btn-primary" (click)="openModal()">+ New Subtask</button>
 </div>
 
-<!-- Filter -->
-<div class="filter-bar">
-  <div class="form-group" style="min-width:200px;">
-    <select class="form-control" title="Filter by project" [(ngModel)]="filterProjectId" (change)="loadTasks()">
-      <option value="">All Projects</option>
-      @for (p of projects; track p.id) {
-        <option [value]="p.id">{{ p.name }}</option>
-      }
-    </select>
+<!-- Parent Task Info Card -->
+@if (parentTask) {
+  <div class="card" style="margin-bottom:16px;padding:16px 20px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;">
+    <div>
+      <div style="font-size:11px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Task</div>
+      <strong>{{ parentTask.title }}</strong>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Project</div>
+      <span>{{ getProjectName(parentTask.project_id) }}</span>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Status</div>
+      <span class="badge" [class]="statusClass(parentTask.status)">{{ parentTask.status }}</span>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Priority</div>
+      <span class="badge" [class]="priorityClass(parentTask.priority)">{{ parentTask.priority }}</span>
+    </div>
+    @if (parentTask.due_date) {
+      <div>
+        <div style="font-size:11px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Due Date</div>
+        <span>{{ parentTask.due_date | date:'dd MMM yyyy' }}</span>
+      </div>
+    }
   </div>
-</div>
+}
 
+<!-- Subtasks Table -->
 <div class="card">
   @if (loading) {
-    <div class="flex items-center gap-2" style="padding:20px 0;"><div class="spinner"></div><span class="text-muted">Loading tasks…</span></div>
-  } @else if (tasks.length === 0) {
-    <p class="text-muted" style="padding:20px 0;">No tasks found.</p>
+    <div class="flex items-center gap-2" style="padding:20px 0;">
+      <div class="spinner"></div><span class="text-muted">Loading subtasks…</span>
+    </div>
+  } @else if (subtasks.length === 0) {
+    <div style="padding:48px;text-align:center;color:var(--color-text-secondary);">
+      <div style="font-size:40px;margin-bottom:12px;">📋</div>
+      <h3>No Subtasks Yet</h3>
+      <p>Click "+ New Subtask" to add the first subtask to this task.</p>
+    </div>
   } @else {
     <div class="table-wrapper" style="font-size:13px;">
       <table style="table-layout:fixed;width:100%;">
         <colgroup>
-          <col style="width:32px;" />
-          <col style="width:18%;" />
           <col style="width:22%;" />
-          <col style="width:14%;" />
-          <col style="width:8%;" />
-          <col style="width:8%;" />
-          <col style="width:9%;" />
+          <col style="width:24%;" />
+          <col style="width:10%;" />
+          <col style="width:10%;" />
+          <col style="width:12%;" />
           <col style="width:7%;" />
           <col style="width:120px;" />
         </colgroup>
         <thead>
           <tr>
-            <th></th>
-            <th>Task</th>
+            <th>Subtask Name</th>
             <th>Description</th>
-            <th>Project</th>
-            <th>Priority</th>
             <th>Status</th>
+            <th>Priority</th>
             <th>Due Date</th>
             <th>Hrs</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          @for (task of tasks; track task.id) {
-            <!-- Parent task row — click anywhere to open subtasks; action buttons stop propagation -->
-            <tr class="task-row" style="cursor:pointer;" (click)="router.navigate(['/tasks', task.id])">
-              <td style="text-align:center;padding:8px 4px;" (click)="toggleExpand(task.id); $event.stopPropagation()">
-                @if (task.subtasks && task.subtasks.length > 0) {
-                  <span style="font-size:10px;">{{ isExpanded(task.id) ? '▼' : '▶' }}</span>
-                }
-              </td>
-              <td style="padding:8px 6px;">
-                <strong style="color:var(--color-primary);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ task.title }}</strong>
-                @if (task.subtasks && task.subtasks.length > 0) {
-                  <span class="badge badge-gray" style="margin-top:2px;font-size:10px;">{{ task.subtasks.length }} sub</span>
-                }
+          @for (sub of subtasks; track sub.id) {
+            <tr>
+              <td style="padding:8px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                <strong>{{ sub.title }}</strong>
               </td>
               <td style="padding:8px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-secondary);">
-                {{ task.description || '—' }}
+                {{ sub.description || '—' }}
               </td>
-              <td style="padding:8px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ getProjectName(task.project_id) }}</td>
-              <td style="padding:8px 6px;"><span class="badge" [class]="priorityClass(task.priority)" style="font-size:11px;">{{ task.priority }}</span></td>
-              <td style="padding:8px 6px;"><span class="badge" [class]="statusClass(task.status)" style="font-size:11px;">{{ task.status }}</span></td>
-              <td style="padding:8px 6px;white-space:nowrap;">{{ task.due_date ? (task.due_date | date:'dd MMM yy') : '—' }}</td>
-              <td style="padding:8px 6px;text-align:center;">{{ task.estimated_hours ?? '—' }}</td>
-              <td style="padding:8px 4px;" (click)="$event.stopPropagation()">
+              <td style="padding:8px 6px;"><span class="badge" [class]="statusClass(sub.status)" style="font-size:11px;">{{ sub.status }}</span></td>
+              <td style="padding:8px 6px;"><span class="badge" [class]="priorityClass(sub.priority)" style="font-size:11px;">{{ sub.priority }}</span></td>
+              <td style="padding:8px 6px;white-space:nowrap;">{{ sub.due_date ? (sub.due_date | date:'dd MMM yy') : '—' }}</td>
+              <td style="padding:8px 6px;text-align:center;">{{ sub.estimated_hours ?? '—' }}</td>
+              <td style="padding:8px 4px;">
                 <div style="display:flex;gap:2px;flex-wrap:nowrap;">
-                  <button class="btn btn-ghost btn-sm" title="Edit task"
+                  <button class="btn btn-ghost btn-sm" title="Edit subtask"
                           style="padding:2px 6px;font-size:12px;min-width:0;"
-                          (click)="openEditModal(task, $event)">✏️</button>
+                          (click)="openEditModal(sub, $event)">✏️</button>
                   <button class="btn btn-ghost btn-sm" title="Log time"
                           style="padding:2px 6px;font-size:12px;min-width:0;"
-                          (click)="openLogTimeModal(task, $event)">⏱️</button>
-                  <button class="btn btn-ghost btn-sm" title="Delete task"
+                          (click)="openLogTimeModal(sub, $event)">⏱️</button>
+                  <button class="btn btn-ghost btn-sm" title="Delete subtask"
                           style="padding:2px 6px;font-size:12px;min-width:0;color:var(--color-danger);"
-                          (click)="openDeleteConfirm(task, $event)">🗑️</button>
+                          (click)="openDeleteConfirm(sub, $event)">🗑️</button>
                 </div>
               </td>
             </tr>
-            <!-- Subtask rows -->
-            @if (isExpanded(task.id) && task.subtasks) {
-              @for (sub of task.subtasks; track sub.id) {
-                <tr class="subtask-row" style="font-size:12px;">
-                  <td></td>
-                  <td style="padding:6px 6px 6px 20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                    <span style="color:var(--color-text-muted);margin-right:4px;">↳</span>{{ sub.title }}
-                  </td>
-                  <td style="padding:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-secondary);">{{ sub.description || '—' }}</td>
-                  <td style="padding:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ getProjectName(sub.project_id) }}</td>
-                  <td style="padding:6px;"><span class="badge" [class]="priorityClass(sub.priority)" style="font-size:10px;">{{ sub.priority }}</span></td>
-                  <td style="padding:6px;"><span class="badge" [class]="statusClass(sub.status)" style="font-size:10px;">{{ sub.status }}</span></td>
-                  <td style="padding:6px;white-space:nowrap;">{{ sub.due_date ? (sub.due_date | date:'dd MMM yy') : '—' }}</td>
-                  <td style="padding:6px;text-align:center;">{{ sub.estimated_hours ?? '—' }}</td>
-                  <td></td>
-                </tr>
-              }
-            }
           }
         </tbody>
       </table>
@@ -114,31 +112,29 @@
   }
 </div>
 
-<!-- ══ New Task Modal ══════════════════════════════════════════════════════════ -->
+<!-- ══ New Subtask Modal ═══════════════════════════════════════════════════════ -->
 @if (showModal) {
   <div class="modal-overlay" (click)="closeModal()">
     <div class="modal" style="max-width:520px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h3>New Task</h3>
+        <h3>New Subtask</h3>
         <button class="icon-btn" (click)="closeModal()" title="Close">✕</button>
       </div>
       <div class="modal-body">
+        @if (parentTask) {
+          <div class="form-group">
+            <label class="form-label">Parent Task</label>
+            <input class="form-control" type="text" title="Parent task" [value]="parentTask.title" readonly
+                   style="background:var(--color-bg-secondary,#f8fafc);color:var(--color-text-secondary);cursor:not-allowed;" />
+          </div>
+        }
         <div class="form-group">
-          <label class="form-label">Task Name <span style="color:var(--color-danger)">*</span></label>
-          <input class="form-control" type="text" placeholder="Enter task name…" [(ngModel)]="form.title" />
+          <label class="form-label">Subtask Name <span style="color:var(--color-danger)">*</span></label>
+          <input class="form-control" type="text" placeholder="Enter subtask name…" [(ngModel)]="form.title" />
         </div>
         <div class="form-group">
           <label class="form-label">Description</label>
           <textarea class="form-control" rows="3" placeholder="Optional description…" [(ngModel)]="form.description"></textarea>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Project <span style="color:var(--color-danger)">*</span></label>
-          <select class="form-control" title="Select project" [(ngModel)]="form.project_id">
-            <option value="">— Select project —</option>
-            @for (p of projects; track p.id) {
-              <option [value]="p.id">{{ p.name }}</option>
-            }
-          </select>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div class="form-group">
@@ -176,26 +172,26 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" (click)="closeModal()">Cancel</button>
-        <button class="btn btn-primary" (click)="submitTask()" [disabled]="saving">
-          @if (saving) { <span class="spinner-sm"></span> Saving… } @else { Create Task }
+        <button class="btn btn-primary" (click)="submitSubtask()" [disabled]="saving">
+          @if (saving) { <span class="spinner-sm"></span> Saving… } @else { Create Subtask }
         </button>
       </div>
     </div>
   </div>
 }
 
-<!-- ══ Edit Task Modal ════════════════════════════════════════════════════════ -->
+<!-- ══ Edit Subtask Modal ══════════════════════════════════════════════════════ -->
 @if (showEditModal) {
   <div class="modal-overlay" (click)="closeEditModal()">
     <div class="modal" style="max-width:520px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h3>Edit Task</h3>
+        <h3>Edit Subtask</h3>
         <button class="icon-btn" (click)="closeEditModal()" title="Close">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label class="form-label">Task Name <span style="color:var(--color-danger)">*</span></label>
-          <input class="form-control" type="text" placeholder="Task name…" [(ngModel)]="editForm.title" />
+          <label class="form-label">Subtask Name <span style="color:var(--color-danger)">*</span></label>
+          <input class="form-control" type="text" placeholder="Subtask name…" [(ngModel)]="editForm.title" />
         </div>
         <div class="form-group">
           <label class="form-label">Description</label>
@@ -230,7 +226,7 @@
           <div class="form-group">
             <label class="form-label">Est. Hours</label>
             <input class="form-control" type="number" title="Estimated hours" min="0" step="0.5"
-                   placeholder="e.g. 4" [(ngModel)]="editForm.estimated_hours" />
+                   placeholder="e.g. 2" [(ngModel)]="editForm.estimated_hours" />
           </div>
         </div>
         @if (editError) {
@@ -247,18 +243,18 @@
   </div>
 }
 
-<!-- ══ Delete Confirm Modal ═══════════════════════════════════════════════════ -->
+<!-- ══ Delete Confirm Modal ════════════════════════════════════════════════════ -->
 @if (showDeleteConfirm) {
   <div class="modal-overlay" (click)="closeDeleteConfirm()">
     <div class="modal" style="max-width:420px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h3>Delete Task</h3>
+        <h3>Delete Subtask</h3>
         <button class="icon-btn" (click)="closeDeleteConfirm()" title="Close">✕</button>
       </div>
       <div class="modal-body">
-        <p>Are you sure you want to delete <strong>{{ deletingTask?.title }}</strong>?</p>
+        <p>Are you sure you want to delete <strong>{{ deletingSubtask?.title }}</strong>?</p>
         <p style="color:var(--color-text-muted);font-size:13px;margin-top:8px;">
-          This will also delete all subtasks associated with this task. This action cannot be undone.
+          This action cannot be undone.
         </p>
       </div>
       <div class="modal-footer">
@@ -272,7 +268,7 @@
   </div>
 }
 
-<!-- ══ Log Time Modal ════════════════════════════════════════════════════════ -->
+<!-- ══ Log Time Modal ══════════════════════════════════════════════════════════ -->
 @if (showLogTimeModal) {
   <div class="modal-overlay" (click)="closeLogTimeModal()">
     <div class="modal" style="max-width:400px;" (click)="$event.stopPropagation()">
@@ -281,16 +277,18 @@
         <button class="icon-btn" (click)="closeLogTimeModal()" title="Close">✕</button>
       </div>
       <div class="modal-body">
-        @if (logTimeTask) {
+        @if (logTimeSubtask) {
           <div style="background:var(--color-bg-secondary,#f8fafc);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:16px;font-size:13px;">
-            <strong>{{ logTimeTask.title }}</strong>
-            <span style="color:var(--color-text-muted);margin-left:8px;">{{ getProjectName(logTimeTask.project_id) }}</span>
+            <strong>{{ logTimeSubtask.title }}</strong>
+            @if (parentTask) {
+              <span style="color:var(--color-text-muted);margin-left:8px;">↳ {{ parentTask.title }}</span>
+            }
           </div>
         }
         <div class="form-group">
           <label class="form-label">Hours Worked <span style="color:var(--color-danger)">*</span></label>
           <input class="form-control" type="number" title="Hours worked" min="0.25" step="0.25"
-                 placeholder="e.g. 2.5" [(ngModel)]="logTimeForm.hours" />
+                 placeholder="e.g. 1.5" [(ngModel)]="logTimeForm.hours" />
         </div>
         <div class="form-group">
           <label class="form-label">Note (optional)</label>
