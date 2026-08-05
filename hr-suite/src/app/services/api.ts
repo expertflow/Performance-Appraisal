@@ -90,6 +90,14 @@ export class ApiService {
     return this.http.post<{ message: string }>(`${this.base}/sync/trigger`, {});
   }
 
+  syncProjects(): Observable<{ message: string; total: number }> {
+    return this.http.post<{ message: string; total: number }>(`${this.base}/projects/sync`, {});
+  }
+
+  syncEmployees(): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.base}/employees/sync`, {});
+  }
+
   // ── Job Postings ──────────────────────────────────────────────────────────
   getJobPostings(status?: string): Observable<JobPosting[]> {
     let params = new HttpParams();

@@ -35,7 +35,7 @@ DB_NAME=hr_suite
 DB_USER=hr_suite_user
 DB_PASSWORD=HrSuite2025!
 DIRECTUS_URL=https://bs4.expertflow.com
-DIRECTUS_TOKEN=
+DIRECTUS_TOKEN=july2026-admin-token-zaeem
 APP_URL=http://169.58.125.199
 CORS_ORIGIN=http://169.58.125.199
 """

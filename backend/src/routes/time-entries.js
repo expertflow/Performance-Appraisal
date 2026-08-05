@@ -56,8 +56,8 @@ router.post('/', async (req, res) => {
     description, start_datetime, end_datetime, hours_worked, is_billable
   } = req.body;
 
-  if (!task_id || !project_id || !employee_id || !start_datetime || !end_datetime || !hours_worked) {
-    return res.status(400).json({ error: 'Missing required fields: task_id, project_id, employee_id, start_datetime, end_datetime, hours_worked' });
+  if (!project_id || !employee_id || !start_datetime || !end_datetime || !hours_worked) {
+    return res.status(400).json({ error: 'Missing required fields: project_id, employee_id, start_datetime, end_datetime, hours_worked' });
   }
 
   const idempotency_key = uuidv4();
@@ -69,7 +69,7 @@ router.post('/', async (req, res) => {
           status, directus_sync_status, idempotency_key)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'draft','pending',$10)
        RETURNING *`,
-      [task_id, project_id, subtask_id || null, employee_id,
+      [task_id || null, project_id, subtask_id || null, employee_id,
        description || '', start_datetime, end_datetime,
        hours_worked, is_billable || false, idempotency_key]
     );

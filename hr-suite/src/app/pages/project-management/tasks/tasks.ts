@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, computed } from '@angular/core';
+import { Component, OnInit, inject, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -14,6 +14,7 @@ import { Task, Project } from '../../../models';
 })
 export class Tasks implements OnInit {
   private auth = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
 
   // ── Role helpers ───────────────────────────────────────────────────────────
   /** Employee can CRUD their own tasks/time entries but cannot create projects */
@@ -30,15 +31,18 @@ export class Tasks implements OnInit {
   constructor(private api: ApiService) {}
 
   ngOnInit() {
-    this.api.getProjects().subscribe({ next: p => this.projects = p, error: () => {} });
+    this.api.getProjects().subscribe({
+      next: p => { this.projects = p; this.cdr.detectChanges(); },
+      error: () => {}
+    });
     this.loadTasks();
   }
 
   loadTasks() {
     this.loading = true;
     this.api.getTasks(this.filterProjectId || undefined).subscribe({
-      next: t => { this.tasks = t.filter(x => !x.parent_task_id); this.loading = false; },
-      error: () => { this.loading = false; }
+      next: t => { this.tasks = t.filter(x => !x.parent_task_id); this.loading = false; this.cdr.detectChanges(); },
+      error: () => { this.loading = false; this.cdr.detectChanges(); }
     });
   }
 

@@ -38,12 +38,12 @@ async function pushToDirectus() {
 
   for (const entry of pending) {
     const payload = {
-      employee:         entry.employee_id,
-      project:          entry.project_id,
-      description:      entry.description,
-      start_datetime:   entry.start_datetime,
-      end_datetime:     entry.end_datetime,
-      hours_worked:     parseFloat(entry.hours_worked),
+      Employee:         entry.employee_id,
+      Project:          entry.project_id,
+      Description:      entry.description,
+      StartDateTime:    entry.start_datetime,
+      EndDateTime:      entry.end_datetime,
+      HoursWorked:      entry.hours_worked,
       otrs_project_ref: `${APP_URL()}/timesheet?entry=${entry.id}`
     };
 
@@ -53,14 +53,14 @@ async function pushToDirectus() {
       if (directusId) {
         // Update existing Directus record
         await axios.patch(
-          `${DIRECTUS_URL()}/items/time_entry/${directusId}`,
+          `${DIRECTUS_URL()}/items/TimeEntry/${directusId}`,
           payload,
           { headers: directusHeaders(), timeout: 10000 }
         );
       } else {
         // Create new Directus record
         const resp = await axios.post(
-          `${DIRECTUS_URL()}/items/time_entry`,
+          `${DIRECTUS_URL()}/items/TimeEntry`,
           payload,
           { headers: directusHeaders(), timeout: 10000 }
         );
@@ -125,53 +125,41 @@ async function pullFromDirectus() {
 
   try {
     const resp = await axios.get(
-      `${DIRECTUS_URL()}/items/time_entry?fields=id,employee,project,description,start_datetime,end_datetime,hours_worked&filter[date_updated][_gte]=${encodeURIComponent(since)}&limit=500`,
+      `${DIRECTUS_URL()}/items/TimeEntry?fields=id,Employee,Project,Description,StartDateTime,EndDateTime,HoursWorked&limit=500&sort=-id`,
       { headers: directusHeaders(), timeout: 15000 }
     );
     const entries = resp.data?.data ?? [];
 
     let pulled = 0;
     for (const d of entries) {
-      const employeeId = typeof d.employee === 'object' ? d.employee?.id : d.employee;
-      const projectId  = typeof d.project  === 'object' ? d.project?.id  : d.project;
+      try {
+        const employeeId = typeof d.Employee === 'object' ? d.Employee?.id : d.Employee;
+        const directusProjectId = typeof d.Project === 'object' ? d.Project?.id : d.Project;
 
-      if (!employeeId || !projectId || !d.start_datetime || !d.end_datetime) continue;
+        if (!employeeId || !directusProjectId || !d.StartDateTime) continue;
 
-      // Check if we already have this directus_id
-      const { rows: existing } = await pool.query(
-        `SELECT id FROM project.time_entry WHERE directus_id = $1`, [d.id]
-      );
-
-      if (existing.length) {
-        // Update existing local entry
-        await pool.query(
-          `UPDATE project.time_entry
-           SET description = $1, start_datetime = $2, end_datetime = $3,
-               hours_worked = $4, directus_sync_status = 'synced',
-               directus_sync_at = NOW(), updated_at = NOW()
-           WHERE directus_id = $5`,
-          [d.description, d.start_datetime, d.end_datetime, d.hours_worked, d.id]
+        // Check if we already have this directus_id — only update existing local entries
+        // (we don't insert new ones from Directus since project IDs are different systems)
+        const { rows: existing } = await pool.query(
+          `SELECT id FROM project.time_entry WHERE directus_id = $1`, [String(d.id)]
         );
-      } else {
-        // We need a task_id — try to find a matching task for this project
-        const { rows: tasks } = await pool.query(
-          `SELECT id FROM project.task WHERE project_id = $1 LIMIT 1`, [projectId]
-        );
-        const taskId = tasks[0]?.id;
-        if (!taskId) continue; // can't insert without a task
 
-        await pool.query(
-          `INSERT INTO project.time_entry
-             (task_id, project_id, employee_id, description,
-              start_datetime, end_datetime, hours_worked,
-              status, directus_id, directus_sync_status, directus_sync_at)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,'approved',$8,'synced',NOW())
-           ON CONFLICT (idempotency_key) DO NOTHING`,
-          [taskId, projectId, employeeId, d.description || '',
-           d.start_datetime, d.end_datetime, d.hours_worked, d.id]
-        );
+        if (existing.length) {
+          await pool.query(
+            `UPDATE project.time_entry
+             SET description = $1, start_datetime = $2, end_datetime = $3,
+                 hours_worked = $4, directus_sync_status = 'synced',
+                 directus_sync_at = NOW(), updated_at = NOW()
+             WHERE directus_id = $5`,
+            [d.Description, d.StartDateTime, d.EndDateTime, d.HoursWorked, String(d.id)]
+          );
+          pulled++;
+        }
+        // Skip inserting new entries from Directus — project IDs are integer in Directus
+        // but UUID in our local DB. Only update entries we previously pushed.
+      } catch (entryErr) {
+        console.warn(`[sync] Skipping TimeEntry ${d.id}:`, entryErr.message);
       }
-      pulled++;
     }
 
     return { pulled };
@@ -181,13 +169,62 @@ async function pullFromDirectus() {
   }
 }
 
+// ── Direction C: Directus → App (Projects) ───────────────────────────────
+async function syncProjectsFromDirectus() {
+  if (!DIRECTUS_TOKEN()) {
+    console.warn('[sync] DIRECTUS_TOKEN not set — skipping project sync.');
+    return { synced: 0 };
+  }
+  try {
+    let page = 1;
+    const limit = 500;
+    let synced = 0;
+
+    while (true) {
+      const url = `${DIRECTUS_URL()}/items/Project?fields=id,Name,Status,Description&limit=${limit}&page=${page}&filter[Status][_nin]=Closed,Cancelled&sort=id`;
+      const resp = await axios.get(url, {
+        headers: directusHeaders(),
+        timeout: 20000
+      });
+      const items = resp.data?.data ?? [];
+      if (!items.length) break;
+
+      for (const p of items) {
+        const statusMap = { 'Active':'active','Open':'active','On Hold':'on_hold','Closed':'completed','Cancelled':'cancelled' };
+        const localStatus = statusMap[p.Status] || 'active';
+        const name = (p.Name || '').trim() || `Project ${p.id}`;
+        await pool.query(
+          `INSERT INTO project.project
+             (name, type, status, health_status, bs4_project_id, created_at, updated_at)
+           VALUES ($1, 'client', $2, NULL, $3, NOW(), NOW())
+           ON CONFLICT (bs4_project_id) DO UPDATE SET
+             name       = EXCLUDED.name,
+             status     = EXCLUDED.status,
+             updated_at = NOW()`,
+          [name, localStatus, String(p.id)]
+        );
+        synced++;
+      }
+
+      if (items.length < limit) break;
+      page++;
+    }
+
+    return { synced };
+  } catch (err) {
+    console.error('[sync] Project sync from Directus failed:', err.message);
+    return { synced: 0, error: err.message };
+  }
+}
+
 // ── Main sync runner ──────────────────────────────────────────────────────
 async function runSync() {
   console.log(`[sync] Starting bidirectional sync at ${new Date().toISOString()}`);
-  const pushResult = await pushToDirectus();
-  const pullResult = await pullFromDirectus();
-  console.log(`[sync] Done. Push: ${JSON.stringify(pushResult)} | Pull: ${JSON.stringify(pullResult)}`);
-  return { push: pushResult, pull: pullResult };
+  const projectResult = await syncProjectsFromDirectus();
+  const pushResult    = await pushToDirectus();
+  const pullResult    = await pullFromDirectus();
+  console.log(`[sync] Done. Projects: ${JSON.stringify(projectResult)} | Push: ${JSON.stringify(pushResult)} | Pull: ${JSON.stringify(pullResult)}`);
+  return { projects: projectResult, push: pushResult, pull: pullResult };
 }
 
-module.exports = { runSync, pushToDirectus, pullFromDirectus };
+module.exports = { runSync, pushToDirectus, pullFromDirectus, syncProjectsFromDirectus };

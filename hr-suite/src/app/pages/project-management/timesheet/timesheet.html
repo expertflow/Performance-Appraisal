@@ -152,13 +152,13 @@
           </div>
         </div>
 
-        <!-- Row 2: Task + Subtask (cascading) -->
+        <!-- Row 2: Task + Subtask (cascading, both optional) -->
         <div class="grid-2">
           <div class="form-group">
-            <label class="form-label">Task <span style="color:var(--color-red)">*</span></label>
+            <label class="form-label">Task <span style="color:var(--color-text-muted);font-size:11px;">(optional)</span></label>
             <select class="form-control" title="Select task" [(ngModel)]="form.task_id" (change)="onTaskChange()"
                     [disabled]="!form.project_id">
-              <option value="">— Select Task —</option>
+              <option value="">— None / General —</option>
               @for (t of tasks; track t.id) {
                 <option [value]="t.id">{{ t.title }}</option>
               }

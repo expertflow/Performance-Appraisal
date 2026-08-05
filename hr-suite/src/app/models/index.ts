@@ -38,6 +38,7 @@ export interface Employee {
 export interface Project {
   id: string;
   name: string;
+  description?: string;
   type: 'client' | 'internal' | 'operational';
   status: 'active' | 'on_hold' | 'completed' | 'cancelled';
   health_status?: 'on_track' | 'at_risk' | 'off_track';
@@ -69,7 +70,7 @@ export interface Task {
 
 export interface TimeEntry {
   id?: string;
-  task_id: string;
+  task_id?: string | null;
   project_id: string;
   subtask_id?: string | null;
   employee_id: string;

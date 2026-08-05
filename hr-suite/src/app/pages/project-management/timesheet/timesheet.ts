@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, computed } from '@angular/core';
+import { Component, OnInit, inject, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../services/api';
@@ -14,11 +14,11 @@ import { TimeEntry, Project, Task, Employee, TimeEntryFormData } from '../../../
 })
 export class Timesheet implements OnInit {
   private auth = inject(AuthService);
+  private cdr  = inject(ChangeDetectorRef);
 
   // ── Role helpers ───────────────────────────────────────────────────────────
-  /** All roles can log time entries (Employee can CRUD their own) */
   readonly isEmployee = computed(() => this.auth.isEmployee());
-  readonly canLogTime = computed(() => true); // all roles can log time per spec
+  readonly canLogTime = computed(() => true);
 
   // Data
   timeEntries: TimeEntry[] = [];
@@ -55,12 +55,27 @@ export class Timesheet implements OnInit {
 
   loadData() {
     this.loading = true;
+    // Load projects — if empty, auto-sync from Directus
     this.api.getProjects().subscribe({
-      next: p => { this.projects = p; },
+      next: p => {
+        this.projects = p;
+        this.cdr.detectChanges();
+        if (p.length === 0) {
+          this.api.syncProjects().subscribe({
+            next: () => {
+              this.api.getProjects().subscribe({
+                next: p2 => { this.projects = p2; this.cdr.detectChanges(); },
+                error: () => {}
+              });
+            },
+            error: () => {}
+          });
+        }
+      },
       error: () => {}
     });
     this.api.getEmployees().subscribe({
-      next: e => { this.employees = e; },
+      next: e => { this.employees = e; this.cdr.detectChanges(); },
       error: () => {}
     });
     this.loadTimeEntries();
@@ -80,8 +95,8 @@ export class Timesheet implements OnInit {
     }
 
     this.api.getTimeEntries(filters).subscribe({
-      next: e => { this.timeEntries = e; this.loading = false; },
-      error: () => { this.loading = false; }
+      next: e => { this.timeEntries = e; this.loading = false; this.cdr.detectChanges(); },
+      error: () => { this.loading = false; this.cdr.detectChanges(); }
     });
   }
 
@@ -94,7 +109,7 @@ export class Timesheet implements OnInit {
     this.subtasks = [];
     if (!this.form.project_id) return;
     this.api.getTasks(this.form.project_id).subscribe({
-      next: t => { this.tasks = t.filter(x => !x.parent_task_id); },
+      next: t => { this.tasks = t.filter(x => !x.parent_task_id); this.cdr.detectChanges(); },
       error: () => {}
     });
   }
@@ -104,7 +119,7 @@ export class Timesheet implements OnInit {
     this.subtasks = [];
     if (!this.form.task_id) return;
     this.api.getSubtasks(this.form.task_id).subscribe({
-      next: s => { this.subtasks = s; },
+      next: s => { this.subtasks = s; this.cdr.detectChanges(); },
       error: () => {}
     });
   }
@@ -130,7 +145,6 @@ export class Timesheet implements OnInit {
 
   openModal() {
     this.form = this.emptyForm();
-    // Pre-fill employee for Employee role
     const user = this.auth.currentUser();
     if (this.auth.isEmployee() && user?.employee_id) {
       this.form.employee_id = user.employee_id;
@@ -148,9 +162,9 @@ export class Timesheet implements OnInit {
   }
 
   submitEntry() {
-    if (!this.form.project_id || !this.form.task_id || !this.form.employee_id ||
+    if (!this.form.project_id || !this.form.employee_id ||
         !this.form.start_datetime || !this.form.end_datetime) {
-      this.error = 'Please fill in all required fields.';
+      this.error = 'Please fill in all required fields (Project, Employee, Start & End time).';
       return;
     }
     if (!this.form.hours_worked || this.form.hours_worked <= 0) {
@@ -160,7 +174,7 @@ export class Timesheet implements OnInit {
     this.saving = true;
     this.error = '';
     const payload: Omit<TimeEntry, 'id' | 'created_at' | 'updated_at'> = {
-      task_id: this.form.task_id,
+      task_id: this.form.task_id || null,
       project_id: this.form.project_id,
       subtask_id: this.form.subtask_id || null,
       employee_id: this.form.employee_id,
@@ -176,11 +190,13 @@ export class Timesheet implements OnInit {
         this.timeEntries.unshift(entry);
         this.saving = false;
         this.success = 'Time entry saved successfully.';
-        setTimeout(() => { this.success = ''; this.closeModal(); }, 1500);
+        this.cdr.detectChanges();
+        setTimeout(() => { this.success = ''; this.closeModal(); this.cdr.detectChanges(); }, 1500);
       },
       error: err => {
         this.saving = false;
         this.error = err?.error?.message || 'Failed to save time entry.';
+        this.cdr.detectChanges();
       }
     });
   }
@@ -221,8 +237,8 @@ export class Timesheet implements OnInit {
 
   triggerSync() {
     this.api.triggerSync().subscribe({
-      next: r => { this.success = r.message; setTimeout(() => this.success = '', 3000); },
-      error: () => { this.error = 'Sync trigger failed.'; }
+      next: r => { this.success = r.message; this.cdr.detectChanges(); setTimeout(() => { this.success = ''; this.cdr.detectChanges(); }, 3000); },
+      error: () => { this.error = 'Sync trigger failed.'; this.cdr.detectChanges(); }
     });
   }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -14,6 +14,7 @@ type KanbanStatus = 'todo' | 'in_progress' | 'in_review' | 'blocked' | 'done';
   styleUrl: './kanban.scss'
 })
 export class Kanban implements OnInit {
+  private cdr = inject(ChangeDetectorRef);
   tasks: Task[] = [];
   projects: Project[] = [];
   loading = true;
@@ -30,15 +31,18 @@ export class Kanban implements OnInit {
   constructor(private api: ApiService) {}
 
   ngOnInit() {
-    this.api.getProjects().subscribe({ next: p => this.projects = p, error: () => {} });
+    this.api.getProjects().subscribe({
+      next: p => { this.projects = p; this.cdr.detectChanges(); },
+      error: () => {}
+    });
     this.loadTasks();
   }
 
   loadTasks() {
     this.loading = true;
     this.api.getTasks(this.filterProjectId || undefined).subscribe({
-      next: t => { this.tasks = t; this.loading = false; },
-      error: () => { this.loading = false; }
+      next: t => { this.tasks = t; this.loading = false; this.cdr.detectChanges(); },
+      error: () => { this.loading = false; this.cdr.detectChanges(); }
     });
   }
 

@@ -14,11 +14,14 @@ CREATE TABLE IF NOT EXISTS project.employee_snapshot (
   email         TEXT,
   department    TEXT,
   job_title     TEXT,
+  manager_id    TEXT,
   avatar_url    TEXT,
   synced_at     TIMESTAMPTZ DEFAULT NOW(),
   created_at    TIMESTAMPTZ DEFAULT NOW(),
   updated_at    TIMESTAMPTZ DEFAULT NOW()
 );
+-- Add manager_id column if it doesn't exist (for existing deployments)
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS manager_id TEXT;
 
 -- ── Projects ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS project.project (
@@ -31,7 +34,7 @@ CREATE TABLE IF NOT EXISTS project.project (
   end_date        DATE,
   budget_hours    NUMERIC(10,2),
   budget_amount   NUMERIC(14,2),
-  bs4_project_id  TEXT,
+  bs4_project_id  TEXT UNIQUE,
   client_id       TEXT,
   legal_entity_id TEXT,
   cost_center_id  TEXT,
@@ -39,6 +42,17 @@ CREATE TABLE IF NOT EXISTS project.project (
   created_at      TIMESTAMPTZ DEFAULT NOW(),
   updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
+-- Add UNIQUE constraint on bs4_project_id for existing deployments (idempotent)
+ALTER TABLE project.project ADD COLUMN IF NOT EXISTS bs4_project_id TEXT;
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'project_project_bs4_project_id_key'
+      AND conrelid = 'project.project'::regclass
+  ) THEN
+    ALTER TABLE project.project ADD CONSTRAINT project_project_bs4_project_id_key UNIQUE (bs4_project_id);
+  END IF;
+END $$;
 
 -- ── Tasks ─────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS project.task (
@@ -72,9 +86,11 @@ CREATE TABLE IF NOT EXISTS project.task_assignee (
 );
 
 -- ── Time entries ──────────────────────────────────────────────────────────
+-- task_id is nullable — employees can log time against a project without a task
+ALTER TABLE project.time_entry ALTER COLUMN task_id DROP NOT NULL;
 CREATE TABLE IF NOT EXISTS project.time_entry (
   id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_id               UUID NOT NULL REFERENCES project.task(id),
+  task_id               UUID REFERENCES project.task(id),
   project_id            UUID NOT NULL REFERENCES project.project(id),
   subtask_id            UUID REFERENCES project.task(id),
   employee_id           TEXT NOT NULL,
