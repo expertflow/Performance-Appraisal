@@ -253,13 +253,16 @@
     <div class="modal" style="max-width:420px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>Delete Task</h3>
-        <button class="icon-btn" (click)="closeDeleteConfirm()" title="Close">✕</button>
+        <button style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--color-text-secondary);line-height:1;padding:4px 8px;" (click)="closeDeleteConfirm()" title="Close">×</button>
       </div>
       <div class="modal-body">
         <p>Are you sure you want to delete <strong>{{ deletingTask?.title }}</strong>?</p>
         <p style="color:var(--color-text-muted);font-size:13px;margin-top:8px;">
-          This will also delete all subtasks associated with this task. This action cannot be undone.
+          This will also delete all subtasks and time entries associated with this task. This action cannot be undone.
         </p>
+        @if (deleteError) {
+          <p style="color:var(--color-danger,#ef4444);font-size:13px;margin-top:8px;background:#fef2f2;padding:8px 12px;border-radius:6px;">{{ deleteError }}</p>
+        }
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" (click)="closeDeleteConfirm()">Cancel</button>

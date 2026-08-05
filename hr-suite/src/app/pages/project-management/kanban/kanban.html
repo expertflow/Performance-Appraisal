@@ -26,7 +26,7 @@
         </div>
         <div class="kanban-cards">
           @for (task of getColumnTasks(col.id); track task.id) {
-            <div class="kanban-card">
+            <div class="kanban-card" style="cursor:pointer;" (click)="openTask(task)">
               <div class="card-title">{{ task.title }}</div>
               @if (task.project_id) {
                 <div class="card-project">{{ getProjectName(task.project_id) }}</div>

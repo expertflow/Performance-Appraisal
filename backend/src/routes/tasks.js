@@ -108,14 +108,56 @@ router.patch('/:id', async (req, res) => {
 
 // DELETE /api/v1/tasks/:id
 router.delete('/:id', async (req, res) => {
+  const client = await pool.connect();
   try {
-    const { rows } = await pool.query(
+    await client.query('BEGIN');
+
+    // Collect all time_entry IDs for this task and its subtasks
+    const { rows: teRows } = await client.query(
+      `SELECT id FROM project.time_entry
+       WHERE task_id = $1
+          OR task_id IN (SELECT id FROM project.task WHERE parent_task_id = $1)`,
+      [req.params.id]
+    );
+    const teIds = teRows.map(r => r.id);
+
+    // Delete directus_sync_log rows referencing those time entries first
+    if (teIds.length > 0) {
+      await client.query(
+        `DELETE FROM project.directus_sync_log WHERE time_entry_id = ANY($1::uuid[])`,
+        [teIds]
+      );
+    }
+
+    // Now delete the time entries
+    await client.query(
+      `DELETE FROM project.time_entry
+       WHERE task_id = $1
+          OR task_id IN (SELECT id FROM project.task WHERE parent_task_id = $1)`,
+      [req.params.id]
+    );
+
+    // Delete subtasks
+    await client.query(
+      `DELETE FROM project.task WHERE parent_task_id = $1`, [req.params.id]
+    );
+
+    // Delete the task itself
+    const { rows } = await client.query(
       `DELETE FROM project.task WHERE id = $1 RETURNING id`, [req.params.id]
     );
-    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    if (!rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    await client.query('COMMIT');
     res.json({ deleted: rows[0].id });
   } catch (err) {
+    await client.query('ROLLBACK');
     res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 

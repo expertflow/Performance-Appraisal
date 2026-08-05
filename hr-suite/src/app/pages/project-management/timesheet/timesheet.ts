@@ -295,6 +295,14 @@ export class Timesheet implements OnInit {
       this.error = 'Please fill in all required fields (Project, Employee, Start & End time).';
       return;
     }
+    if (!this.form.task_id) {
+      this.error = 'Please select a task for this time entry.';
+      return;
+    }
+    if (!this.form.description || !this.form.description.trim()) {
+      this.error = 'Description is required. Please describe what you worked on.';
+      return;
+    }
     if (!this.form.hours_worked || this.form.hours_worked <= 0) {
       this.error = 'Hours worked must be greater than 0.';
       return;
@@ -398,6 +406,14 @@ export class Timesheet implements OnInit {
     if (!this.editForm.project_id || !this.editForm.employee_id ||
         !this.editForm.start_datetime || !this.editForm.end_datetime) {
       this.editError = 'Project, Employee, Start and End time are required.';
+      return;
+    }
+    if (!this.editForm.task_id) {
+      this.editError = 'Please select a task for this time entry.';
+      return;
+    }
+    if (!this.editForm.description || !this.editForm.description.trim()) {
+      this.editError = 'Description is required.';
       return;
     }
     this.editSaving = true;

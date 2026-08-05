@@ -263,15 +263,16 @@
 
         <div class="grid-2">
           <div class="form-group">
-            <label class="form-label">Task <span style="color:var(--color-text-muted);font-size:11px;">(optional)</span></label>
+            <label class="form-label">Task <span style="color:var(--color-red)">*</span></label>
             <select class="form-control" title="Select task" [(ngModel)]="form.task_id" (change)="onTaskChange()" [disabled]="!form.project_id">
-              <option value="">— None / General —</option>
+              <option value="">— Select Task —</option>
               @for (t of tasks; track t.id) { <option [value]="t.id">{{ t.title }}</option> }
             </select>
             @if (!form.project_id) { <small class="text-muted">Select a project first</small> }
+            @else if (form.project_id && tasks.length === 0) { <small class="text-muted">No tasks for this project</small> }
           </div>
           <div class="form-group">
-            <label class="form-label">Subtask</label>
+            <label class="form-label">Subtask <span style="color:var(--color-text-muted);font-size:11px;">(optional)</span></label>
             <select class="form-control" title="Select subtask" [(ngModel)]="form.subtask_id" [disabled]="!form.task_id">
               <option value="">— None —</option>
               @for (s of subtasks; track s.id) { <option [value]="s.id">{{ s.title }}</option> }
@@ -313,8 +314,8 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Description</label>
-          <textarea class="form-control" rows="3" [(ngModel)]="form.description" placeholder="What did you work on?"></textarea>
+          <label class="form-label">Description <span style="color:var(--color-red)">*</span></label>
+          <textarea class="form-control" rows="3" [(ngModel)]="form.description" placeholder="What did you work on?" required></textarea>
         </div>
       </div>
 
@@ -366,18 +367,21 @@
 
         <div class="grid-2">
           <div class="form-group">
-            <label class="form-label">Task <span style="color:var(--color-text-muted);font-size:11px;">(optional)</span></label>
+            <label class="form-label">Task <span style="color:var(--color-red)">*</span></label>
             <select class="form-control" title="Select task" [(ngModel)]="editForm.task_id" (change)="onEditTaskChange()" [disabled]="!editForm.project_id">
-              <option value="">— None / General —</option>
+              <option value="">— Select Task —</option>
               @for (t of editTasks; track t.id) { <option [value]="t.id">{{ t.title }}</option> }
             </select>
+            @if (!editForm.project_id) { <small class="text-muted">Select a project first</small> }
+            @else if (editForm.project_id && editTasks.length === 0) { <small class="text-muted">No tasks for this project</small> }
           </div>
           <div class="form-group">
-            <label class="form-label">Subtask</label>
+            <label class="form-label">Subtask <span style="color:var(--color-text-muted);font-size:11px;">(optional)</span></label>
             <select class="form-control" title="Select subtask" [(ngModel)]="editForm.subtask_id" [disabled]="!editForm.task_id">
               <option value="">— None —</option>
               @for (s of editSubtasks; track s.id) { <option [value]="s.id">{{ s.title }}</option> }
             </select>
+            @if (!editForm.task_id) { <small class="text-muted">Select a task first</small> }
           </div>
         </div>
 
@@ -406,8 +410,8 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Description</label>
-          <textarea class="form-control" rows="3" [(ngModel)]="editForm.description" placeholder="What did you work on?"></textarea>
+          <label class="form-label">Description <span style="color:var(--color-red)">*</span></label>
+          <textarea class="form-control" rows="3" [(ngModel)]="editForm.description" placeholder="What did you work on?" required></textarea>
         </div>
       </div>
 

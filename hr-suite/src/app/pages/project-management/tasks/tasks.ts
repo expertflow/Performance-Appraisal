@@ -88,6 +88,7 @@ export class Tasks implements OnInit {
   showDeleteConfirm = false;
   deletingTask: Task | null = null;
   deleteInProgress = false;
+  deleteError = '';
 
   // ── Log Time modal ──────────────────────────────────────────────────────────
   showLogTimeModal = false;
@@ -251,16 +252,19 @@ export class Tasks implements OnInit {
   confirmDelete() {
     if (!this.deletingTask) return;
     this.deleteInProgress = true;
+    this.deleteError = '';
     this.api.deleteTask(this.deletingTask.id).subscribe({
       next: () => {
         this.deleteInProgress = false;
         this.showDeleteConfirm = false;
         this.deletingTask = null;
+        this.deleteError = '';
         this.loadTasks();
         this.cdr.detectChanges();
       },
-      error: () => {
+      error: (err: any) => {
         this.deleteInProgress = false;
+        this.deleteError = err?.error?.error || 'Failed to delete task. Please try again.';
         this.cdr.detectChanges();
       }
     });

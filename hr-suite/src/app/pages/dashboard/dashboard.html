@@ -40,16 +40,16 @@
         </div>
         <div class="module-nav-stats">
           <div>
-            <div class="module-stat-value">24</div>
+            <div class="module-stat-value">{{ openPositions() !== null ? openPositions() : '…' }}</div>
             <div class="module-stat-label">Open Positions</div>
           </div>
           <div>
-            <div class="module-stat-value">187</div>
+            <div class="module-stat-value">{{ recruitCandidates() }}</div>
             <div class="module-stat-label">Candidates</div>
           </div>
           <div>
-            <div class="module-stat-value">6</div>
-            <div class="module-stat-label">Offers Pending</div>
+            <div class="module-stat-value">{{ recruitOffersPending() }}</div>
+            <div class="module-stat-label">Shortlisted</div>
           </div>
         </div>
         <div class="module-nav-arrow">→</div>
@@ -123,15 +123,15 @@
       </div>
       <div class="module-nav-stats">
         <div>
-          <div class="module-stat-value">18</div>
+          <div class="module-stat-value">{{ activeProjects() !== null ? activeProjects() : '…' }}</div>
           <div class="module-stat-label">Active Projects</div>
         </div>
         <div>
-          <div class="module-stat-value">94</div>
+          <div class="module-stat-value">{{ openTasks() !== null ? openTasks() : '…' }}</div>
           <div class="module-stat-label">Open Tasks</div>
         </div>
         <div>
-          <div class="module-stat-value">3</div>
+          <div class="module-stat-value">{{ atRiskProjects() !== null ? atRiskProjects() : '0' }}</div>
           <div class="module-stat-label">At Risk</div>
         </div>
       </div>

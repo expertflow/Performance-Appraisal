@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { ApiService } from '../../../services/api';
 import { Task, Project } from '../../../models';
 
@@ -14,7 +14,8 @@ type KanbanStatus = 'todo' | 'in_progress' | 'in_review' | 'blocked' | 'done';
   styleUrl: './kanban.scss'
 })
 export class Kanban implements OnInit {
-  private cdr = inject(ChangeDetectorRef);
+  private cdr    = inject(ChangeDetectorRef);
+  private router = inject(Router);
   tasks: Task[] = [];
   projects: Project[] = [];
   loading = true;
@@ -48,6 +49,10 @@ export class Kanban implements OnInit {
 
   getColumnTasks(status: KanbanStatus): Task[] {
     return this.tasks.filter(t => t.status === status && !t.parent_task_id);
+  }
+
+  openTask(task: Task): void {
+    this.router.navigate(['/tasks', task.id]);
   }
 
   priorityClass(p: string): string {

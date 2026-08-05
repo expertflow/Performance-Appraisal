@@ -156,17 +156,35 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/v1/time-entries/:id (only draft entries)
+// DELETE /api/v1/time-entries/:id
 router.delete('/:id', async (req, res) => {
+  const client = await pool.connect();
   try {
-    const { rows } = await pool.query(
-      `DELETE FROM project.time_entry WHERE id = $1 AND status = 'draft' RETURNING id`,
+    await client.query('BEGIN');
+
+    // Delete directus_sync_log rows referencing this time entry first
+    await client.query(
+      `DELETE FROM project.directus_sync_log WHERE time_entry_id = $1`,
       [req.params.id]
     );
-    if (!rows.length) return res.status(409).json({ error: 'Cannot delete: entry not found or not in draft status' });
+
+    // Delete the time entry (removed draft-only restriction)
+    const { rows } = await client.query(
+      `DELETE FROM project.time_entry WHERE id = $1 RETURNING id`,
+      [req.params.id]
+    );
+    if (!rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Time entry not found' });
+    }
+
+    await client.query('COMMIT');
     res.json({ deleted: rows[0].id });
   } catch (err) {
+    await client.query('ROLLBACK');
     res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
