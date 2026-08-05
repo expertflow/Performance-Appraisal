@@ -20,8 +20,30 @@ CREATE TABLE IF NOT EXISTS project.employee_snapshot (
   created_at    TIMESTAMPTZ DEFAULT NOW(),
   updated_at    TIMESTAMPTZ DEFAULT NOW()
 );
--- Add manager_id column if it doesn't exist (for existing deployments)
-ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS manager_id TEXT;
+-- Add columns for exact Directus Employee fields (idempotent)
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS manager_id         TEXT;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS status             TEXT;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS region_code        TEXT;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS default_project_id TEXT;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS mobile_number      TEXT;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS phone_no           TEXT;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS employ_start_date  TEXT;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS department         TEXT;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS designation        TEXT;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS seniority          TEXT;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS country            TEXT;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS legal_entity_id    TEXT;
+-- Legacy columns kept for backward compatibility
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS phone              TEXT;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS mobile             TEXT;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS hire_date          DATE;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS emp_status         TEXT;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS gender             TEXT;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS nationality        TEXT;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS address            TEXT;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS city               TEXT;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS directus_id        TEXT;
+ALTER TABLE project.employee_snapshot ADD COLUMN IF NOT EXISTS avatar_url         TEXT;
 
 -- ── Projects ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS project.project (

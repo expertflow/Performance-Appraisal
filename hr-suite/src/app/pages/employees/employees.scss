@@ -1,0 +1,19 @@
+.detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detail-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+}
+
+.detail-value {
+  font-size: 13px;
+  color: var(--color-text);
+  word-break: break-word;
+}

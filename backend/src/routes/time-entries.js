@@ -19,9 +19,17 @@ router.get('/', async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT te.*,
-         row_to_json(e.*) AS employee
+         COALESCE(
+           CASE WHEN e.id IS NOT NULL THEN row_to_json(e.*) ELSE NULL END,
+           json_build_object(
+             'id', a.employee_id,
+             'first_name', split_part(a.name, ' ', 1),
+             'last_name', CASE WHEN strpos(a.name, ' ') > 0 THEN substring(a.name from strpos(a.name, ' ') + 1) ELSE '' END
+           )
+         ) AS employee
        FROM project.time_entry te
        LEFT JOIN project.employee_snapshot e ON e.id = te.employee_id
+       LEFT JOIN auth_local.account a ON a.employee_id = te.employee_id
        ${where}
        ORDER BY te.start_datetime DESC`,
       values
@@ -49,15 +57,51 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Helper: seconds → decimal hours (rounded to 4 decimal places)
+function secondsToDecimalHours(totalSeconds) {
+  return Math.round((totalSeconds / 3600) * 10000) / 10000;
+}
+
+// Helper: parse "HH:MM:SS" or "HH:MM" string → decimal hours
+function hmsToDecimalHours(str) {
+  const parts = String(str).split(':').map(Number);
+  if (parts.length >= 2) {
+    const h = parts[0] || 0;
+    const m = parts[1] || 0;
+    const s = parts[2] || 0;
+    return Math.round(((h * 3600 + m * 60 + s) / 3600) * 10000) / 10000;
+  }
+  // Fallback: try parsing as a plain number
+  const n = parseFloat(str);
+  return isNaN(n) ? 0 : n;
+}
+
 // POST /api/v1/time-entries
 router.post('/', async (req, res) => {
   const {
     task_id, project_id, subtask_id, employee_id,
-    description, start_datetime, end_datetime, hours_worked, is_billable
+    description, start_datetime, end_datetime, is_billable
   } = req.body;
+  let { hours_worked } = req.body;
 
-  if (!project_id || !employee_id || !start_datetime || !end_datetime || !hours_worked) {
-    return res.status(400).json({ error: 'Missing required fields: project_id, employee_id, start_datetime, end_datetime, hours_worked' });
+  if (!project_id || !employee_id || !start_datetime || !end_datetime) {
+    return res.status(400).json({ error: 'Missing required fields: project_id, employee_id, start_datetime, end_datetime' });
+  }
+
+  // Resolve hours_worked as a decimal number for the numeric column
+  let hoursDecimal;
+  if (!hours_worked) {
+    // Auto-calculate from start/end
+    const diffMs = new Date(end_datetime) - new Date(start_datetime);
+    if (diffMs <= 0) return res.status(400).json({ error: 'end_datetime must be after start_datetime' });
+    hoursDecimal = secondsToDecimalHours(Math.floor(diffMs / 1000));
+  } else if (typeof hours_worked === 'number') {
+    hoursDecimal = hours_worked;
+  } else if (typeof hours_worked === 'string' && hours_worked.includes(':')) {
+    // "HH:MM:SS" or "HH:MM" → decimal
+    hoursDecimal = hmsToDecimalHours(hours_worked);
+  } else {
+    hoursDecimal = parseFloat(hours_worked) || 0;
   }
 
   const idempotency_key = uuidv4();
@@ -71,7 +115,7 @@ router.post('/', async (req, res) => {
        RETURNING *`,
       [task_id || null, project_id, subtask_id || null, employee_id,
        description || '', start_datetime, end_datetime,
-       hours_worked, is_billable || false, idempotency_key]
+       hoursDecimal, is_billable || false, idempotency_key]
     );
     res.status(201).json(rows[0]);
   } catch (err) {

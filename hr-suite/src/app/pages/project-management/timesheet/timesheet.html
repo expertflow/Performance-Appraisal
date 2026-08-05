@@ -7,9 +7,6 @@
     </p>
   </div>
   <div class="flex gap-2">
-    @if (!isEmployee()) {
-      <button class="btn btn-secondary" (click)="triggerSync()" title="Trigger manual sync">🔄 Sync Now</button>
-    }
     <button class="btn btn-primary" (click)="openModal()">+ New Time Entry</button>
   </div>
 </div>
@@ -18,39 +15,144 @@
 @if (success) {
   <div class="alert alert-success mb-3">{{ success }}</div>
 }
-@if (error && !showModal) {
+@if (error && !showModal && !showEditModal) {
   <div class="alert alert-error mb-3">{{ error }}</div>
 }
 
-<!-- Filters -->
-<div class="filter-bar">
-  <div class="form-group" style="flex:1; min-width:160px;">
-    <select class="form-control" title="Filter by project" [(ngModel)]="filterProjectId" (change)="loadTimeEntries()">
-      <option value="">All Projects</option>
-      @for (p of projects; track p.id) {
-        <option [value]="p.id">{{ p.name }}</option>
-      }
-    </select>
-  </div>
-  @if (!isEmployee()) {
-    <div class="form-group" style="flex:1; min-width:160px;">
-      <select class="form-control" title="Filter by employee" [(ngModel)]="filterEmployeeId" (change)="loadTimeEntries()">
-        <option value="">All Employees</option>
-        @for (e of employees; track e.id) {
-          <option [value]="e.id">{{ e.first_name }} {{ e.last_name }}</option>
+<!-- ── Filters ── -->
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;">
+
+  <!-- Project filter -->
+  <div class="ts-filter-wrap" style="position:relative;min-width:160px;max-width:200px;flex:1;">
+    <button class="form-control" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:13px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+            (click)="toggleDrop('project', $event)">
+      <span style="overflow:hidden;text-overflow:ellipsis;">{{ projectFilterLabel }}</span>
+      <span style="margin-left:6px;font-size:10px;">▾</span>
+    </button>
+    @if (showProjectDrop) {
+      <div style="position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:220px;max-height:260px;display:flex;flex-direction:column;"
+           (click)="stopProp($event)">
+        <div style="padding:8px;">
+          <input class="form-control" style="font-size:12px;padding:4px 8px;" type="text" placeholder="Search projects…" [(ngModel)]="projectSearch" />
+        </div>
+        <div style="overflow-y:auto;flex:1;">
+          @for (p of filteredProjects; track p.id) {
+            <label style="display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;font-size:13px;" (click)="toggleProjectFilter(p.id)">
+              <input type="checkbox" [checked]="filterProjectIds.includes(p.id)" (change)="toggleProjectFilter(p.id)" style="pointer-events:none;" />
+              {{ p.name }}
+            </label>
+          }
+        </div>
+        @if (filterProjectIds.length) {
+          <div style="padding:6px 12px;border-top:1px solid var(--color-border);">
+            <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 8px;" (click)="clearProjectFilter()">Clear</button>
+          </div>
         }
-      </select>
+      </div>
+    }
+  </div>
+
+  <!-- Employee filter (non-employee roles only) -->
+  @if (!isEmployee()) {
+    <div class="ts-filter-wrap" style="position:relative;min-width:160px;max-width:200px;flex:1;">
+      <button class="form-control" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:13px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+              (click)="toggleDrop('employee', $event)">
+        <span style="overflow:hidden;text-overflow:ellipsis;">{{ employeeFilterLabel }}</span>
+        <span style="margin-left:6px;font-size:10px;">▾</span>
+      </button>
+      @if (showEmployeeDrop) {
+        <div style="position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:220px;max-height:260px;display:flex;flex-direction:column;"
+             (click)="stopProp($event)">
+          <div style="padding:8px;">
+            <input class="form-control" style="font-size:12px;padding:4px 8px;" type="text" placeholder="Search employees…" [(ngModel)]="employeeSearch" />
+          </div>
+          <div style="overflow-y:auto;flex:1;">
+            @for (e of filteredEmployees; track e.id) {
+              <label style="display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;font-size:13px;" (click)="toggleEmployeeFilter(e.id)">
+                <input type="checkbox" [checked]="filterEmployeeIds.includes(e.id)" (change)="toggleEmployeeFilter(e.id)" style="pointer-events:none;" />
+                {{ e.first_name }} {{ e.last_name }}
+              </label>
+            }
+          </div>
+          @if (filterEmployeeIds.length) {
+            <div style="padding:6px 12px;border-top:1px solid var(--color-border);">
+              <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 8px;" (click)="clearEmployeeFilter()">Clear</button>
+            </div>
+          }
+        </div>
+      }
     </div>
   }
-  <div class="form-group">
-    <input type="date" class="form-control" [(ngModel)]="filterDateFrom" (change)="loadTimeEntries()" placeholder="From">
+
+  <!-- Task filter -->
+  <div class="ts-filter-wrap" style="position:relative;min-width:160px;max-width:200px;flex:1;">
+    <button class="form-control" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:13px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+            (click)="toggleDrop('task', $event)">
+      <span style="overflow:hidden;text-overflow:ellipsis;">{{ taskFilterLabel }}</span>
+      <span style="margin-left:6px;font-size:10px;">▾</span>
+    </button>
+    @if (showTaskDrop) {
+      <div style="position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:220px;max-height:260px;display:flex;flex-direction:column;"
+           (click)="stopProp($event)">
+        <div style="padding:8px;">
+          <input class="form-control" style="font-size:12px;padding:4px 8px;" type="text" placeholder="Search tasks…" [(ngModel)]="taskSearch" />
+        </div>
+        <div style="overflow-y:auto;flex:1;">
+          @for (t of filteredTasks; track t.id) {
+            <label style="display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;font-size:13px;" (click)="toggleTaskFilter(t.id)">
+              <input type="checkbox" [checked]="filterTaskIds.includes(t.id)" (change)="toggleTaskFilter(t.id)" style="pointer-events:none;" />
+              {{ t.title }}
+            </label>
+          }
+        </div>
+        @if (filterTaskIds.length) {
+          <div style="padding:6px 12px;border-top:1px solid var(--color-border);">
+            <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 8px;" (click)="clearTaskFilter()">Clear</button>
+          </div>
+        }
+      </div>
+    }
   </div>
-  <div class="form-group">
-    <input type="date" class="form-control" [(ngModel)]="filterDateTo" (change)="loadTimeEntries()" placeholder="To">
+
+  <!-- Subtask filter -->
+  <div class="ts-filter-wrap" style="position:relative;min-width:160px;max-width:200px;flex:1;">
+    <button class="form-control" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:13px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+            (click)="toggleDrop('subtask', $event)">
+      <span style="overflow:hidden;text-overflow:ellipsis;">{{ subtaskFilterLabel }}</span>
+      <span style="margin-left:6px;font-size:10px;">▾</span>
+    </button>
+    @if (showSubtaskDrop) {
+      <div style="position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:220px;max-height:260px;display:flex;flex-direction:column;"
+           (click)="stopProp($event)">
+        <div style="padding:8px;">
+          <input class="form-control" style="font-size:12px;padding:4px 8px;" type="text" placeholder="Search subtasks…" [(ngModel)]="subtaskSearch" />
+        </div>
+        <div style="overflow-y:auto;flex:1;">
+          @for (s of filteredSubtasks; track s.id) {
+            <label style="display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;font-size:13px;" (click)="toggleSubtaskFilter(s.id)">
+              <input type="checkbox" [checked]="filterSubtaskIds.includes(s.id)" (change)="toggleSubtaskFilter(s.id)" style="pointer-events:none;" />
+              {{ s.title }}
+            </label>
+          }
+        </div>
+        @if (filterSubtaskIds.length) {
+          <div style="padding:6px 12px;border-top:1px solid var(--color-border);">
+            <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 8px;" (click)="clearSubtaskFilter()">Clear</button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Date range -->
+  <div style="display:flex;gap:6px;align-items:center;">
+    <input type="date" class="form-control" style="font-size:13px;min-width:130px;" [(ngModel)]="filterDateFrom" (change)="onDateFilterChange()" title="From date">
+    <span style="color:var(--color-text-muted);font-size:12px;">–</span>
+    <input type="date" class="form-control" style="font-size:13px;min-width:130px;" [(ngModel)]="filterDateTo" (change)="onDateFilterChange()" title="To date">
   </div>
 </div>
 
-<!-- Table -->
+<!-- ── Table ── -->
 <div class="card">
   @if (loading) {
     <div class="flex items-center gap-2" style="padding: 20px 0;">
@@ -65,7 +167,16 @@
     </div>
   } @else {
     <div class="table-wrapper">
-      <table>
+      <table style="table-layout:fixed;width:100%;">
+        <colgroup>
+          <col style="width:14%;" />
+          <col style="width:14%;" />
+          <col style="width:20%;" />
+          <col style="width:12%;" />
+          <col style="width:12%;" />
+          <col style="width:8%;" />
+          <col style="width:100px;" />
+        </colgroup>
         <thead>
           <tr>
             <th>Employee</th>
@@ -74,30 +185,33 @@
             <th>Start</th>
             <th>End</th>
             <th>Hours</th>
-            <th>Status</th>
-            <th>Sync</th>
+            <th style="text-align:right;padding-right:12px;">Actions</th>
           </tr>
         </thead>
         <tbody>
           @for (entry of timeEntries; track entry.id) {
             <tr>
-              <td>{{ getEmployeeName(entry.employee_id) }}</td>
-              <td>{{ getProjectName(entry.project_id) }}</td>
-              <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                {{ getEmployeeName(entry.employee_id, entry['employee']) }}
+              </td>
+              <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ getProjectName(entry.project_id) }}</td>
+              <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-secondary);">
                 {{ entry.description || '—' }}
               </td>
-              <td>{{ entry.start_datetime | date:'dd MMM, HH:mm' }}</td>
-              <td>{{ entry.end_datetime | date:'dd MMM, HH:mm' }}</td>
+              <td style="white-space:nowrap;">{{ entry.start_datetime | date:'dd MMM, HH:mm' }}</td>
+              <td style="white-space:nowrap;">{{ entry.end_datetime | date:'dd MMM, HH:mm' }}</td>
               <td><strong>{{ formatHours(entry.hours_worked) }}</strong></td>
-              <td>
-                <span class="badge" [class]="entry.status === 'approved' ? 'badge-green' : entry.status === 'rejected' ? 'badge-red' : 'badge-orange'">
-                  {{ entry.status }}
-                </span>
-              </td>
-              <td>
-                <span class="badge" [class]="getSyncBadge(entry.directus_sync_status)">
-                  {{ entry.directus_sync_status ?? 'pending' }}
-                </span>
+              <td style="text-align:right;padding:8px 4px;">
+                <div style="display:inline-flex;gap:2px;align-items:center;justify-content:flex-end;">
+                  <button class="btn btn-ghost btn-sm" title="Edit entry"
+                          style="padding:2px 6px;font-size:12px;min-width:0;"
+                          (click)="openEditModal(entry)">✏️</button>
+                  @if (isAppAdmin()) {
+                    <button class="btn btn-ghost btn-sm" title="Delete entry"
+                            style="padding:2px 6px;font-size:12px;min-width:0;color:var(--color-danger);"
+                            (click)="openDeleteConfirm(entry)">🗑️</button>
+                  }
+                </div>
               </td>
             </tr>
           }
@@ -107,24 +221,20 @@
   }
 </div>
 
-<!-- ── New Time Entry Modal ── -->
+<!-- ══ New Time Entry Modal ══════════════════════════════════════════════════ -->
 @if (showModal) {
-  <div class="modal-overlay" (click)="closeModal()">
+  <div class="modal-overlay">
     <div class="modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>New Time Entry</h2>
-        <button class="btn btn-icon" (click)="closeModal()">✕</button>
+        <button class="icon-btn" (click)="closeModal()"
+                style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;border:1px solid var(--color-border);background:var(--color-bg);font-size:16px;cursor:pointer;">✕</button>
       </div>
 
       <div class="modal-body">
-        @if (error) {
-          <div class="alert alert-error">{{ error }}</div>
-        }
-        @if (success) {
-          <div class="alert alert-success">{{ success }}</div>
-        }
+        @if (error) { <div class="alert alert-error">{{ error }}</div> }
+        @if (success) { <div class="alert alert-success">{{ success }}</div> }
 
-        <!-- Row 1: Project + Employee -->
         <div class="grid-2">
           <div class="form-group">
             <label class="form-label">Project <span style="color:var(--color-red)">*</span></label>
@@ -138,7 +248,6 @@
           <div class="form-group">
             <label class="form-label">Employee <span style="color:var(--color-red)">*</span></label>
             @if (isEmployee()) {
-              <!-- Employee: locked to their own account -->
               <input class="form-control" [value]="getEmployeeName(form.employee_id)" readonly
                      style="background:var(--color-bg-secondary);cursor:not-allowed;" title="Your employee account" />
             } @else {
@@ -152,53 +261,38 @@
           </div>
         </div>
 
-        <!-- Row 2: Task + Subtask (cascading, both optional) -->
         <div class="grid-2">
           <div class="form-group">
             <label class="form-label">Task <span style="color:var(--color-text-muted);font-size:11px;">(optional)</span></label>
-            <select class="form-control" title="Select task" [(ngModel)]="form.task_id" (change)="onTaskChange()"
-                    [disabled]="!form.project_id">
+            <select class="form-control" title="Select task" [(ngModel)]="form.task_id" (change)="onTaskChange()" [disabled]="!form.project_id">
               <option value="">— None / General —</option>
-              @for (t of tasks; track t.id) {
-                <option [value]="t.id">{{ t.title }}</option>
-              }
+              @for (t of tasks; track t.id) { <option [value]="t.id">{{ t.title }}</option> }
             </select>
-            @if (!form.project_id) {
-              <small class="text-muted">Select a project first</small>
-            }
+            @if (!form.project_id) { <small class="text-muted">Select a project first</small> }
           </div>
           <div class="form-group">
             <label class="form-label">Subtask</label>
-            <select class="form-control" title="Select subtask" [(ngModel)]="form.subtask_id"
-                    [disabled]="!form.task_id">
+            <select class="form-control" title="Select subtask" [(ngModel)]="form.subtask_id" [disabled]="!form.task_id">
               <option value="">— None —</option>
-              @for (s of subtasks; track s.id) {
-                <option [value]="s.id">{{ s.title }}</option>
-              }
+              @for (s of subtasks; track s.id) { <option [value]="s.id">{{ s.title }}</option> }
             </select>
-            @if (!form.task_id) {
-              <small class="text-muted">Select a task first</small>
-            }
+            @if (!form.task_id) { <small class="text-muted">Select a task first</small> }
           </div>
         </div>
 
-        <!-- Row 3: Start + End datetime -->
         <div class="grid-2">
           <div class="form-group">
-            <label class="form-label">Start Date & Time <span style="color:var(--color-red)">*</span></label>
+            <label class="form-label">Start Date &amp; Time <span style="color:var(--color-red)">*</span></label>
             <input type="datetime-local" class="form-control" title="Start date and time"
-                   [(ngModel)]="form.start_datetime"
-                   (change)="onDatetimeChange()">
+                   [(ngModel)]="form.start_datetime" (change)="onDatetimeChange()">
           </div>
           <div class="form-group">
-            <label class="form-label">End Date & Time <span style="color:var(--color-red)">*</span></label>
+            <label class="form-label">End Date &amp; Time <span style="color:var(--color-red)">*</span></label>
             <input type="datetime-local" class="form-control" title="End date and time"
-                   [(ngModel)]="form.end_datetime"
-                   (change)="onDatetimeChange()">
+                   [(ngModel)]="form.end_datetime" (change)="onDatetimeChange()">
           </div>
         </div>
 
-        <!-- Row 4: Hours Worked (auto-calculated) -->
         <div class="form-group">
           <label class="form-label">
             Hours Worked <span style="color:var(--color-red)">*</span>
@@ -207,36 +301,153 @@
             }
             @if (hoursManuallyEdited) {
               <span class="badge badge-orange" style="margin-left:6px;">Manual</span>
-              <button class="btn btn-sm btn-secondary" style="margin-left:6px; padding:2px 8px; font-size:11px;"
+              <button class="btn btn-sm btn-secondary" style="margin-left:6px;padding:2px 8px;font-size:11px;"
                       (click)="resetHoursManual()">↺ Recalculate</button>
             }
           </label>
           <input type="number" class="form-control" step="0.25" min="0.25" max="24"
-                 [(ngModel)]="form.hours_worked"
-                 (input)="onHoursManualEdit()"
-                 placeholder="e.g. 2.5">
+                 [(ngModel)]="form.hours_worked" (input)="onHoursManualEdit()" placeholder="e.g. 2.5">
           @if (form.start_datetime && form.end_datetime && form.hours_worked) {
             <small class="text-muted">= {{ formatHours(form.hours_worked) }}</small>
           }
         </div>
 
-        <!-- Description -->
         <div class="form-group">
           <label class="form-label">Description</label>
-          <textarea class="form-control" rows="3" [(ngModel)]="form.description"
-                    placeholder="What did you work on?"></textarea>
+          <textarea class="form-control" rows="3" [(ngModel)]="form.description" placeholder="What did you work on?"></textarea>
         </div>
       </div>
 
       <div class="modal-footer">
         <button class="btn btn-secondary" (click)="closeModal()" [disabled]="saving">Cancel</button>
         <button class="btn btn-primary" (click)="submitEntry()" [disabled]="saving">
-          @if (saving) {
-            <span class="spinner" style="width:14px;height:14px;border-width:2px;"></span>
-            Saving…
-          } @else {
-            Save Entry
-          }
+          @if (saving) { <span class="spinner" style="width:14px;height:14px;border-width:2px;"></span> Saving… }
+          @else { Save Entry }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══ Edit Time Entry Modal ═════════════════════════════════════════════════ -->
+@if (showEditModal) {
+  <div class="modal-overlay">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Edit Time Entry</h2>
+        <button class="icon-btn" (click)="closeEditModal()"
+                style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;border:1px solid var(--color-border);background:var(--color-bg);font-size:16px;cursor:pointer;">✕</button>
+      </div>
+
+      <div class="modal-body">
+        @if (editError) { <div class="alert alert-error">{{ editError }}</div> }
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Project <span style="color:var(--color-red)">*</span></label>
+            <select class="form-control" title="Select project" [(ngModel)]="editForm.project_id" (change)="onEditProjectChange()">
+              <option value="">— Select Project —</option>
+              @for (p of projects; track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Employee <span style="color:var(--color-red)">*</span></label>
+            @if (isEmployee()) {
+              <input class="form-control" [value]="getEmployeeName(editForm.employee_id)" readonly
+                     style="background:var(--color-bg-secondary);cursor:not-allowed;" title="Your employee account" />
+            } @else {
+              <select class="form-control" title="Select employee" [(ngModel)]="editForm.employee_id">
+                <option value="">— Select Employee —</option>
+                @for (e of employees; track e.id) { <option [value]="e.id">{{ e.first_name }} {{ e.last_name }}</option> }
+              </select>
+            }
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Task <span style="color:var(--color-text-muted);font-size:11px;">(optional)</span></label>
+            <select class="form-control" title="Select task" [(ngModel)]="editForm.task_id" (change)="onEditTaskChange()" [disabled]="!editForm.project_id">
+              <option value="">— None / General —</option>
+              @for (t of editTasks; track t.id) { <option [value]="t.id">{{ t.title }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Subtask</label>
+            <select class="form-control" title="Select subtask" [(ngModel)]="editForm.subtask_id" [disabled]="!editForm.task_id">
+              <option value="">— None —</option>
+              @for (s of editSubtasks; track s.id) { <option [value]="s.id">{{ s.title }}</option> }
+            </select>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Start Date &amp; Time <span style="color:var(--color-red)">*</span></label>
+            <input type="datetime-local" class="form-control" title="Start date and time"
+                   [(ngModel)]="editForm.start_datetime" (change)="onEditDatetimeChange()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">End Date &amp; Time <span style="color:var(--color-red)">*</span></label>
+            <input type="datetime-local" class="form-control" title="End date and time"
+                   [(ngModel)]="editForm.end_datetime" (change)="onEditDatetimeChange()">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">
+            Hours Worked
+            @if (!editHoursManual && editForm.hours_worked) {
+              <span class="badge badge-teal" style="margin-left:6px;">Auto-calculated</span>
+            }
+          </label>
+          <input type="number" class="form-control" step="0.25" min="0.25" max="24"
+                 [(ngModel)]="editForm.hours_worked" (input)="editHoursManual = true" placeholder="e.g. 2.5">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-control" rows="3" [(ngModel)]="editForm.description" placeholder="What did you work on?"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeEditModal()" [disabled]="editSaving">Cancel</button>
+        <button class="btn btn-primary" (click)="submitEdit()" [disabled]="editSaving">
+          @if (editSaving) { <span class="spinner" style="width:14px;height:14px;border-width:2px;"></span> Saving… }
+          @else { Save Changes }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══ Delete Confirm Modal ═══════════════════════════════════════════════════ -->
+@if (showDeleteConfirm) {
+  <div class="modal-overlay">
+    <div class="modal" style="max-width:420px;" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Delete Time Entry</h3>
+        <button class="icon-btn" (click)="closeDeleteConfirm()"
+                style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;border:1px solid var(--color-border);background:var(--color-bg);font-size:16px;cursor:pointer;">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete this time entry?</p>
+        @if (deletingEntry) {
+          <div style="background:var(--color-bg-secondary,#f8fafc);border-radius:var(--radius-md);padding:10px 14px;margin-top:12px;font-size:13px;">
+            <strong>{{ getProjectName(deletingEntry.project_id) }}</strong>
+            <span style="color:var(--color-text-muted);margin-left:8px;">{{ deletingEntry.description || '' }}</span><br/>
+            <span style="color:var(--color-text-muted);">{{ deletingEntry.start_datetime | date:'dd MMM yyyy, HH:mm' }} → {{ deletingEntry.end_datetime | date:'HH:mm' }}</span>
+            <strong style="margin-left:8px;">{{ formatHours(deletingEntry.hours_worked) }}</strong>
+          </div>
+        }
+        <p style="color:var(--color-text-muted);font-size:13px;margin-top:10px;">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="closeDeleteConfirm()">Cancel</button>
+        <button class="btn btn-danger" (click)="confirmDelete()" [disabled]="deleteInProgress"
+                style="background:var(--color-danger,#ef4444);color:#fff;border:none;">
+          @if (deleteInProgress) { <span class="spinner-sm"></span> Deleting… } @else { Delete }
         </button>
       </div>
     </div>

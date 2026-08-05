@@ -1,8 +1,9 @@
-import { Component, inject, ChangeDetectorRef, OnInit } from '@angular/core';
+import { Component, inject, ChangeDetectorRef, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../../services/api';
+import { SearchService } from '../../../services/search';
 import { Project } from '../../../models';
 
 // Open/Active projects sort first; closed/cancelled sort last
@@ -20,13 +21,16 @@ export class AllProjects implements OnInit {
   private api    = inject(ApiService);
   private cdr    = inject(ChangeDetectorRef);
   private router = inject(Router);
+  private search = inject(SearchService);
 
   projects: Project[] = [];
   loading = true;
 
   // Filters
   filterStatus = '';
-  searchText   = '';
+
+  // searchText comes from the shared topbar SearchService
+  get searchText(): string { return this.search.query(); }
 
   ngOnInit() { this.load(); }
 

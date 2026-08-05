@@ -197,7 +197,10 @@
       </div>
       <div class="topbar-search">
         <span class="search-icon">🔍</span>
-        <input type="text" class="search-input" [placeholder]="topbarSearch" />
+        <input type="text" class="search-input"
+               [placeholder]="topbarSearch"
+               [ngModel]="search.query()"
+               (ngModelChange)="onSearchInput($event)" />
       </div>
       <div class="topbar-actions">
         <a routerLink="/notifications" class="icon-btn" title="Notifications">

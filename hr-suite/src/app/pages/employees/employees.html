@@ -1,0 +1,253 @@
+<div class="page-header">
+  <div>
+    <h1>Employees</h1>
+    <p>Employee directory synced from Directus ERP</p>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    @if (syncMessage) {
+      <span style="font-size:13px;color:var(--color-success);">{{ syncMessage }}</span>
+    }
+    <button class="btn btn-secondary btn-sm" (click)="syncFromDirectus()" [disabled]="syncing">
+      {{ syncing ? 'Syncing…' : '🔄 Sync from Directus' }}
+    </button>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar" style="margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+  <select class="form-control" style="width:180px;" title="Filter by status" [(ngModel)]="filterStatus">
+    <option value="">All Statuses</option>
+    @for (s of statuses; track s) {
+      <option [value]="s">{{ s }}</option>
+    }
+  </select>
+  <span style="font-size:13px;color:var(--color-text-secondary);margin-left:auto;">
+    {{ filtered.length }} of {{ employees.length }} employees
+  </span>
+</div>
+
+<div class="card" style="padding:0;">
+  @if (loading) {
+    <div style="padding:40px;text-align:center;color:var(--color-text-muted);">
+      <div class="spinner"></div><span style="margin-left:8px;">Loading employees…</span>
+    </div>
+  } @else if (employees.length === 0) {
+    <div style="padding:60px;text-align:center;color:var(--color-text-secondary);">
+      <div style="font-size:48px;margin-bottom:16px;">👤</div>
+      <h3 style="margin-bottom:8px;">No Employees Found</h3>
+      <p style="font-size:13px;margin-bottom:16px;">No employees synced yet. Click "Sync from Directus" to load employee data.</p>
+      <button class="btn btn-primary btn-sm" (click)="syncFromDirectus()" [disabled]="syncing">
+        {{ syncing ? 'Syncing…' : '🔄 Sync from Directus' }}
+      </button>
+    </div>
+  } @else if (filtered.length === 0) {
+    <div style="padding:48px;text-align:center;color:var(--color-text-secondary);">
+      <div style="font-size:48px;margin-bottom:16px;">🔍</div>
+      <h3>No Results</h3>
+      <p>No employees match your search or filters.</p>
+    </div>
+  } @else {
+    <div class="table-wrapper">
+      <table style="table-layout:fixed;width:100%;">
+        <colgroup>
+          <col style="width:50px;">   <!-- ID -->
+          <col style="width:200px;">  <!-- Employee Name -->
+          <col style="width:190px;">  <!-- Email -->
+          <col style="width:130px;">  <!-- Employ Start Date -->
+          <col style="width:130px;">  <!-- Mobile Number -->
+          <col style="width:110px;">  <!-- Status -->
+          <col style="width:90px;">   <!-- Region Code -->
+          <col style="width:140px;">  <!-- Default Project ID -->
+          <col style="width:140px;">  <!-- Manager ID -->
+          <col style="width:110px;">  <!-- Phone No -->
+          <col style="width:90px;">   <!-- Seniority -->
+          <col style="width:130px;">  <!-- Department -->
+          <col style="width:150px;">  <!-- Designation -->
+          <col style="width:70px;">   <!-- Details -->
+        </colgroup>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Employee Name</th>
+            <th>Email</th>
+            <th>Employ Start Date</th>
+            <th>Mobile Number</th>
+            <th>Status</th>
+            <th>Region Code</th>
+            <th>Default Project ID</th>
+            <th>Manager ID</th>
+            <th>Phone No</th>
+            <th>Seniority</th>
+            <th>Department</th>
+            <th>Designation</th>
+            <th style="text-align:center;">Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (emp of filtered; track emp.id) {
+            <tr style="cursor:pointer;" (click)="openDetail(emp)">
+              <!-- ID -->
+              <td style="font-size:12px;color:var(--color-text-muted);">{{ emp.id }}</td>
+
+              <!-- Employee Name with avatar -->
+              <td style="padding:8px 12px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div style="width:28px;height:28px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;">
+                    {{ initials(emp) }}
+                  </div>
+                  <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;">
+                    {{ emp.first_name }} {{ emp.last_name }}
+                  </span>
+                </div>
+              </td>
+
+              <!-- Email -->
+              <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">{{ emp.email || '—' }}</td>
+
+              <!-- Employ Start Date -->
+              <td style="white-space:nowrap;font-size:12px;">{{ formatDate(emp.employ_start_date) }}</td>
+
+              <!-- Mobile Number -->
+              <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">{{ emp.mobile_number || '—' }}</td>
+
+              <!-- Status -->
+              <td>
+                <span class="badge" [class]="statusClass(emp.status)" style="font-size:11px;">
+                  {{ emp.status || '—' }}
+                </span>
+              </td>
+
+              <!-- Region Code -->
+              <td style="font-size:12px;color:var(--color-text-secondary);">{{ emp.region_code || '—' }}</td>
+
+              <!-- Default Project ID -->
+              <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--color-text-secondary);">{{ emp.default_project_id || '—' }}</td>
+
+              <!-- Manager ID -->
+              <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--color-text-secondary);">{{ managerLabel(emp.manager_id) }}</td>
+
+              <!-- Phone No -->
+              <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">{{ emp.phone_no || '—' }}</td>
+
+              <!-- Seniority -->
+              <td style="font-size:12px;color:var(--color-text-secondary);">{{ seniorityLabel(emp.seniority) }}</td>
+
+              <!-- Department -->
+              <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--color-text-secondary);">{{ emp.department || '—' }}</td>
+
+              <!-- Designation -->
+              <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--color-text-secondary);">{{ emp.designation || '—' }}</td>
+
+              <!-- Details button -->
+              <td style="text-align:center;">
+                <button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:12px;" (click)="openDetail(emp);$event.stopPropagation()">
+                  View
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+
+<!-- Employee Detail Modal -->
+@if (showDetail && selectedEmployee) {
+  <div class="modal-overlay" (click)="closeDetail()">
+    <div class="modal" style="max-width:640px;" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 style="margin:0;">Employee Details</h3>
+        <button class="btn btn-ghost" style="width:32px;height:32px;padding:0;border-radius:50%;border:1px solid var(--color-border);background:var(--color-bg);font-size:16px;display:flex;align-items:center;justify-content:center;" (click)="closeDetail()">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Header with avatar -->
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--color-border);">
+          <div style="width:56px;height:56px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0;">
+            {{ initials(selectedEmployee) }}
+          </div>
+          <div>
+            <h2 style="margin:0 0 4px;font-size:18px;">{{ selectedEmployee.first_name }} {{ selectedEmployee.last_name }}</h2>
+            <div style="font-size:13px;color:var(--color-text-secondary);">{{ selectedEmployee.designation || '—' }}</div>
+            <div style="margin-top:4px;">
+              <span class="badge" [class]="statusClass(selectedEmployee.status)" style="font-size:11px;">
+                {{ selectedEmployee.status || 'Unknown' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Details grid — exact Directus fields -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="detail-field">
+            <label class="detail-label">ID</label>
+            <div class="detail-value">{{ selectedEmployee.id }}</div>
+          </div>
+          <div class="detail-field">
+            <label class="detail-label">Email</label>
+            <div class="detail-value">{{ selectedEmployee.email || '—' }}</div>
+          </div>
+          <div class="detail-field">
+            <label class="detail-label">Employ Start Date</label>
+            <div class="detail-value">{{ formatDate(selectedEmployee.employ_start_date) }}</div>
+          </div>
+          <div class="detail-field">
+            <label class="detail-label">Mobile Number</label>
+            <div class="detail-value">{{ selectedEmployee.mobile_number || '—' }}</div>
+          </div>
+          <div class="detail-field">
+            <label class="detail-label">Status</label>
+            <div class="detail-value">
+              <span class="badge" [class]="statusClass(selectedEmployee.status)" style="font-size:11px;">
+                {{ selectedEmployee.status || '—' }}
+              </span>
+            </div>
+          </div>
+          <div class="detail-field">
+            <label class="detail-label">Region Code</label>
+            <div class="detail-value">{{ selectedEmployee.region_code || '—' }}</div>
+          </div>
+          <div class="detail-field">
+            <label class="detail-label">Default Project ID</label>
+            <div class="detail-value">{{ selectedEmployee.default_project_id || '—' }}</div>
+          </div>
+          <div class="detail-field">
+            <label class="detail-label">Manager ID</label>
+            <div class="detail-value">{{ managerLabel(selectedEmployee.manager_id) }}</div>
+          </div>
+          <div class="detail-field">
+            <label class="detail-label">Phone No</label>
+            <div class="detail-value">{{ selectedEmployee.phone_no || '—' }}</div>
+          </div>
+          <div class="detail-field">
+            <label class="detail-label">Seniority</label>
+            <div class="detail-value">{{ seniorityLabel(selectedEmployee.seniority) }}</div>
+          </div>
+          <div class="detail-field">
+            <label class="detail-label">Department</label>
+            <div class="detail-value">{{ selectedEmployee.department || '—' }}</div>
+          </div>
+          <div class="detail-field">
+            <label class="detail-label">Designation</label>
+            <div class="detail-value">{{ selectedEmployee.designation || '—' }}</div>
+          </div>
+          <div class="detail-field">
+            <label class="detail-label">Country</label>
+            <div class="detail-value">{{ selectedEmployee.country || '—' }}</div>
+          </div>
+          <div class="detail-field">
+            <label class="detail-label">Legal Entity ID</label>
+            <div class="detail-value">{{ selectedEmployee.legal_entity_id || '—' }}</div>
+          </div>
+          <div class="detail-field" style="grid-column:1/-1;">
+            <label class="detail-label">Last Synced</label>
+            <div class="detail-value">{{ formatDate(selectedEmployee.synced_at) }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeDetail()">Close</button>
+      </div>
+    </div>
+  </div>
+}

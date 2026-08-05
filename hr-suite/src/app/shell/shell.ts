@@ -1,14 +1,16 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { filter } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthService } from '../services/auth';
 import { NotificationService } from '../services/notification';
+import { SearchService } from '../services/search';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, FormsModule],
   templateUrl: './shell.html',
   styleUrl: './shell.scss'
 })
@@ -16,6 +18,7 @@ export class Shell {
   private router = inject(Router);
   readonly auth   = inject(AuthService);
   readonly notif  = inject(NotificationService);
+  readonly search = inject(SearchService);
 
   // Track which module section is expanded
   expandedModule = signal<'recruitment' | 'appraisal' | 'projects' | null>(null);
@@ -71,6 +74,7 @@ export class Shell {
       this.autoExpand();
       this.userMenuOpen.set(false);    // close top-right user menu on navigation
       this.profileMenuOpen.set(false); // close sidebar profile popup on navigation
+      this.search.clear();             // clear topbar search on page navigation
     });
     this.autoExpand();
 
@@ -157,12 +161,19 @@ export class Shell {
 
   get topbarSearch(): string {
     const url = this.currentUrl();
-    if (url.startsWith('/recruitment')) return 'Search jobs, candidates...';
-    if (url.startsWith('/appraisal'))   return 'Search employees, cycles...';
-    if (
-      url.startsWith('/projects') || url.startsWith('/tasks') ||
-      url.startsWith('/kanban') || url.startsWith('/gantt') || url.startsWith('/timesheet')
-    ) return 'Search projects, tasks...';
+    if (url.startsWith('/recruitment'))  return 'Search jobs, candidates...';
+    if (url.startsWith('/appraisal'))    return 'Search employees, cycles...';
+    if (url.startsWith('/timesheet'))    return 'Search time entries...';
+    if (url.startsWith('/tasks'))        return 'Search tasks...';
+    if (url.startsWith('/projects/all')) return 'Search projects...';
+    if (url.startsWith('/projects'))     return 'Search projects, tasks...';
+    if (url.startsWith('/kanban'))       return 'Search tasks...';
+    if (url.startsWith('/gantt'))        return 'Search tasks...';
+    if (url.startsWith('/employees'))    return 'Search employees...';
     return 'Search...';
+  }
+
+  onSearchInput(value: string) {
+    this.search.set(value);
   }
 }

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../../services/api';
 import { AuthService } from '../../../services/auth';
+import { SearchService } from '../../../services/search';
 import { Task, Project, Employee } from '../../../models';
 import { AppUserRecord } from '../../../services/user-store';
 
@@ -26,8 +27,14 @@ interface EditTaskForm {
 }
 
 interface LogTimeForm {
-  hours: string;
-  note: string;
+  project_id: string;
+  task_id: string;
+  description: string;
+  employee_id: string;
+  start_datetime: string;
+  end_datetime: string;
+  hours_worked: string;   // HH:MM:SS or empty (auto-calc)
+  manual_hours: boolean;  // true = user typed hours manually
 }
 
 @Component({
@@ -41,9 +48,9 @@ export class Tasks implements OnInit {
   readonly router = inject(Router);
   private cdr     = inject(ChangeDetectorRef);
   private route   = inject(ActivatedRoute);
+  private search  = inject(SearchService);
 
-  readonly isEmployee     = computed(() => this.auth.isEmployee());
-  readonly canMutateTasks = computed(() => true);
+  readonly isEmployee      = computed(() => this.auth.isEmployee());
   readonly currentUserName = computed(() => this.auth.currentUser()?.name || '—');
 
   tasks: Task[] = [];
@@ -53,6 +60,16 @@ export class Tasks implements OnInit {
   loading = true;
   filterProjectId = '';
   expandedTasks = new Set<string>();
+
+  /** Tasks filtered by topbar search query */
+  get filteredTasks(): Task[] {
+    const q = this.search.query().toLowerCase().trim();
+    if (!q) return this.tasks;
+    return this.tasks.filter(t =>
+      t.title.toLowerCase().includes(q) ||
+      (t.description || '').toLowerCase().includes(q)
+    );
+  }
 
   // ── New Task modal ──────────────────────────────────────────────────────────
   showModal = false;
@@ -77,7 +94,7 @@ export class Tasks implements OnInit {
   logTimeTask: Task | null = null;
   logTimeSaving = false;
   logTimeError = '';
-  logTimeForm: LogTimeForm = { hours: '', note: '' };
+  logTimeForm: LogTimeForm = this.emptyLogTimeForm();
 
   constructor(private api: ApiService) {}
 
@@ -250,35 +267,93 @@ export class Tasks implements OnInit {
   }
 
   // ── Log Time ────────────────────────────────────────────────────────────────
+  emptyLogTimeForm(): LogTimeForm {
+    return { project_id: '', task_id: '', description: '', employee_id: '', start_datetime: '', end_datetime: '', hours_worked: '', manual_hours: false };
+  }
+
+  /** Find the employee_id linked to the currently logged-in app user */
+  private currentEmployeeId(): string {
+    const user = this.auth.currentUser();
+    if (!user) return '';
+    // AppUser has employee_id field
+    return (user as any).employee_id || '';
+  }
+
   openLogTimeModal(task: Task, event: Event) {
     event.stopPropagation();
     this.logTimeTask = task;
-    this.logTimeForm = { hours: '', note: '' };
     this.logTimeError = '';
+    this.logTimeForm = {
+      project_id:     task.project_id,
+      task_id:        task.id,
+      description:    task.description || task.title,
+      employee_id:    this.currentEmployeeId(),
+      start_datetime: '',
+      end_datetime:   '',
+      hours_worked:   '',
+      manual_hours:   false,
+    };
     this.showLogTimeModal = true;
     this.cdr.detectChanges();
   }
 
   closeLogTimeModal() { this.showLogTimeModal = false; this.logTimeTask = null; this.cdr.detectChanges(); }
 
-  submitLogTime() {
-    const h = parseFloat(this.logTimeForm.hours);
-    if (!this.logTimeForm.hours || isNaN(h) || h <= 0) {
-      this.logTimeError = 'Please enter valid hours (> 0).';
-      return;
+  /** Called when start or end datetime changes — auto-calc hours if not manual */
+  onDatetimeChange() {
+    if (this.logTimeForm.manual_hours) return;
+    const start = this.logTimeForm.start_datetime;
+    const end   = this.logTimeForm.end_datetime;
+    if (start && end) {
+      const diffMs = new Date(end).getTime() - new Date(start).getTime();
+      if (diffMs > 0) {
+        const totalSec = Math.floor(diffMs / 1000);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        this.logTimeForm.hours_worked = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      } else {
+        this.logTimeForm.hours_worked = '';
+      }
+      this.cdr.detectChanges();
     }
-    if (!this.logTimeTask) return;
+  }
+
+  onHoursWorkedChange() {
+    // If user types in hours_worked, mark as manual so auto-calc stops overwriting
+    this.logTimeForm.manual_hours = !!this.logTimeForm.hours_worked;
+  }
+
+  submitLogTime() {
+    const f = this.logTimeForm;
+    if (!f.start_datetime) { this.logTimeError = 'Start date/time is required.'; return; }
+    if (!f.end_datetime)   { this.logTimeError = 'End date/time is required.'; return; }
+    if (new Date(f.end_datetime) <= new Date(f.start_datetime)) {
+      this.logTimeError = 'End must be after Start.'; return;
+    }
+    if (!f.employee_id) { this.logTimeError = 'Employee is required.'; return; }
 
     this.logTimeSaving = true;
     this.logTimeError = '';
 
-    // Update actual_hours on the task
-    this.api.updateTask(this.logTimeTask.id, { actual_hours: (this.logTimeTask.actual_hours || 0) + h } as any).subscribe({
+    const payload: any = {
+      project_id:     f.project_id,
+      task_id:        f.task_id || null,
+      employee_id:    f.employee_id,
+      description:    f.description,
+      start_datetime: f.start_datetime,
+      end_datetime:   f.end_datetime,
+    };
+    // Only send hours_worked if manually entered; otherwise backend auto-calcs
+    if (f.manual_hours && f.hours_worked) {
+      payload.hours_worked = f.hours_worked;
+    }
+
+    this.api.createTimeEntry(payload).subscribe({
       next: () => {
         this.logTimeSaving = false;
         this.showLogTimeModal = false;
         this.logTimeTask = null;
-        this.loadTasks();
         this.cdr.detectChanges();
       },
       error: err => {
@@ -318,5 +393,10 @@ export class Tasks implements OnInit {
 
   getProjectName(id: string): string {
     return this.projects.find(p => p.id === id)?.name ?? id;
+  }
+
+  getEmployeeName(id: string): string {
+    const e = this.employees.find(e => e.id === id);
+    return e ? `${e.first_name} ${e.last_name}` : id;
   }
 }

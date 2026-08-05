@@ -1,5 +1,8 @@
 'use strict';
-require('dotenv').config();
+const path = require('path');
+// Load .env from the app root directory (works regardless of CWD)
+// __dirname = /opt/hr-suite/src, so '../.env' = /opt/hr-suite/.env
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
