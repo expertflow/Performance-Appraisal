@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../../services/api';
 import { AuthService } from '../../../services/auth';
 import { Task, Project } from '../../../models';
@@ -13,14 +13,13 @@ import { Task, Project } from '../../../models';
   styleUrl: './tasks.scss'
 })
 export class Tasks implements OnInit {
-  private auth = inject(AuthService);
-  private cdr = inject(ChangeDetectorRef);
+  private auth  = inject(AuthService);
+  private cdr   = inject(ChangeDetectorRef);
+  private route = inject(ActivatedRoute);
 
   // ── Role helpers ───────────────────────────────────────────────────────────
-  /** Employee can CRUD their own tasks/time entries but cannot create projects */
-  readonly isEmployee = computed(() => this.auth.isEmployee());
-  /** All roles can see tasks; Employee can also create/update tasks */
-  readonly canMutateTasks = computed(() => true); // all roles can manage tasks per spec
+  readonly isEmployee    = computed(() => this.auth.isEmployee());
+  readonly canMutateTasks = computed(() => true);
 
   tasks: Task[] = [];
   projects: Project[] = [];
@@ -31,6 +30,12 @@ export class Tasks implements OnInit {
   constructor(private api: ApiService) {}
 
   ngOnInit() {
+    // Read optional ?project=<uuid> query param from All Projects "Tasks" button
+    const projectParam = this.route.snapshot.queryParamMap.get('project');
+    if (projectParam) {
+      this.filterProjectId = projectParam;
+    }
+
     this.api.getProjects().subscribe({
       next: p => { this.projects = p; this.cdr.detectChanges(); },
       error: () => {}

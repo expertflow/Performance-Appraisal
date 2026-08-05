@@ -121,8 +121,8 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// POST /api/v1/projects/sync — pull projects from Directus and upsert locally
-// Only syncs non-Closed projects (Active/Open/On Hold) to keep the list manageable.
+// POST /api/v1/projects/sync — pull ALL projects from Directus and upsert locally.
+// Syncs all statuses (Open, Active, On Hold, Closed, Cancelled).
 // Uses bs4_project_id as the dedup key; local UUID is generated on first insert.
 router.post('/sync', async (req, res) => {
   if (!DIRECTUS_TOKEN()) {
@@ -135,7 +135,8 @@ router.post('/sync', async (req, res) => {
     let synced = 0;
 
     while (true) {
-      const url = `${DIRECTUS_URL()}/items/Project?fields=id,Name,Status,Description&limit=${limit}&page=${page}&filter[Status][_nin]=Closed,Cancelled&sort=id`;
+      // Fetch ALL projects — no status filter — sorted by id descending (newest first)
+      const url = `${DIRECTUS_URL()}/items/Project?fields=id,Name,Status,Description&limit=${limit}&page=${page}&sort=-id`;
       const resp = await axios.get(url, {
         headers: { Authorization: `Bearer ${DIRECTUS_TOKEN()}` },
         timeout: 20000
@@ -147,14 +148,15 @@ router.post('/sync', async (req, res) => {
         const mapped = mapDirectusProject(p);
         await pool.query(
           `INSERT INTO project.project
-             (name, type, status, health_status, bs4_project_id, created_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+             (name, type, status, health_status, description, bs4_project_id, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
            ON CONFLICT (bs4_project_id) DO UPDATE SET
              name          = EXCLUDED.name,
              status        = EXCLUDED.status,
              health_status = EXCLUDED.health_status,
+             description   = EXCLUDED.description,
              updated_at    = NOW()`,
-          [mapped.name, mapped.type, mapped.status, mapped.health_status, mapped.bs4_project_id]
+          [mapped.name, mapped.type, mapped.status, mapped.health_status, mapped.description, mapped.bs4_project_id]
         );
         synced++;
       }
