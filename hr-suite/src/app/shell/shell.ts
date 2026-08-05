@@ -78,9 +78,9 @@ export class Shell {
     });
     this.autoExpand();
 
-    // Load backend notifications for HR and AppAdmin roles
+    // Load backend notifications for all logged-in users
     const u = this.auth.currentUser();
-    if (u && (u.role === 'HR' || u.role === 'AppAdmin')) {
+    if (u) {
       this.notif.loadFromBackend(u.role, u.id);
     }
   }

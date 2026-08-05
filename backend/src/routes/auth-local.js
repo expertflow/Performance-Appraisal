@@ -3,6 +3,47 @@ const express = require('express');
 const router  = express.Router();
 const pool    = require('../db/pool');
 
+// ── Ensure OTP table exists ───────────────────────────────────────────────────
+async function ensureOtpTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS auth_local.email_otp (
+      id         SERIAL PRIMARY KEY,
+      email      TEXT NOT NULL,
+      otp        TEXT NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used       BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_email_otp_email ON auth_local.email_otp(email)
+  `);
+}
+ensureOtpTable().catch(e => console.error('[auth-local] OTP table init error:', e.message));
+
+// ── Helper: send email via nodemailer or stub ─────────────────────────────────
+async function sendEmail(to, subject, html) {
+  if (process.env.SMTP_HOST) {
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({
+      host:   process.env.SMTP_HOST,
+      port:   Number(process.env.SMTP_PORT) || 587,
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    });
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || '"ExpertFlow HR" <hr@expertflow.com>',
+      to, subject, html,
+    });
+    console.log(`[email] Sent OTP to ${to}`);
+  } else {
+    // Dev stub — print OTP to console so it can be tested without SMTP
+    console.log(`\n📧 [EMAIL STUB] To: ${to}`);
+    console.log(`   Subject: ${subject}`);
+    console.log(`   Body: ${html.replace(/<[^>]+>/g, '').trim()}\n`);
+  }
+}
+
 function mapAccount(r) {
   return {
     id:          r.id,
@@ -17,7 +58,7 @@ function mapAccount(r) {
   };
 }
 
-// POST /api/v1/auth-local/login
+// ── POST /api/v1/auth-local/login ─────────────────────────────────────────────
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -35,6 +76,9 @@ router.post('/login', async (req, res) => {
     if (account.status === 'Inactive') {
       return res.status(403).json({ error: 'Your account is inactive. Please contact HR.' });
     }
+    if (account.status === 'Pending') {
+      return res.status(403).json({ error: 'Your account is not verified yet. Please check your email for the OTP.' });
+    }
     // Update last_login
     await pool.query(
       `UPDATE auth_local.account SET last_login = NOW(), updated_at = NOW() WHERE id = $1`,
@@ -49,7 +93,8 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// POST /api/v1/auth-local/register
+// ── POST /api/v1/auth-local/register ─────────────────────────────────────────
+// Creates account with status='Pending', sends OTP email.
 router.post('/register', async (req, res) => {
   const { firstName, lastName, email, phone, address, password } = req.body;
   if (!firstName || !lastName || !email || !password) {
@@ -67,10 +112,29 @@ router.post('/register', async (req, res) => {
   try {
     // Check duplicate
     const { rows: existing } = await pool.query(
-      `SELECT id FROM auth_local.account WHERE LOWER(email) = $1`,
+      `SELECT id, status FROM auth_local.account WHERE LOWER(email) = $1`,
       [emailLc]
     );
     if (existing.length) {
+      if (existing[0].status === 'Pending') {
+        // Re-send OTP for unverified account
+        const otp = String(Math.floor(100000 + Math.random() * 900000));
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+        await pool.query(
+          `INSERT INTO auth_local.email_otp (email, otp, expires_at) VALUES ($1, $2, $3)`,
+          [emailLc, otp, expiresAt]
+        );
+        await sendEmail(emailLc, 'Your ExpertFlow HR Verification Code', `
+          <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
+            <h2 style="color:#1a56db;">ExpertFlow HR Suite</h2>
+            <p>Your email verification code is:</p>
+            <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#1a56db;padding:16px 0;">${otp}</div>
+            <p style="color:#666;">This code expires in <strong>10 minutes</strong>.</p>
+            <p style="color:#999;font-size:12px;">If you did not request this, please ignore this email.</p>
+          </div>
+        `);
+        return res.status(200).json({ pending: true, message: 'A new verification code has been sent to your email.' });
+      }
       return res.status(409).json({ error: 'An account with this email already exists.' });
     }
 
@@ -78,21 +142,127 @@ router.post('/register', async (req, res) => {
     const empId    = isInternal ? 'emp-' + newId : '';
     const token    = 'local-token-' + newId;
 
-    const { rows } = await pool.query(
+    // Create account with Pending status
+    await pool.query(
       `INSERT INTO auth_local.account
          (id, email, password, token, role, name, phone, address, employee_id, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'Active')
-       RETURNING *`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'Pending')`,
       [newId, emailLc, password, token, role, fullName,
        phone   ? phone.trim()   : '',
        address ? address.trim() : '',
        empId]
     );
-    const account = rows[0];
-    res.status(201).json({
+
+    // Generate 6-digit OTP, valid 10 minutes
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    await pool.query(
+      `INSERT INTO auth_local.email_otp (email, otp, expires_at) VALUES ($1, $2, $3)`,
+      [emailLc, otp, expiresAt]
+    );
+
+    // Send OTP email
+    await sendEmail(emailLc, 'Your ExpertFlow HR Verification Code', `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
+        <h2 style="color:#1a56db;">ExpertFlow HR Suite</h2>
+        <p>Hi ${fullName},</p>
+        <p>Thank you for registering. Your email verification code is:</p>
+        <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#1a56db;padding:16px 0;">${otp}</div>
+        <p style="color:#666;">This code expires in <strong>10 minutes</strong>.</p>
+        <p style="color:#999;font-size:12px;">If you did not create this account, please ignore this email.</p>
+      </div>
+    `);
+
+    res.status(201).json({ pending: true, email: emailLc, message: 'Account created. Please check your email for the verification code.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/v1/auth-local/verify-otp ───────────────────────────────────────
+// Verifies OTP, activates account, returns token + user.
+router.post('/verify-otp', async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) {
+    return res.status(400).json({ error: 'Email and OTP are required.' });
+  }
+  const emailLc = email.trim().toLowerCase();
+
+  try {
+    // Find the latest unused, non-expired OTP for this email
+    const { rows: otpRows } = await pool.query(
+      `SELECT * FROM auth_local.email_otp
+       WHERE email = $1 AND used = FALSE AND expires_at > NOW()
+       ORDER BY created_at DESC LIMIT 1`,
+      [emailLc]
+    );
+
+    if (!otpRows.length) {
+      return res.status(400).json({ error: 'Invalid or expired verification code. Please request a new one.' });
+    }
+
+    if (otpRows[0].otp !== otp.trim()) {
+      return res.status(400).json({ error: 'Incorrect verification code. Please try again.' });
+    }
+
+    // Mark OTP as used
+    await pool.query(
+      `UPDATE auth_local.email_otp SET used = TRUE WHERE id = $1`,
+      [otpRows[0].id]
+    );
+
+    // Activate account
+    const { rows: accountRows } = await pool.query(
+      `UPDATE auth_local.account
+       SET status = 'Active', last_login = NOW(), updated_at = NOW()
+       WHERE LOWER(email) = $1
+       RETURNING *`,
+      [emailLc]
+    );
+
+    if (!accountRows.length) {
+      return res.status(404).json({ error: 'Account not found.' });
+    }
+
+    const account = accountRows[0];
+    res.json({
       token: account.token,
       user:  mapAccount(account),
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/v1/auth-local/resend-otp ───────────────────────────────────────
+router.post('/resend-otp', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email is required.' });
+  const emailLc = email.trim().toLowerCase();
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM auth_local.account WHERE LOWER(email) = $1`,
+      [emailLc]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Account not found.' });
+    if (rows[0].status === 'Active') return res.status(400).json({ error: 'Account is already verified.' });
+
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    await pool.query(
+      `INSERT INTO auth_local.email_otp (email, otp, expires_at) VALUES ($1, $2, $3)`,
+      [emailLc, otp, expiresAt]
+    );
+    await sendEmail(emailLc, 'Your ExpertFlow HR Verification Code', `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
+        <h2 style="color:#1a56db;">ExpertFlow HR Suite</h2>
+        <p>Your new verification code is:</p>
+        <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#1a56db;padding:16px 0;">${otp}</div>
+        <p style="color:#666;">This code expires in <strong>10 minutes</strong>.</p>
+      </div>
+    `);
+    res.json({ sent: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

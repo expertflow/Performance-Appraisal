@@ -5,7 +5,9 @@
   </div>
   <div class="flex gap-2">
     <button class="btn btn-secondary btn-sm" (click)="exportData()">Export</button>
-    <button class="btn btn-primary btn-sm" (click)="openModal()">+ New Cycle</button>
+    @if (isAppAdmin()) {
+      <button class="btn btn-primary btn-sm" (click)="openModal()">+ New Cycle</button>
+    }
   </div>
 </div>
 
@@ -20,15 +22,22 @@
 <div class="card" style="margin-bottom:20px;">
   <div class="card-header">
     <h3>Current Cycle Phases</h3>
-    <span class="badge badge-blue">2025 Mid-Year Review</span>
+    @if (activeCycle) {
+      <span class="badge badge-blue">{{ activeCycle.name }}</span>
+    } @else {
+      <span class="badge badge-gray">No Active Cycle</span>
+    }
   </div>
   <div class="phase-timeline">
     @for (phase of phases; track phase.label; let i = $index) {
-      <div class="phase-step" [class.active]="i === 2" [class.done]="i < 2">
+      <div class="phase-step"
+           [class.active]="i === activeCyclePhaseIndex"
+           [class.done]="activeCyclePhaseIndex >= 0 && i < activeCyclePhaseIndex">
         <div class="phase-icon">{{ phase.icon }}</div>
         <div class="phase-label">{{ phase.label }}</div>
         @if (i < phases.length - 1) {
-          <div class="phase-connector" [class.done]="i < 2"></div>
+          <div class="phase-connector"
+               [class.done]="activeCyclePhaseIndex >= 0 && i < activeCyclePhaseIndex"></div>
         }
       </div>
     }
@@ -42,70 +51,90 @@
   }
 </div>
 
+<!-- Loading -->
+@if (loading()) {
+  <div style="text-align:center;padding:40px;color:var(--color-text-secondary);">Loading cycles…</div>
+}
+
 <!-- Cycles Table -->
-<div class="card" style="padding:0;">
-  <div class="table-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <th>Cycle</th>
-          <th>Type</th>
-          <th>Period</th>
-          <th>Phase</th>
-          <th>Completion</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (cycle of filteredCycles; track cycle.id) {
-          <tr style="cursor:pointer;">
-            <td>
-              <div style="font-weight:600;font-size:13px;">{{ cycle.name }}</div>
-              <div style="font-size:11px;color:var(--color-text-secondary);">{{ cycle.id }} · Review: {{ cycle.startDate }} – {{ cycle.endDate }}</div>
-            </td>
-            <td>
-              <span class="badge badge-gray">{{ cycle.type }}</span>
-            </td>
-            <td style="font-size:12px;color:var(--color-text-secondary);">{{ cycle.period }}</td>
-            <td>
-              <span class="badge" [class]="cycle.phaseClass">{{ cycle.phase }}</span>
-            </td>
-            <td>
-              @if (cycle.totalEmployees > 0) {
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <div class="progress-bar-wrap" style="width:80px;">
-                    <div class="progress-bar"
-                         [style.width.%]="cycle.pct"
-                         [style.background]="cycle.pct === 100 ? '#059669' : '#0066CC'"></div>
-                  </div>
-                  <span style="font-size:12px;font-weight:600;">{{ cycle.pct }}%</span>
-                  <span style="font-size:11px;color:var(--color-text-secondary);">{{ cycle.completed }}/{{ cycle.totalEmployees }}</span>
-                </div>
-              } @else {
-                <span style="font-size:12px;color:var(--color-text-muted);">Not started</span>
-              }
-            </td>
-            <td>
-              <div style="display:flex;gap:6px;">
-                <button class="btn btn-secondary btn-sm">View</button>
-                @if (cycle.phase !== 'Signed' && cycle.phase !== 'Finalized') {
-                  <button class="btn btn-secondary btn-sm">Edit</button>
-                }
-              </div>
-            </td>
-          </tr>
-        }
-        @if (filteredCycles.length === 0) {
+@if (!loading()) {
+  <div class="card" style="padding:0;">
+    <div class="table-wrapper">
+      <table>
+        <thead>
           <tr>
-            <td colspan="6" style="text-align:center;padding:32px;color:var(--color-text-muted);">
-              No cycles in this category.
-            </td>
+            <th>Cycle</th>
+            <th>Type</th>
+            <th>Period</th>
+            <th>Phase</th>
+            <th>Completion</th>
+            <th>Actions</th>
           </tr>
-        }
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          @for (cycle of filteredCycles; track cycle.id) {
+            <tr style="cursor:pointer;">
+              <td>
+                <div style="font-weight:600;font-size:13px;">{{ cycle.name }}</div>
+                <div style="font-size:11px;color:var(--color-text-secondary);">
+                  {{ cycle.id.substring(0,8) }}…
+                  @if (cycle.startDate) { · Review: {{ cycle.startDate }} – {{ cycle.endDate }} }
+                </div>
+              </td>
+              <td>
+                <span class="badge badge-gray">{{ cycle.type }}</span>
+              </td>
+              <td style="font-size:12px;color:var(--color-text-secondary);">{{ cycle.period }}</td>
+              <td>
+                <span class="badge" [class]="cycle.phaseClass">{{ cycle.phase }}</span>
+              </td>
+              <td>
+                @if (cycle.totalEmployees > 0) {
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div class="progress-bar-wrap" style="width:80px;">
+                      <div class="progress-bar"
+                           [style.width.%]="cycle.pct"
+                           [style.background]="cycle.pct === 100 ? '#059669' : '#0066CC'"></div>
+                    </div>
+                    <span style="font-size:12px;font-weight:600;">{{ cycle.pct }}%</span>
+                    <span style="font-size:11px;color:var(--color-text-secondary);">{{ cycle.completed }}/{{ cycle.totalEmployees }}</span>
+                  </div>
+                } @else {
+                  <span style="font-size:12px;color:var(--color-text-muted);">Not started</span>
+                }
+              </td>
+              <td>
+                <div style="display:flex;gap:6px;align-items:center;">
+                  <button class="btn btn-secondary btn-sm">View</button>
+                  @if (cycle.phase !== 'Signed' && cycle.phase !== 'Finalized') {
+                    <button class="btn btn-secondary btn-sm">Edit</button>
+                  }
+                  @if (isAppAdmin()) {
+                    @if (deleteConfirmId === cycle.id) {
+                      <button class="btn btn-danger btn-sm" (click)="doDelete(cycle.id)" [disabled]="deleting()">
+                        {{ deleting() ? 'Deleting…' : 'Confirm' }}
+                      </button>
+                      <button class="btn btn-secondary btn-sm" (click)="cancelDelete()">Cancel</button>
+                    } @else {
+                      <button class="btn btn-danger btn-sm" (click)="confirmDelete(cycle.id)">Delete</button>
+                    }
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+          @if (filteredCycles.length === 0) {
+            <tr>
+              <td colspan="6" style="text-align:center;padding:32px;color:var(--color-text-muted);">
+                No cycles in this category.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
   </div>
-</div>
+}
 
 <!-- New Cycle Modal -->
 @if (showModal) {

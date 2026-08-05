@@ -130,6 +130,16 @@ router.post('/cycles', async (req, res) => {
   }
 });
 
+// DELETE /api/v1/appraisals/cycles/:id
+router.delete('/cycles/:id', async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM project.appraisal_cycles WHERE id=$1`, [req.params.id]);
+    res.json({ deleted: req.params.id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PATCH /api/v1/appraisals/cycles/:id
 router.patch('/cycles/:id', async (req, res) => {
   const { id } = req.params;

@@ -45,6 +45,16 @@ export class Login {
   regError       = signal('');
   regLoading     = signal(false);
 
+  // ── OTP verification ────────────────────────────────────────────────────────
+  showOtp         = signal(false);
+  otpEmail        = signal('');   // signal so template binding is reactive
+  otpCode         = '';
+  otpError        = signal('');
+  otpLoading      = signal(false);
+  otpResendMsg    = signal('');
+  otpResending    = signal(false);
+  otpVerified     = signal(false); // show success screen before redirect
+
   constructor() {
     if (this.auth.isLoggedIn()) {
       const role = this.auth.role();
@@ -108,11 +118,13 @@ export class Login {
     this.regError.set('');
     this.registerSuccess.set(false);
     this.showRegister.set(true);
+    this.showOtp.set(false);
   }
 
   switchToLogin() {
     this.regError.set('');
     this.showRegister.set(false);
+    this.showOtp.set(false);
   }
 
   register() {
@@ -147,45 +159,94 @@ export class Login {
     this.regLoading.set(true);
     this.regError.set('');
 
+    const emailToRegister = r.email.trim().toLowerCase();
+
     this.api.localRegister({
       firstName: r.firstName.trim(),
       lastName:  r.lastName.trim(),
-      email:     r.email.trim(),
+      email:     emailToRegister,
       phone:     r.phone.trim()   || undefined,
       address:   r.address.trim() || undefined,
       password:  r.password,
     }).subscribe({
       next: res => {
         this.regLoading.set(false);
-        this.registerSuccess.set(true);
-
-        // If internal employee, add to UserStore (for All Users page)
-        if (res.user.role !== 'Candidate') {
-          this.userStore.addUser({
-            id:          res.user.id,
-            name:        res.user.name,
-            email:       res.user.email,
-            role:        res.user.role,
-            department:  '—',
-            designation: '—',
-            employee_id: res.user.employee_id || '',
-            status:      'Active',
-            lastLogin:   'Just now',
-          });
-        }
-
-        // Auto-switch back to sign-in after 2 s, pre-fill email
-        setTimeout(() => {
-          this.email    = res.user.email;
-          this.password = '';
-          this.reg = { firstName: '', lastName: '', email: '', phone: '', address: '', password: '', confirmPassword: '' };
-          this.registerSuccess.set(false);
-          this.showRegister.set(false);
-        }, 2000);
+        // Account created with Pending status — show OTP screen
+        // Use res.email if available, otherwise fall back to what user typed
+        const confirmedEmail = res.email || emailToRegister;
+        this.otpEmail.set(confirmedEmail);
+        this.otpCode = '';
+        this.otpError.set('');
+        this.otpResendMsg.set('');
+        this.showRegister.set(false);
+        this.showOtp.set(true);
       },
       error: err => {
         this.regLoading.set(false);
         this.regError.set(err?.error?.error || 'Registration failed. Please try again.');
+      }
+    });
+  }
+
+  // ── OTP verification ────────────────────────────────────────────────────────
+  verifyOtp() {
+    const email = this.otpEmail();
+    const code  = this.otpCode.trim();
+
+    if (!email) {
+      this.otpError.set('Session expired. Please go back and register again.');
+      return;
+    }
+    if (!code || code.length !== 6) {
+      this.otpError.set('Please enter the 6-digit code sent to your email.');
+      return;
+    }
+
+    this.otpLoading.set(true);
+    this.otpError.set('');
+    this.otpResendMsg.set('');
+
+    this.api.verifyOtp(email, code).subscribe({
+      next: res => {
+        this.otpLoading.set(false);
+        // Show success screen, then redirect to login after 3 seconds
+        this.otpVerified.set(true);
+        const verifiedEmail = res.user.email;
+        setTimeout(() => {
+          // Pre-fill email on login form and go back to sign-in
+          this.email = verifiedEmail;
+          this.password = '';
+          this.otpVerified.set(false);
+          this.showOtp.set(false);
+          this.showRegister.set(false);
+        }, 3000);
+      },
+      error: err => {
+        this.otpLoading.set(false);
+        this.otpError.set(err?.error?.error || 'Verification failed. Please try again.');
+      }
+    });
+  }
+
+  resendOtp() {
+    const email = this.otpEmail();
+    if (!email) {
+      this.otpError.set('Session expired. Please go back and register again.');
+      return;
+    }
+
+    this.otpResending.set(true);
+    this.otpResendMsg.set('');
+    this.otpError.set('');
+
+    this.api.resendOtp(email).subscribe({
+      next: () => {
+        this.otpResending.set(false);
+        this.otpResendMsg.set('A new code has been sent to your email.');
+      },
+      error: err => {
+        this.otpResending.set(false);
+        this.otpError.set(err?.error?.error || 'Failed to resend code. Please try again.');
       }
     });
   }

@@ -38,6 +38,12 @@ DIRECTUS_URL=https://bs4.expertflow.com
 DIRECTUS_TOKEN=july2026-admin-token-zaeem
 APP_URL=http://169.58.125.199
 CORS_ORIGIN=http://169.58.125.199
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=zaeem.ahmad@expertflow.com
+SMTP_PASS=xcitkmhazsrgywhb
+SMTP_FROM=ExpertFlow HR Suite <zaeem.ahmad@expertflow.com>
 """
 
 # -- nginx config --------------------------------------------------------------

@@ -61,7 +61,7 @@
       <!-- ════════════════════════════════════════════════════════════════
            SIGN-IN VIEW
       ════════════════════════════════════════════════════════════════ -->
-      @if (!showRegister()) {
+      @if (!showRegister() && !showOtp()) {
 
         <div class="form-header">
           <h1>Welcome back</h1>
@@ -162,146 +162,217 @@
       <!-- ════════════════════════════════════════════════════════════════
            CREATE ACCOUNT VIEW
       ════════════════════════════════════════════════════════════════ -->
-      @if (showRegister()) {
+      @if (showRegister() && !showOtp()) {
 
         <div class="form-header">
           <h1>Create Account</h1>
           <p>ExpertFlow employees use @expertflow.com · External candidates use any email</p>
         </div>
 
-        @if (registerSuccess()) {
-          <div class="alert alert-success">
-            ✅ Account created! Redirecting to sign in…
-          </div>
-        }
-
         @if (regError()) {
           <div class="alert alert-error">{{ regError() }}</div>
         }
 
-        @if (!registerSuccess()) {
-          <form (ngSubmit)="register()" #regForm="ngForm" autocomplete="off">
+        <form (ngSubmit)="register()" #regForm="ngForm" autocomplete="off">
 
-            <!-- First Name + Last Name -->
-            <div class="form-row-2col">
-              <div class="form-group">
-                <label class="form-label" for="reg-first">First Name</label>
-                <input
-                  id="reg-first"
-                  type="text"
-                  class="form-control"
-                  placeholder="Sarah"
-                  [(ngModel)]="reg.firstName"
-                  name="reg-first"
-                  required>
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="reg-last">Last Name</label>
-                <input
-                  id="reg-last"
-                  type="text"
-                  class="form-control"
-                  placeholder="Khan"
-                  [(ngModel)]="reg.lastName"
-                  name="reg-last"
-                  required>
-              </div>
-            </div>
-
-            <!-- Email -->
+          <!-- First Name + Last Name -->
+          <div class="form-row-2col">
             <div class="form-group">
-              <label class="form-label" for="reg-email">Email Address</label>
+              <label class="form-label" for="reg-first">First Name</label>
               <input
-                id="reg-email"
-                type="email"
-                class="form-control"
-                placeholder="you@example.com or you@expertflow.com"
-                [(ngModel)]="reg.email"
-                name="reg-email"
-                autocomplete="off"
-                required>
-            </div>
-
-            <!-- Phone Number -->
-            <div class="form-group">
-              <label class="form-label" for="reg-phone">Phone Number</label>
-              <input
-                id="reg-phone"
-                type="tel"
-                class="form-control"
-                placeholder="+92 300 1234567"
-                [(ngModel)]="reg.phone"
-                name="reg-phone"
-                required>
-            </div>
-
-            <!-- Address -->
-            <div class="form-group">
-              <label class="form-label" for="reg-address">Address</label>
-              <input
-                id="reg-address"
+                id="reg-first"
                 type="text"
                 class="form-control"
-                placeholder="123 Main Street, Lahore"
-                [(ngModel)]="reg.address"
-                name="reg-address">
+                placeholder="Sarah"
+                [(ngModel)]="reg.firstName"
+                name="reg-first"
+                required>
             </div>
-
-            <!-- Password -->
             <div class="form-group">
-              <label class="form-label" for="reg-pass">Password</label>
-              <div class="input-with-action">
-                <input
-                  id="reg-pass"
-                  [type]="regShowPass() ? 'text' : 'password'"
-                  class="form-control"
-                  placeholder="Min. 6 characters"
-                  [(ngModel)]="reg.password"
-                  name="reg-pass"
-                  autocomplete="new-password"
-                  required>
-                <button type="button" class="toggle-pass" (click)="regShowPass.set(!regShowPass())" title="Toggle password visibility">
-                  {{ regShowPass() ? '🙈' : '👁️' }}
-                </button>
-              </div>
+              <label class="form-label" for="reg-last">Last Name</label>
+              <input
+                id="reg-last"
+                type="text"
+                class="form-control"
+                placeholder="Khan"
+                [(ngModel)]="reg.lastName"
+                name="reg-last"
+                required>
             </div>
+          </div>
 
-            <!-- Confirm Password -->
-            <div class="form-group">
-              <label class="form-label" for="reg-confirm">Confirm Password</label>
-              <div class="input-with-action">
-                <input
-                  id="reg-confirm"
-                  [type]="regShowConfirm() ? 'text' : 'password'"
-                  class="form-control"
-                  placeholder="Re-enter password"
-                  [(ngModel)]="reg.confirmPassword"
-                  name="reg-confirm"
-                  autocomplete="new-password"
-                  required>
-                <button type="button" class="toggle-pass" (click)="regShowConfirm.set(!regShowConfirm())" title="Toggle confirm password visibility">
-                  {{ regShowConfirm() ? '🙈' : '👁️' }}
-                </button>
-              </div>
+          <!-- Email -->
+          <div class="form-group">
+            <label class="form-label" for="reg-email">Email Address</label>
+            <input
+              id="reg-email"
+              type="email"
+              class="form-control"
+              placeholder="you@example.com or you@expertflow.com"
+              [(ngModel)]="reg.email"
+              name="reg-email"
+              autocomplete="off"
+              required>
+          </div>
+
+          <!-- Phone Number -->
+          <div class="form-group">
+            <label class="form-label" for="reg-phone">Phone Number</label>
+            <input
+              id="reg-phone"
+              type="tel"
+              class="form-control"
+              placeholder="+92 300 1234567"
+              [(ngModel)]="reg.phone"
+              name="reg-phone"
+              required>
+          </div>
+
+          <!-- Address -->
+          <div class="form-group">
+            <label class="form-label" for="reg-address">Address</label>
+            <input
+              id="reg-address"
+              type="text"
+              class="form-control"
+              placeholder="123 Main Street, Lahore"
+              [(ngModel)]="reg.address"
+              name="reg-address">
+          </div>
+
+          <!-- Password -->
+          <div class="form-group">
+            <label class="form-label" for="reg-pass">Password</label>
+            <div class="input-with-action">
+              <input
+                id="reg-pass"
+                [type]="regShowPass() ? 'text' : 'password'"
+                class="form-control"
+                placeholder="Min. 6 characters"
+                [(ngModel)]="reg.password"
+                name="reg-pass"
+                autocomplete="new-password"
+                required>
+              <button type="button" class="toggle-pass" (click)="regShowPass.set(!regShowPass())" title="Toggle password visibility">
+                {{ regShowPass() ? '🙈' : '👁️' }}
+              </button>
             </div>
+          </div>
 
-            <button type="submit" class="btn-signin" [disabled]="regLoading()">
-              @if (regLoading()) {
-                <span class="spinner"></span>
-                Creating account…
-              } @else {
-                Create Account
-              }
-            </button>
+          <!-- Confirm Password -->
+          <div class="form-group">
+            <label class="form-label" for="reg-confirm">Confirm Password</label>
+            <div class="input-with-action">
+              <input
+                id="reg-confirm"
+                [type]="regShowConfirm() ? 'text' : 'password'"
+                class="form-control"
+                placeholder="Re-enter password"
+                [(ngModel)]="reg.confirmPassword"
+                name="reg-confirm"
+                autocomplete="new-password"
+                required>
+              <button type="button" class="toggle-pass" (click)="regShowConfirm.set(!regShowConfirm())" title="Toggle confirm password visibility">
+                {{ regShowConfirm() ? '🙈' : '👁️' }}
+              </button>
+            </div>
+          </div>
 
-          </form>
-        }
+          <button type="submit" class="btn-signin" [disabled]="regLoading()">
+            @if (regLoading()) {
+              <span class="spinner"></span>
+              Creating account…
+            } @else {
+              Create Account
+            }
+          </button>
+
+        </form>
 
         <!-- Back to sign in -->
         <p class="register-prompt" style="margin-top: 16px;">
           Already have an account?
           <button type="button" class="link-btn" (click)="switchToLogin()">Sign in</button>
         </p>
+
+      }
+
+      <!-- ════════════════════════════════════════════════════════════════
+           OTP VERIFICATION VIEW
+      ════════════════════════════════════════════════════════════════ -->
+      @if (showOtp()) {
+
+        <!-- ── OTP Success screen ── -->
+        @if (otpVerified()) {
+          <div style="text-align:center;padding:32px 0;">
+            <div style="display:inline-flex;align-items:center;justify-content:center;width:72px;height:72px;border-radius:50%;background:#dcfce7;font-size:36px;margin-bottom:20px;">
+              ✅
+            </div>
+            <h1 style="color:#16a34a;margin-bottom:8px;">Account Created!</h1>
+            <p style="color:#555;margin-bottom:4px;">Your email has been verified successfully.</p>
+            <p style="color:#888;font-size:13px;">Redirecting to sign in page…</p>
+          </div>
+        }
+
+        <!-- ── OTP Entry screen ── -->
+        @if (!otpVerified()) {
+          <div class="form-header">
+            <h1>Verify Your Email</h1>
+            <p>We sent a 6-digit code to <strong>{{ otpEmail() }}</strong></p>
+          </div>
+
+          <!-- OTP icon -->
+          <div style="text-align:center;margin:16px 0 24px;">
+            <div style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#1a56db,#3b82f6);font-size:28px;">
+              📧
+            </div>
+          </div>
+
+          @if (otpError()) {
+            <div class="alert alert-error">{{ otpError() }}</div>
+          }
+
+          @if (otpResendMsg()) {
+            <div class="alert alert-success">{{ otpResendMsg() }}</div>
+          }
+
+          <form (ngSubmit)="verifyOtp()" autocomplete="off">
+            <div class="form-group">
+              <label class="form-label" for="otp-code">Verification Code</label>
+              <input
+                id="otp-code"
+                type="text"
+                class="form-control"
+                placeholder="Enter 6-digit code"
+                [(ngModel)]="otpCode"
+                name="otp-code"
+                maxlength="6"
+                autocomplete="one-time-code"
+                style="font-size:24px;letter-spacing:8px;text-align:center;font-weight:600;"
+                required>
+            </div>
+
+            <button type="submit" class="btn-signin" [disabled]="otpLoading()">
+              @if (otpLoading()) {
+                <span class="spinner"></span>
+                Verifying…
+              } @else {
+                Verify &amp; Sign In
+              }
+            </button>
+          </form>
+
+          <p class="register-prompt" style="margin-top:16px;">
+            Didn't receive the code?
+            <button type="button" class="link-btn" (click)="resendOtp()" [disabled]="otpResending()">
+              {{ otpResending() ? 'Sending…' : 'Resend code' }}
+            </button>
+          </p>
+
+          <p class="register-prompt">
+            <button type="button" class="link-btn" (click)="switchToRegister()">← Back to registration</button>
+          </p>
+        }
 
       }
 

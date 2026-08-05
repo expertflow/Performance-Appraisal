@@ -95,15 +95,15 @@
       </div>
       <div class="module-nav-stats">
         <div>
-          <div class="module-stat-value">142</div>
+          <div class="module-stat-value">{{ appraisalInCycle() }}</div>
           <div class="module-stat-label">In Cycle</div>
         </div>
         <div>
-          <div class="module-stat-value">68%</div>
+          <div class="module-stat-value">{{ appraisalHasCycle() ? appraisalCompletion() + '%' : '—' }}</div>
           <div class="module-stat-label">Completion</div>
         </div>
         <div>
-          <div class="module-stat-value">12</div>
+          <div class="module-stat-value">{{ appraisalHasCycle() ? appraisalDaysLeft() : '—' }}</div>
           <div class="module-stat-label">Days Left</div>
         </div>
       </div>
@@ -150,17 +150,10 @@
         <h3>Recent Activity</h3>
         <p style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">Latest updates across your modules</p>
       </div>
-      <button class="btn btn-secondary btn-sm">View All</button>
     </div>
-    @for (item of recentActivity; track item.text) {
-      <div class="activity-item">
-        <span class="activity-icon">{{ item.icon }}</span>
-        <div class="activity-content">
-          <div class="activity-text">{{ item.text }}</div>
-          <div class="activity-time">{{ item.time }}</div>
-        </div>
-      </div>
-    }
+    <div style="padding:24px;text-align:center;color:var(--color-text-secondary);font-size:13px;">
+      No recent activity yet.
+    </div>
   </div>
 
   <!-- Pending Actions -->
@@ -170,17 +163,10 @@
         <h3>Pending Actions</h3>
         <p style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">Items requiring your attention</p>
       </div>
-      <span class="badge badge-red">{{ pendingActions.length }}</span>
+      <span class="badge badge-red">0</span>
     </div>
-    @for (action of pendingActions; track action.text) {
-      <a [routerLink]="action.link" class="pending-item">
-        <div class="pending-dot" [class.urgent]="action.urgent"></div>
-        <div class="pending-content">
-          <div class="pending-text">{{ action.text }}</div>
-          <div class="pending-module">{{ action.module }}</div>
-        </div>
-        <span class="pending-arrow">→</span>
-      </a>
-    }
+    <div style="padding:24px;text-align:center;color:var(--color-text-secondary);font-size:13px;">
+      No pending actions.
+    </div>
   </div>
 </div>

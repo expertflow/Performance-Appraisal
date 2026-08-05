@@ -1,5 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { ApiService } from '../../../services/api';
+import { AuthService } from '../../../services/auth';
 
 interface CycleItem {
   id: string;
@@ -17,17 +20,24 @@ interface CycleItem {
 
 @Component({
   selector: 'app-cycles',
-  imports: [FormsModule],
+  imports: [FormsModule, CommonModule],
   templateUrl: './cycles.html',
   styleUrl: './cycles.scss'
 })
-export class Cycles {
+export class Cycles implements OnInit {
+  private api  = inject(ApiService);
+  private auth = inject(AuthService);
+
+  readonly isAppAdmin = computed(() => this.auth.isAppAdmin());
+
   activeTab = 'Active';
   tabs = ['Active', 'Upcoming', 'Completed', 'All'];
 
   // Modal state
-  showModal = false;
-  exportToast = false;
+  showModal    = false;
+  exportToast  = false;
+  deleteConfirmId: string | null = null;
+  deleting     = signal(false);
 
   newCycle = {
     name: '',
@@ -38,73 +48,72 @@ export class Cycles {
     reviewEnd: '',
   };
 
-  cycles: CycleItem[] = [
-    {
-      id: 'CYC-2025-02',
-      name: '2025 Mid-Year Review',
-      type: 'Semi-Annual',
-      period: 'Jan 1 – Jun 30, 2025',
-      startDate: 'Jun 1, 2025',
-      endDate: 'Aug 15, 2025',
-      phase: 'Manager Review',
-      phaseClass: 'badge-blue',
-      totalEmployees: 142,
-      completed: 74,
-      pct: 52,
-    },
-    {
-      id: 'CYC-2025-01',
-      name: '2025 Q1 Check-in',
-      type: 'Quarterly',
-      period: 'Jan 1 – Mar 31, 2025',
-      startDate: 'Apr 1, 2025',
-      endDate: 'Apr 30, 2025',
-      phase: 'Finalized',
-      phaseClass: 'badge-green',
-      totalEmployees: 138,
-      completed: 138,
-      pct: 100,
-    },
-    {
-      id: 'CYC-2024-02',
-      name: '2024 Annual Review',
-      type: 'Annual',
-      period: 'Jan 1 – Dec 31, 2024',
-      startDate: 'Jan 5, 2025',
-      endDate: 'Feb 28, 2025',
-      phase: 'Signed',
-      phaseClass: 'badge-teal',
-      totalEmployees: 130,
-      completed: 130,
-      pct: 100,
-    },
-    {
-      id: 'CYC-2025-03',
-      name: '2025 Year-End Review',
-      type: 'Annual',
-      period: 'Jan 1 – Dec 31, 2025',
-      startDate: 'Dec 15, 2025',
-      endDate: 'Feb 15, 2026',
-      phase: 'Upcoming',
-      phaseClass: 'badge-gray',
+  cycles = signal<CycleItem[]>([]);
+  loading = signal(true);
+
+  ngOnInit() {
+    this.loadCycles();
+  }
+
+  loadCycles() {
+    this.loading.set(true);
+    this.api.getAppraisalCycles().subscribe({
+      next: rows => {
+        this.cycles.set(rows.map(r => this.mapCycle(r)));
+        this.loading.set(false);
+      },
+      error: () => this.loading.set(false)
+    });
+  }
+
+  private mapCycle(r: any): CycleItem {
+    const fmt = (d: string | null) => {
+      if (!d) return '';
+      return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
+    const periodStart = r.period_start ? fmt(r.period_start) : '';
+    const periodEnd   = r.period_end   ? fmt(r.period_end)   : '';
+    const period = (periodStart && periodEnd) ? `${periodStart} – ${periodEnd}` : '—';
+
+    const phaseClassMap: Record<string, string> = {
+      'Upcoming':       'badge-gray',
+      'Goal Setting':   'badge-purple',
+      'Self Review':    'badge-orange',
+      'Manager Review': 'badge-blue',
+      'Peer Review':    'badge-teal',
+      'Calibration':    'badge-yellow',
+      'Finalized':      'badge-green',
+      'Signed':         'badge-teal',
+    };
+
+    return {
+      id:             r.id,
+      name:           r.name,
+      type:           r.type ?? 'Annual',
+      period,
+      startDate:      r.review_start ? fmt(r.review_start) : '',
+      endDate:        r.review_end   ? fmt(r.review_end)   : '',
+      phase:          r.phase ?? 'Upcoming',
+      phaseClass:     phaseClassMap[r.phase] ?? 'badge-gray',
       totalEmployees: 0,
-      completed: 0,
-      pct: 0,
-    },
-  ];
+      completed:      0,
+      pct:            0,
+    };
+  }
 
   setTab(tab: string) {
     this.activeTab = tab;
   }
 
   get filteredCycles(): CycleItem[] {
-    if (this.activeTab === 'All') return this.cycles;
-    if (this.activeTab === 'Active') return this.cycles.filter(c =>
+    const all = this.cycles();
+    if (this.activeTab === 'All') return all;
+    if (this.activeTab === 'Active') return all.filter(c =>
       c.phase !== 'Upcoming' && c.phase !== 'Finalized' && c.phase !== 'Signed');
-    if (this.activeTab === 'Upcoming') return this.cycles.filter(c => c.phase === 'Upcoming');
-    if (this.activeTab === 'Completed') return this.cycles.filter(c =>
+    if (this.activeTab === 'Upcoming') return all.filter(c => c.phase === 'Upcoming');
+    if (this.activeTab === 'Completed') return all.filter(c =>
       c.phase === 'Finalized' || c.phase === 'Signed');
-    return this.cycles;
+    return all;
   }
 
   phases = [
@@ -116,7 +125,18 @@ export class Cycles {
     { label: 'Finalized', icon: '✅' },
   ];
 
-  openModal() { this.showModal = true; }
+  get activeCycle(): CycleItem | null {
+    return this.cycles().find(c =>
+      c.phase !== 'Upcoming' && c.phase !== 'Finalized' && c.phase !== 'Signed'
+    ) ?? null;
+  }
+
+  get activeCyclePhaseIndex(): number {
+    const phase = this.activeCycle?.phase ?? '';
+    return this.phases.findIndex(p => p.label === phase);
+  }
+
+  openModal()  { this.showModal = true; }
   closeModal() { this.showModal = false; this.resetForm(); }
 
   resetForm() {
@@ -125,25 +145,40 @@ export class Cycles {
 
   submitCycle() {
     if (!this.newCycle.name || !this.newCycle.periodStart || !this.newCycle.periodEnd) return;
-    const fmt = (s: string) => {
-      const d = new Date(s);
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    };
-    const nextNum = this.cycles.length + 1;
-    this.cycles.unshift({
-      id: `CYC-2025-0${nextNum}`,
-      name: this.newCycle.name,
-      type: this.newCycle.type,
-      period: `${fmt(this.newCycle.periodStart)} – ${fmt(this.newCycle.periodEnd)}`,
-      startDate: this.newCycle.reviewStart ? fmt(this.newCycle.reviewStart) : fmt(this.newCycle.periodEnd),
-      endDate: this.newCycle.reviewEnd ? fmt(this.newCycle.reviewEnd) : '',
-      phase: 'Upcoming',
-      phaseClass: 'badge-gray',
-      totalEmployees: 0,
-      completed: 0,
-      pct: 0,
+    this.api.createAppraisalCycle({
+      name:         this.newCycle.name,
+      type:         this.newCycle.type,
+      period_start: this.newCycle.periodStart,
+      period_end:   this.newCycle.periodEnd,
+      review_start: this.newCycle.reviewStart || null,
+      review_end:   this.newCycle.reviewEnd   || null,
+    }).subscribe({
+      next: () => { this.closeModal(); this.loadCycles(); },
+      error: () => { this.closeModal(); this.loadCycles(); }
     });
-    this.closeModal();
+  }
+
+  confirmDelete(id: string) {
+    this.deleteConfirmId = id;
+  }
+
+  cancelDelete() {
+    this.deleteConfirmId = null;
+  }
+
+  doDelete(id: string) {
+    this.deleting.set(true);
+    this.api.deleteAppraisalCycle(id).subscribe({
+      next: () => {
+        this.deleting.set(false);
+        this.deleteConfirmId = null;
+        this.loadCycles();
+      },
+      error: () => {
+        this.deleting.set(false);
+        this.deleteConfirmId = null;
+      }
+    });
   }
 
   exportData() {

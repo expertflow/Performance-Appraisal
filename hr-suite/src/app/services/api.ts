@@ -14,6 +14,7 @@ export interface LocalRegisterRequest {
   phone?: string; address?: string; password: string;
 }
 export interface LocalAuthResponse  { token: string; user: import('../models').AppUser; }
+export interface LocalRegisterPendingResponse { pending: true; email: string; message: string; }
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -171,8 +172,16 @@ export class ApiService {
     return this.http.post<LocalAuthResponse>(`${this.base}/auth-local/login`, req);
   }
 
-  localRegister(req: LocalRegisterRequest): Observable<LocalAuthResponse> {
-    return this.http.post<LocalAuthResponse>(`${this.base}/auth-local/register`, req);
+  localRegister(req: LocalRegisterRequest): Observable<LocalRegisterPendingResponse> {
+    return this.http.post<LocalRegisterPendingResponse>(`${this.base}/auth-local/register`, req);
+  }
+
+  verifyOtp(email: string, otp: string): Observable<LocalAuthResponse> {
+    return this.http.post<LocalAuthResponse>(`${this.base}/auth-local/verify-otp`, { email, otp });
+  }
+
+  resendOtp(email: string): Observable<{ sent: boolean }> {
+    return this.http.post<{ sent: boolean }>(`${this.base}/auth-local/resend-otp`, { email });
   }
 
   // ── App Users ─────────────────────────────────────────────────────────────
@@ -186,6 +195,31 @@ export class ApiService {
 
   deleteAppUser(id: string): Observable<{ deleted: string }> {
     return this.http.delete<{ deleted: string }>(`${this.base}/app-users/${id}`);
+  }
+
+  // ── Appraisal Cycles ──────────────────────────────────────────────────────
+  getAppraisalCycles(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.base}/appraisals/cycles`);
+  }
+
+  createAppraisalCycle(payload: {
+    name: string; type: string;
+    period_start: string; period_end: string;
+    review_start?: string | null; review_end?: string | null;
+  }): Observable<any> {
+    return this.http.post<any>(`${this.base}/appraisals/cycles`, payload);
+  }
+
+  deleteAppraisalCycle(id: string): Observable<{ deleted: string }> {
+    return this.http.delete<{ deleted: string }>(`${this.base}/appraisals/cycles/${id}`);
+  }
+
+  getAppraisalRecords(filters?: { cycleId?: string; managerId?: string; employeeId?: string }): Observable<any[]> {
+    let params = new HttpParams();
+    if (filters?.cycleId)     params = params.set('cycleId',     filters.cycleId);
+    if (filters?.managerId)   params = params.set('managerId',   filters.managerId);
+    if (filters?.employeeId)  params = params.set('employeeId',  filters.employeeId);
+    return this.http.get<any[]>(`${this.base}/appraisals/records`, { params });
   }
 
   // ── App Notifications (backend-persisted, cross-user) ─────────────────────
