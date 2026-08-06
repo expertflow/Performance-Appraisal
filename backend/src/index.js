@@ -17,6 +17,7 @@ const syncRouter           = require('./routes/sync');
 const jobPostingsRouter    = require('./routes/job-postings');
 const jobApplicationsRouter = require('./routes/job-applications');
 const authLocalRouter      = require('./routes/auth-local');
+const authGoogleRouter     = require('./routes/auth-google');
 const appUsersRouter          = require('./routes/app-users');
 const jobRequisitionsRouter   = require('./routes/job-requisitions');
 const sendEmailRouter         = require('./routes/send-email');
@@ -61,6 +62,7 @@ app.use('/api/v1/job-requisitions', jobRequisitionsRouter);
 app.use('/api/v1/send-email',       sendEmailRouter);
 app.use('/api/v1/notifications',    notificationsRouter);
 app.use('/api/v1/appraisals',       performanceAppraisalsRouter);
+app.use('/api/v1/auth/google',      authGoogleRouter);
 
 // ── 404 handler ───────────────────────────────────────────────────────────
 app.use((req, res) => {

@@ -109,7 +109,9 @@ export class Login {
   }
 
   googleSignIn() {
-    this.error.set('Google SSO is not yet configured. Only @expertflow.com accounts will be permitted. Please sign in with your email and password for now.');
+    // Redirect browser to backend OAuth entry point.
+    // nginx proxies /api/ → Node, so this works on both IP and domain.
+    window.location.href = '/api/v1/auth/google';
   }
 
   // ── Registration ────────────────────────────────────────────────────────────

@@ -10,6 +10,10 @@ export const routes: Routes = [
     path: 'login',
     loadComponent: () => import('./pages/auth/login/login').then(m => m.Login)
   },
+  {
+    path: 'auth/google-callback',
+    loadComponent: () => import('./pages/auth/google-callback/google-callback').then(m => m.GoogleCallback)
+  },
 
   // ── Candidate portal (external users) ─────────────────────────────────────
   {

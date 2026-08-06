@@ -26,8 +26,18 @@ WWW_DIR  = '/var/www/hr-suite'
 BACKEND_LOCAL  = os.path.abspath(os.path.join(os.path.dirname(__file__), 'backend'))
 FRONTEND_DIST  = os.path.abspath(os.path.join(os.path.dirname(__file__), 'hr-suite', 'dist', 'hr-suite', 'browser'))
 
+DOMAIN   = 'hrsuite.expertflow.com'
+
 # -- VM .env for production ----------------------------------------------------
-VM_ENV = """NODE_ENV=production
+# GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are injected at deploy time
+# from environment variables on the machine running deploy.py.
+# Set them before running:
+#   $env:GOOGLE_CLIENT_ID="your-id"
+#   $env:GOOGLE_CLIENT_SECRET="your-secret"
+GOOGLE_CLIENT_ID     = os.environ.get('GOOGLE_CLIENT_ID',     '')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+
+VM_ENV = f"""NODE_ENV=production
 PORT=3000
 DB_HOST=localhost
 DB_PORT=5432
@@ -36,8 +46,11 @@ DB_USER=hr_suite_user
 DB_PASSWORD=HrSuite2025!
 DIRECTUS_URL=https://bs4.expertflow.com
 DIRECTUS_TOKEN=july2026-admin-token-zaeem
-APP_URL=http://169.58.125.199
-CORS_ORIGIN=http://169.58.125.199
+APP_URL=https://{DOMAIN}
+CORS_ORIGIN=https://{DOMAIN}
+GOOGLE_CLIENT_ID={GOOGLE_CLIENT_ID}
+GOOGLE_CLIENT_SECRET={GOOGLE_CLIENT_SECRET}
+ALLOWED_DOMAIN=expertflow.com
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
@@ -46,21 +59,24 @@ SMTP_PASS=xcitkmhazsrgywhb
 SMTP_FROM=ExpertFlow HR Suite <zaeem.ahmad@expertflow.com>
 """
 
-# -- nginx config --------------------------------------------------------------
-NGINX_CONF = """server {
+# -- nginx config (HTTP only — certbot will upgrade to HTTPS) ------------------
+# After first deploy, certbot rewrites this file to add SSL.
+# Subsequent deploys keep the certbot-managed HTTPS config intact by
+# only writing the HTTP block when no SSL cert exists yet.
+NGINX_CONF_HTTP = f"""server {{
     listen 80;
-    server_name 169.58.125.199;
+    server_name {DOMAIN};
 
     root /var/www/hr-suite;
     index index.html;
 
     # Angular SPA -- all routes fall back to index.html
-    location / {
+    location / {{
         try_files $uri $uri/ /index.html;
-    }
+    }}
 
     # Proxy API calls to Node.js backend
-    location /api/ {
+    location /api/ {{
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
@@ -70,9 +86,12 @@ NGINX_CONF = """server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_cache_bypass $http_upgrade;
         proxy_read_timeout 60s;
-    }
-}
+    }}
+}}
 """
+
+# Keep backward-compat alias
+NGINX_CONF = NGINX_CONF_HTTP
 
 # -- PM2 ecosystem -------------------------------------------------------------
 PM2_ECOSYSTEM = """module.exports = {
@@ -228,13 +247,49 @@ sudo -u postgres psql -d hr_suite -c "GRANT ALL ON SCHEMA project TO hr_suite_us
     run(client, f'cd {APP_DIR} && pm2 delete hr-suite-backend 2>/dev/null; pm2 start ecosystem.config.js', 'start with PM2')
     run(client, 'pm2 save && pm2 startup systemd -u root --hp /root 2>/dev/null | tail -1 | bash 2>/dev/null || true', 'PM2 startup')
 
-    # -- Step 11: Configure nginx ----------------------------------------------
+    # -- Step 11: Configure nginx (HTTP first, then HTTPS via certbot) ---------
     print('\n-- Step 11: Configuring nginx --')
-    run(client, f"cat > /etc/nginx/sites-available/hr-suite << 'NGEOF'\n{NGINX_CONF}\nNGEOF", 'write nginx config')
-    run(client, 'ln -sf /etc/nginx/sites-available/hr-suite /etc/nginx/sites-enabled/hr-suite', 'enable nginx site')
-    run(client, 'rm -f /etc/nginx/sites-enabled/default', 'remove default nginx site')
-    run(client, 'nginx -t', 'test nginx config')
-    run(client, 'systemctl restart nginx && systemctl enable nginx', 'restart nginx')
+
+    # Check if a certbot-managed SSL cert already exists for the domain
+    cert_check, _, _ = run(client,
+        f'test -f /etc/letsencrypt/live/{DOMAIN}/fullchain.pem && echo EXISTS || echo MISSING',
+        'check SSL cert')
+    ssl_exists = 'EXISTS' in cert_check
+
+    if not ssl_exists:
+        # Write plain HTTP config so certbot can do its ACME challenge
+        run(client, f"cat > /etc/nginx/sites-available/hr-suite << 'NGEOF'\n{NGINX_CONF_HTTP}\nNGEOF", 'write HTTP nginx config')
+        run(client, 'ln -sf /etc/nginx/sites-available/hr-suite /etc/nginx/sites-enabled/hr-suite', 'enable nginx site')
+        run(client, 'rm -f /etc/nginx/sites-enabled/default', 'remove default nginx site')
+        run(client, 'nginx -t && systemctl restart nginx && systemctl enable nginx', 'start nginx (HTTP)')
+
+        # Install certbot if missing
+        run(client, 'which certbot || (apt-get install -y certbot python3-certbot-nginx)', 'install certbot')
+
+        # Obtain certificate (non-interactive, agrees to ToS, no redirect yet)
+        print(f'  Obtaining Let\'s Encrypt certificate for {DOMAIN}...')
+        cert_out, cert_err, cert_code = run(client,
+            f'certbot --nginx -d {DOMAIN} --non-interactive --agree-tos '
+            f'-m zaeem.ahmad@expertflow.com --redirect 2>&1',
+            'run certbot')
+        if cert_code == 0:
+            print('  [OK] SSL certificate obtained and nginx updated by certbot.')
+            ssl_exists = True
+        else:
+            print(f'  [WARN] certbot failed (exit {cert_code}). App will run on HTTP only.')
+            print(f'         Error: {cert_err[:300]}')
+    else:
+        # Cert already exists — just refresh the proxy block inside the existing config.
+        # certbot manages the SSL stanzas; we only need to ensure the proxy location is present.
+        # Safest: re-run certbot --nginx to re-apply (idempotent).
+        run(client, f"cat > /etc/nginx/sites-available/hr-suite << 'NGEOF'\n{NGINX_CONF_HTTP}\nNGEOF", 'refresh HTTP nginx config')
+        run(client, 'ln -sf /etc/nginx/sites-available/hr-suite /etc/nginx/sites-enabled/hr-suite', 'enable nginx site')
+        run(client, 'rm -f /etc/nginx/sites-enabled/default', 'remove default nginx site')
+        run(client,
+            f'certbot --nginx -d {DOMAIN} --non-interactive --agree-tos '
+            f'-m zaeem.ahmad@expertflow.com --redirect 2>&1 || true',
+            'certbot re-apply SSL')
+        run(client, 'nginx -t && systemctl reload nginx', 'reload nginx')
 
     # -- Step 12: Verify -------------------------------------------------------
     print('\n-- Step 12: Verifying deployment --')
@@ -242,18 +297,25 @@ sudo -u postgres psql -d hr_suite -c "GRANT ALL ON SCHEMA project TO hr_suite_us
     out, _, _ = run(client, 'pm2 list', 'PM2 status')
     out2, _, _ = run(client, 'systemctl is-active nginx', 'nginx status')
     out3, _, _ = run(client, 'curl -s http://localhost:3000/health', 'backend health check')
-    out4, _, _ = run(client, 'curl -s -o /dev/null -w "%{http_code}" http://localhost/', 'frontend HTTP check')
+    proto = 'https' if ssl_exists else 'http'
+    out4, _, _ = run(client, f'curl -sk -o /dev/null -w "%{{http_code}}" {proto}://localhost/', 'frontend HTTP check')
 
     print(f'\n{"="*60}')
     print('  DEPLOYMENT COMPLETE')
     print(f'{"="*60}')
-    print(f'  Frontend: http://{HOST}')
-    print(f'  Backend:  http://{HOST}/api/v1/health')
+    print(f'  Frontend: {proto}://{DOMAIN}')
+    print(f'  Backend:  {proto}://{DOMAIN}/api/v1/health')
+    print(f'  SSL:      {"YES (Let\'s Encrypt)" if ssl_exists else "NO (HTTP only — certbot failed or skipped)"}')
     print(f'  nginx:    {out2}')
     print(f'  Backend health: {out3}')
     print(f'  Frontend HTTP:  {out4}')
-    print(f'\n  [!] Remember to set DIRECTUS_TOKEN in {APP_DIR}/.env')
-    print(f'      then: pm2 restart hr-suite-backend')
+    if GOOGLE_CLIENT_ID:
+        print(f'\n  Google OAuth redirect URI to register in Google Console:')
+        print(f'    {proto}://{DOMAIN}/api/v1/auth/google/callback')
+    else:
+        print(f'\n  [!] GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET not set.')
+        print(f'      Google login will return 503 until you set them in .env and restart:')
+        print(f'        pm2 restart hr-suite-backend')
     print(f'{"="*60}\n')
 
     client.close()
