@@ -115,12 +115,10 @@ if (CLIENT_ID && CLIENT_SECRET) {
         email:       user.email,
         name:        user.name,
         role:        user.role,
-        employeeId:  user.employee_id || '',
-        managerId:   user.manager_id  || '',
-        department:  user.department  || '',
-        designation: user.designation || '',
-        avatarUrl:   user.avatar_url  || '',
-        status:      user.status,
+        employee_id: user.employee_id || '',
+        manager_id:  user.manager_id  || '',
+        avatar_url:  user.avatar_url  || '',
+        loginMethod: 'google',
       };
 
       const token = user.token;

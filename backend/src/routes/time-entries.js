@@ -3,6 +3,120 @@ const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const pool = require('../db/pool');
+const axios = require('axios');
+const https = require('https');
+
+const httpsAgent = new https.Agent({ rejectUnauthorized: false });
+const DIRECTUS_URL   = () => (process.env.DIRECTUS_URL   || 'https://bs4.expertflow.com').trim();
+const DIRECTUS_TOKEN = () => (process.env.DIRECTUS_TOKEN || '').trim();
+
+// ── Helper: parse HoursWorked from Directus (may be "HH:MM:SS", number, or null) ──
+function parseHours(val) {
+  if (val == null) return 0;
+  if (typeof val === 'number') return val;
+  const s = String(val);
+  if (s.includes(':')) {
+    const parts = s.split(':').map(Number);
+    return (parts[0] || 0) + (parts[1] || 0) / 60 + (parts[2] || 0) / 3600;
+  }
+  return parseFloat(s) || 0;
+}
+
+/**
+ * GET /api/v1/time-entries/directus-summary?employee_id=171
+ *
+ * Fetches ALL TimeEntry records for the given Directus employee ID directly
+ * from the Directus ERP, groups them by Project, and returns a summary array:
+ *   [{ projectId, projectName, totalHours, entryCount }]
+ *
+ * Falls back to local DB if Directus is unavailable.
+ */
+router.get('/directus-summary', async (req, res) => {
+  const { employee_id } = req.query;
+  if (!employee_id) {
+    return res.status(400).json({ error: 'employee_id is required' });
+  }
+
+  // ── Try Directus first ────────────────────────────────────────────────────
+  if (DIRECTUS_TOKEN()) {
+    try {
+      // Fetch all time entries for this employee from Directus
+      // Fields: id, Employee (int), Project (int or object), HoursWorked, Description
+      const filter = encodeURIComponent(JSON.stringify({ Employee: { _eq: Number(employee_id) } }));
+      const url = `${DIRECTUS_URL()}/items/TimeEntry?fields=id,Employee,Project,HoursWorked,Description&filter=${filter}&limit=-1`;
+      const resp = await axios.get(url, {
+        headers: { Authorization: `Bearer ${DIRECTUS_TOKEN()}` },
+        httpsAgent,
+        timeout: 15000,
+      });
+      const entries = resp.data?.data ?? [];
+
+      // Fetch project names from local DB (already synced)
+      const { rows: projects } = await pool.query(
+        `SELECT id, name, bs4_project_id FROM project.project`
+      );
+      const projectByBs4Id = new Map();
+      projects.forEach(p => {
+        if (p.bs4_project_id) projectByBs4Id.set(String(p.bs4_project_id), p);
+      });
+
+      // Group by Project
+      const grouped = new Map();
+      entries.forEach(e => {
+        const pid = e.Project != null ? String(e.Project) : null;
+        if (!pid) return;
+        const hours = parseHours(e.HoursWorked);
+        const existing = grouped.get(pid);
+        if (existing) {
+          existing.totalHours += hours;
+          existing.entryCount += 1;
+        } else {
+          grouped.set(pid, { totalHours: hours, entryCount: 1 });
+        }
+      });
+
+      const summary = [];
+      grouped.forEach((stats, bs4ProjectId) => {
+        const proj = projectByBs4Id.get(bs4ProjectId);
+        summary.push({
+          projectId:   proj?.id ?? bs4ProjectId,
+          projectName: proj?.name ?? `Project ${bs4ProjectId}`,
+          totalHours:  Math.round(stats.totalHours * 100) / 100,
+          entryCount:  stats.entryCount,
+        });
+      });
+      summary.sort((a, b) => b.totalHours - a.totalHours);
+
+      return res.json(summary);
+    } catch (err) {
+      console.warn('[directus-summary] Directus fetch failed, falling back to local DB:', err.message);
+    }
+  }
+
+  // ── Fallback: local DB ────────────────────────────────────────────────────
+  try {
+    const { rows } = await pool.query(
+      `SELECT te.project_id, p.name AS project_name,
+              SUM(te.hours_worked) AS total_hours,
+              COUNT(*) AS entry_count
+       FROM project.time_entry te
+       LEFT JOIN project.project p ON p.id = te.project_id
+       WHERE te.employee_id = $1
+       GROUP BY te.project_id, p.name
+       ORDER BY total_hours DESC`,
+      [employee_id]
+    );
+    const summary = rows.map(r => ({
+      projectId:   r.project_id,
+      projectName: r.project_name ?? r.project_id,
+      totalHours:  Math.round(parseFloat(r.total_hours) * 100) / 100,
+      entryCount:  parseInt(r.entry_count, 10),
+    }));
+    res.json(summary);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // GET /api/v1/time-entries
 router.get('/', async (req, res) => {

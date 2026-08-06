@@ -22,11 +22,11 @@
     <div class="profile-info-grid">
       <div class="profile-info-item">
         <span class="profile-info-label">Department</span>
-        <span class="profile-info-value">{{ department }}</span>
+        <span class="profile-info-value">{{ department() }}</span>
       </div>
       <div class="profile-info-item">
         <span class="profile-info-label">Designation</span>
-        <span class="profile-info-value">{{ designation }}</span>
+        <span class="profile-info-value">{{ designation() }}</span>
       </div>
       <div class="profile-info-item">
         <span class="profile-info-label">App Role</span>
@@ -34,51 +34,72 @@
       </div>
       <div class="profile-info-item">
         <span class="profile-info-label">Employee ID</span>
-        <span class="profile-info-value">{{ user()?.employee_id ?? '—' }}</span>
+        <span class="profile-info-value">{{ directusEmpId() }}</span>
       </div>
     </div>
 
     <div class="profile-actions">
-      <a routerLink="/change-password" class="btn btn-secondary" style="font-size:13px;">
-        🔑 Change Password
-      </a>
+      @if (isGoogleOnly()) {
+        <a routerLink="/change-password" class="btn btn-secondary" style="font-size:13px;">
+          🔑 Set a Password
+        </a>
+        <p style="font-size:11px;color:var(--color-text-secondary);margin-top:6px;text-align:center;">
+          Set a local password for your Google account
+        </p>
+      } @else {
+        <a routerLink="/change-password" class="btn btn-secondary" style="font-size:13px;">
+          🔑 Change Password
+        </a>
+      }
     </div>
   </div>
 
   <!-- Right: Time entries per project -->
   <div class="card">
     <div class="card-header">
-      <h3>⏱️ Time Logged per Project</h3>
-      <div class="time-summary">
-        <span class="time-summary-item">
-          <strong>{{ totalHours | number:'1.1-1' }}h</strong> total
-        </span>
-        <span class="time-summary-sep">·</span>
-        <span class="time-summary-item">
-          <strong>{{ totalEntries }}</strong> entries
-        </span>
-      </div>
+      <h3>⏱️ Total Time Logged</h3>
+      @if (!loading()) {
+        <div class="time-summary">
+          <span class="time-summary-item">
+            <strong>{{ totalHours | number:'1.1-1' }}h</strong> total
+          </span>
+          <span class="time-summary-sep">·</span>
+          <span class="time-summary-item">
+            <strong>{{ totalEntries }}</strong> entries
+          </span>
+        </div>
+      }
     </div>
 
     <div class="project-time-list">
-      @for (entry of projectTimeEntries; track entry.projectId) {
-        <div class="project-time-row">
-          <div class="project-time-meta">
-            <span class="project-dot" [style.background]="entry.color"></span>
-            <span class="project-time-name">{{ entry.projectName }}</span>
-            <span class="project-time-entries">{{ entry.entryCount }} entries</span>
-          </div>
-          <div class="project-time-bar-wrap">
-            <div class="project-time-bar">
-              <div
-                class="project-time-bar-fill"
-                [style.width.%]="barWidth(entry.totalHours)"
-                [style.background]="entry.color">
-              </div>
-            </div>
-            <span class="project-time-hours">{{ entry.totalHours | number:'1.1-1' }}h</span>
-          </div>
+      @if (loading()) {
+        <div style="text-align:center;padding:40px 0;color:var(--color-text-secondary);font-size:13px;">
+          Loading…
         </div>
+      } @else if (projectTimeEntries().length === 0) {
+        <div style="text-align:center;padding:40px 0;color:var(--color-text-secondary);font-size:13px;">
+          No time entries logged yet.
+        </div>
+      } @else {
+        @for (entry of projectTimeEntries(); track entry.projectId) {
+          <div class="project-time-row">
+            <div class="project-time-meta">
+              <span class="project-dot" [style.background]="entry.color"></span>
+              <span class="project-time-name">{{ entry.projectName }}</span>
+              <span class="project-time-entries">{{ entry.entryCount }} entries</span>
+            </div>
+            <div class="project-time-bar-wrap">
+              <div class="project-time-bar">
+                <div
+                  class="project-time-bar-fill"
+                  [style.width.%]="barWidth(entry.totalHours)"
+                  [style.background]="entry.color">
+                </div>
+              </div>
+              <span class="project-time-hours">{{ entry.totalHours | number:'1.1-1' }}h</span>
+            </div>
+          </div>
+        }
       }
     </div>
   </div>

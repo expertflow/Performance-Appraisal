@@ -41,11 +41,31 @@ export class AuthService {
     this.router.navigate(['/login'], { replaceUrl: true });
   }
 
+  /** True when the user signed in via Google and has never set a local password */
+  readonly isGoogleOnly = computed(() => this._user()?.loginMethod === 'google');
+
   changePassword(currentPassword: string, newPassword: string): Observable<{ message: string }> {
-    return this.http.post<{ message: string }>(`${this.base}/auth/change-password`, {
+    return this.http.post<{ message: string }>(`${this.base}/auth-local/change-password`, {
       current_password: currentPassword,
       new_password: newPassword
     });
+  }
+
+  /** For Google-SSO users setting a local password for the first time */
+  setPassword(newPassword: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.base}/auth-local/set-password`, {
+      new_password: newPassword
+    });
+  }
+
+  /** After setting a password, update the stored user so the UI reflects loginMethod: 'local' */
+  markPasswordSet(): void {
+    const u = this._user();
+    if (u) {
+      const updated = { ...u, loginMethod: 'local' as const };
+      localStorage.setItem('hr_suite_user', JSON.stringify(updated));
+      this._user.set(updated);
+    }
   }
 
   getToken(): string | null {

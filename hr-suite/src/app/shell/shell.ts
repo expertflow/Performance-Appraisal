@@ -51,6 +51,7 @@ export class Shell {
   get canAppraisal()   { return this.auth.canAccessAppraisal(); }
   get canProjects()    { return this.auth.canAccessProjects(); }
   get canViewEmployees() { return this.auth.canViewEmployees(); }
+  get isGoogleOnly(): boolean { return this.auth.isGoogleOnly(); }
 
   get userInitials(): string {
     const name = this.user?.name ?? '';

@@ -12,6 +12,9 @@ export interface AppUser {
   avatar_url?: string;
   phone?: string;         // stored for candidates
   address?: string;       // stored for candidates
+  /** 'google' = signed in via Google SSO (no local password set yet)
+   *  'local'  = signed in with email+password */
+  loginMethod?: 'google' | 'local';
 }
 
 export interface LoginRequest {
@@ -30,7 +33,8 @@ export interface Employee {
   last_name: string;
   email: string;
   department?: string;
-  job_title?: string;
+  designation?: string;   // from Directus Designation field
+  job_title?: string;     // alias kept for compatibility
   avatar_url?: string;
   manager_id?: string;    // reporting hierarchy from BS4 sync
 }

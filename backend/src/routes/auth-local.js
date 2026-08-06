@@ -55,6 +55,7 @@ function mapAccount(r) {
     employee_id: r.employee_id || '',
     manager_id:  r.manager_id  || '',
     avatar_url:  r.avatar_url  || '',
+    loginMethod: r.password === 'GOOGLE_SSO' ? 'google' : 'local',
   };
 }
 
@@ -263,6 +264,83 @@ router.post('/resend-otp', async (req, res) => {
       </div>
     `);
     res.json({ sent: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/v1/auth-local/set-password ─────────────────────────────────────
+// For Google-SSO users who want to set a local password for the first time.
+// Authenticated via Bearer token (same token stored in auth_local.account).
+router.post('/set-password', async (req, res) => {
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!token) return res.status(401).json({ error: 'Authorization token required.' });
+
+  const { new_password } = req.body;
+  if (!new_password || new_password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM auth_local.account WHERE token = $1`,
+      [token]
+    );
+    if (!rows.length) return res.status(401).json({ error: 'Invalid or expired token.' });
+
+    const account = rows[0];
+    if (account.password !== 'GOOGLE_SSO') {
+      return res.status(400).json({ error: 'Use the change-password endpoint to update an existing password.' });
+    }
+
+    await pool.query(
+      `UPDATE auth_local.account SET password = $1, updated_at = NOW() WHERE token = $2`,
+      [new_password, token]
+    );
+
+    res.json({ message: 'Password set successfully. You can now sign in with your email and password.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/v1/auth-local/change-password ───────────────────────────────────
+// For local-password users. Requires current password + new password.
+router.post('/change-password', async (req, res) => {
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!token) return res.status(401).json({ error: 'Authorization token required.' });
+
+  const { current_password, new_password } = req.body;
+  if (!current_password || !new_password) {
+    return res.status(400).json({ error: 'current_password and new_password are required.' });
+  }
+  if (new_password.length < 8) {
+    return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM auth_local.account WHERE token = $1`,
+      [token]
+    );
+    if (!rows.length) return res.status(401).json({ error: 'Invalid or expired token.' });
+
+    const account = rows[0];
+    if (account.password === 'GOOGLE_SSO') {
+      return res.status(400).json({ error: 'Use the set-password endpoint to set a password for your Google account.' });
+    }
+    if (account.password !== current_password) {
+      return res.status(401).json({ error: 'Current password is incorrect.' });
+    }
+
+    await pool.query(
+      `UPDATE auth_local.account SET password = $1, updated_at = NOW() WHERE token = $2`,
+      [new_password, token]
+    );
+
+    res.json({ message: 'Password changed successfully.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

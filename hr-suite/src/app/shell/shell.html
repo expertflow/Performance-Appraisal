@@ -162,7 +162,7 @@
             <span>⚙️</span> Settings
           </a>
           <a routerLink="/change-password" class="profile-popup-item" (click)="closeProfileMenu()">
-            <span>🔑</span> Change Password
+            <span>🔑</span> {{ isGoogleOnly ? 'Set a Password' : 'Change Password' }}
           </a>
           <div class="profile-popup-divider"></div>
           <button class="profile-popup-item profile-popup-logout" (click)="logout()">
@@ -222,7 +222,7 @@
                 <span>⚙️</span> Settings
               </a>
               <a routerLink="/change-password" class="user-dropdown-item">
-                <span>🔑</span> Change Password
+                <span>🔑</span> {{ isGoogleOnly ? 'Set a Password' : 'Change Password' }}
               </a>
               <div class="user-dropdown-divider"></div>
               <button class="user-dropdown-item user-dropdown-logout" (click)="logout()">

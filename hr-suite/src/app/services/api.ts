@@ -99,6 +99,14 @@ export class ApiService {
     return this.http.get<TimeEntry[]>(`${this.base}/time-entries`, { params });
   }
 
+  /** Fetch time-logged-per-project summary directly from Directus ERP for a given employee */
+  getDirectusTimeSummary(employeeId: string): Observable<{ projectId: string; projectName: string; totalHours: number; entryCount: number }[]> {
+    const params = new HttpParams().set('employee_id', employeeId);
+    return this.http.get<{ projectId: string; projectName: string; totalHours: number; entryCount: number }[]>(
+      `${this.base}/time-entries/directus-summary`, { params }
+    );
+  }
+
   createTimeEntry(entry: Omit<TimeEntry, 'id' | 'created_at' | 'updated_at'>): Observable<TimeEntry> {
     return this.http.post<TimeEntry>(`${this.base}/time-entries`, entry);
   }
