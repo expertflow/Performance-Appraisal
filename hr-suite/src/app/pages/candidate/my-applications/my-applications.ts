@@ -21,7 +21,8 @@ export class MyApplications implements OnInit {
   // ── Offers ─────────────────────────────────────────────────────────────────
   offers: JobOffer[]    = [];
   offersLoading         = false;
-  respondingOfferId: string | null = null;
+  respondingOfferId:   string | null = null;
+  respondingDecision:  'Accepted' | 'Rejected' | null = null;
   offerToast: { msg: string; ok: boolean } | null = null;
 
   ngOnInit(): void {
@@ -45,11 +46,13 @@ export class MyApplications implements OnInit {
   }
 
   respondToOffer(offerId: string, decision: 'Accepted' | 'Rejected'): void {
-    this.respondingOfferId = offerId;
+    this.respondingOfferId  = offerId;
+    this.respondingDecision = decision;
     this.api.respondToJobOffer(offerId, decision).subscribe({
       next: updated => {
         this.offers = this.offers.map(o => o.id === offerId ? updated : o);
-        this.respondingOfferId = null;
+        this.respondingOfferId  = null;
+        this.respondingDecision = null;
         this.offerToast = {
           msg: decision === 'Accepted'
             ? '🎉 Offer accepted! HR has been notified.'
@@ -59,7 +62,8 @@ export class MyApplications implements OnInit {
         setTimeout(() => this.offerToast = null, 5000);
       },
       error: () => {
-        this.respondingOfferId = null;
+        this.respondingOfferId  = null;
+        this.respondingDecision = null;
         this.offerToast = { msg: '⚠️ Something went wrong. Please try again.', ok: false };
         setTimeout(() => this.offerToast = null, 4000);
       },

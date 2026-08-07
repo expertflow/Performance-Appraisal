@@ -72,7 +72,7 @@
                      transition:opacity .15s;"
               [disabled]="respondingOfferId === offer.id"
               (click)="respondToOffer(offer.id, 'Accepted')">
-              @if (respondingOfferId === offer.id) {
+              @if (respondingOfferId === offer.id && respondingDecision === 'Accepted') {
                 <span style="width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;
                              border-radius:50%;animation:spin .7s linear infinite;display:inline-block;"></span>
               } @else {
@@ -86,7 +86,13 @@
                      transition:opacity .15s;"
               [disabled]="respondingOfferId === offer.id"
               (click)="respondToOffer(offer.id, 'Rejected')">
-              ❌ Decline Offer
+              @if (respondingOfferId === offer.id && respondingDecision === 'Rejected') {
+                <span style="width:14px;height:14px;border:2px solid rgba(220,38,38,.3);border-top-color:#dc2626;
+                             border-radius:50%;animation:spin .7s linear infinite;display:inline-block;"></span>
+              } @else {
+                ❌
+              }
+              Decline Offer
             </button>
           </div>
         </div>
