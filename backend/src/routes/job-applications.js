@@ -172,15 +172,18 @@ router.post('/', async (req, res) => {
 
     const app = rows[0];
 
-    // ── Notify HR + AppAdmin + Manager (app notification) ────────────────────
-    await notifyRecruitmentRoles({
+    // ── Respond immediately — notifications/emails fire in background ─────────
+    res.status(201).json(mapRow(app));
+
+    // ── Notify HR + AppAdmin + Manager (fire-and-forget) ─────────────────────
+    notifyRecruitmentRoles({
       type:  'application',
       title: `New Application: ${jobTitle}`,
       body:  `${candidateName} has applied for "${jobTitle}".`,
-    });
+    }).catch(e => console.error('[app notify]', e.message));
 
-    // ── Email HR + AppAdmin + Manager ─────────────────────────────────────────
-    await emailRecruitmentRoles(
+    // ── Email HR + AppAdmin + Manager (fire-and-forget) ───────────────────────
+    emailRecruitmentRoles(
       `New Application — ${jobTitle}`,
       `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
         <h2 style="color:#1878cc;">📋 New Job Application</h2>
@@ -200,9 +203,7 @@ router.post('/', async (req, res) => {
         </p>
         <p style="color:#64748b;font-size:13px;">Best regards,<br>ExpertFlow HR Suite</p>
       </div>`
-    );
-
-    res.status(201).json(mapRow(app));
+    ).catch(e => console.error('[app email]', e.message));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -227,29 +228,31 @@ router.patch('/:id', async (req, res) => {
 
     const app = rows[0];
 
-    // ── Notify candidate (targeted by candidateId) ────────────────────────────
-    const { rows: userRows } = await pool.query(
-      `SELECT id FROM auth_local.account WHERE id = $1 LIMIT 1`,
-      [app.candidate_id]
-    );
-    const candidateUserId = userRows.length ? userRows[0].id : null;
+    // ── Respond immediately — notifications/emails fire in background ─────────
+    res.json(mapRow(app));
 
-    await pushNotification({
-      target_role:    'Candidate',
-      target_user_id: candidateUserId,
-      type:           'status',
-      title:          `Application Status Updated: ${app.job_title}`,
-      body:           `Your application for "${app.job_title}" has been updated to: ${status}. Visit the careers portal to check your application status.`,
-    });
+    // ── Notify candidate (fire-and-forget) ────────────────────────────────────
+    pool.query(`SELECT id FROM auth_local.account WHERE id = $1 LIMIT 1`, [app.candidate_id])
+      .then(({ rows: userRows }) => {
+        const candidateUserId = userRows.length ? userRows[0].id : null;
+        return pushNotification({
+          target_role:    'Candidate',
+          target_user_id: candidateUserId,
+          type:           'status',
+          title:          `Application Status Updated: ${app.job_title}`,
+          body:           `Your application for "${app.job_title}" has been updated to: ${status}. Visit the careers portal to check your application status.`,
+        });
+      })
+      .catch(e => console.error('[candidate notify]', e.message));
 
-    // ── Notify HR + AppAdmin + Manager (app notification) ────────────────────
-    await notifyRecruitmentRoles({
+    // ── Notify HR + AppAdmin + Manager (fire-and-forget) ─────────────────────
+    notifyRecruitmentRoles({
       type:  'status',
       title: `Application Status Changed: ${app.job_title}`,
       body:  `${app.candidate_name}'s application for "${app.job_title}" was moved to: ${status}.`,
-    });
+    }).catch(e => console.error('[status notify]', e.message));
 
-    // ── Email candidate ───────────────────────────────────────────────────────
+    // ── Email candidate (fire-and-forget) ─────────────────────────────────────
     const statusMessages = {
       'Under Review': 'Your application is now under review by our HR team.',
       'Shortlisted':  'Congratulations! You have been shortlisted for this position.',
@@ -259,7 +262,7 @@ router.patch('/:id', async (req, res) => {
     };
     const statusMsg = statusMessages[status] || `Your application status has been updated to: ${status}.`;
 
-    await sendEmail(
+    sendEmail(
       app.candidate_email,
       `Application Update — ${app.job_title}`,
       `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
@@ -278,10 +281,10 @@ router.patch('/:id', async (req, res) => {
         </p>
         <p style="color:#64748b;font-size:13px;">Best regards,<br>ExpertFlow HR Team<br><a href="${CAREERS_URL}">${CAREERS_URL}</a></p>
       </div>`
-    );
+    ).catch(e => console.error('[candidate email]', e.message));
 
-    // ── Email HR + AppAdmin + Manager about the status change ─────────────────
-    await emailRecruitmentRoles(
+    // ── Email HR + AppAdmin + Manager (fire-and-forget) ───────────────────────
+    emailRecruitmentRoles(
       `Application Status Changed — ${app.job_title}`,
       `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
         <h2 style="color:#1878cc;">📋 Application Status Changed</h2>
@@ -302,9 +305,7 @@ router.patch('/:id', async (req, res) => {
         </p>
         <p style="color:#64748b;font-size:13px;">Best regards,<br>ExpertFlow HR Suite</p>
       </div>`
-    );
-
-    res.json(mapRow(app));
+    ).catch(e => console.error('[status email]', e.message));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

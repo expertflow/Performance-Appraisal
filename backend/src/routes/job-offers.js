@@ -124,9 +124,12 @@ router.post('/', async (req, res) => {
     );
     const offer = rows[0];
 
-    // ── Send email to candidate with accept/reject link ───────────────────────
+    // ── Respond immediately — send email in background (fire-and-forget) ──────
+    res.status(201).json(mapRow(offer));
+
+    // ── Send email to candidate with accept/reject link (async, non-blocking) ─
     const portalUrl = `${CAREERS_URL}/candidate/my-applications`;
-    await sendEmail(
+    sendEmail(
       candidateEmail,
       `Offer Letter — ${role} at ExpertFlow`,
       `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
@@ -155,9 +158,7 @@ router.post('/', async (req, res) => {
           <a href="${CAREERS_URL}">${CAREERS_URL}</a>
         </p>
       </div>`
-    );
-
-    res.status(201).json(mapRow(offer));
+    ).catch(e => console.error('[offer email]', e.message));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -183,15 +184,18 @@ router.patch('/:id/respond', async (req, res) => {
     const offer = rows[0];
     const emoji = decision === 'Accepted' ? '🎉' : '❌';
 
-    // ── App notification → HR + AppAdmin + Manager ────────────────────────────
-    await notifyRecruitmentRoles({
+    // ── Respond immediately — notifications/emails fire in background ─────────
+    res.json(mapRow(offer));
+
+    // ── App notification → HR + AppAdmin + Manager (fire-and-forget) ─────────
+    notifyRecruitmentRoles({
       type:  decision === 'Accepted' ? 'offer' : 'info',
       title: `${emoji} Offer ${decision}: ${offer.role}`,
       body:  `${offer.candidate_name} has ${decision.toLowerCase()} the offer for "${offer.role}".`,
-    });
+    }).catch(e => console.error('[offer notify]', e.message));
 
-    // ── Email HR + AppAdmin + Manager ─────────────────────────────────────────
-    await emailRecruitmentRoles(
+    // ── Email HR + AppAdmin + Manager (fire-and-forget) ───────────────────────
+    emailRecruitmentRoles(
       `${emoji} Offer ${decision} — ${offer.role}`,
       `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
         <h2 style="color:${decision === 'Accepted' ? '#059669' : '#dc2626'};">
@@ -217,9 +221,7 @@ router.patch('/:id/respond', async (req, res) => {
         </p>
         <p style="color:#64748b;font-size:13px;">Best regards,<br>ExpertFlow HR Suite</p>
       </div>`
-    );
-
-    res.json(mapRow(offer));
+    ).catch(e => console.error('[offer respond email]', e.message));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
