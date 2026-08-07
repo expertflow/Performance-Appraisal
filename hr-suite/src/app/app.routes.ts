@@ -99,7 +99,7 @@ export const routes: Routes = [
       },
       {
         path: 'recruitment/pipeline',
-        canActivate: [roleGuard(['AppAdmin', 'HR'])],
+        canActivate: [roleGuard(['AppAdmin', 'HR', 'Manager'])],
         loadComponent: () => import('./pages/recruitment/pipeline/pipeline').then(m => m.Pipeline)
       },
       {

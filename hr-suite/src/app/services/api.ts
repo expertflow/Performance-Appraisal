@@ -255,6 +255,11 @@ export class ApiService {
     return this.http.get<any[]>(`${this.base}/appraisals/records`, { params });
   }
 
+  // ── Email ─────────────────────────────────────────────────────────────────
+  sendEmail(to: string, subject: string, html: string): Observable<{ sent: boolean }> {
+    return this.http.post<{ sent: boolean }>(`${this.base}/send-email`, { to, subject, html });
+  }
+
   // ── App Notifications (backend-persisted, cross-user) ─────────────────────
   getNotifications(role: string, userId: string): Observable<AppNotification[]> {
     const params = new HttpParams().set('role', role).set('userId', userId);

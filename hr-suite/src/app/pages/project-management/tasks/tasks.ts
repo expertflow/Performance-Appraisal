@@ -368,20 +368,41 @@ export class Tasks implements OnInit {
     });
   }
 
-  // ── Notification helper ─────────────────────────────────────────────────────
+  // ── Notification + Email helper ─────────────────────────────────────────────
   private sendAssignmentNotification(task: Task, employeeId: string) {
     const appUser = this.appUsers.find(u => u.employee_id === employeeId);
     const emp = this.employees.find(e => e.id === employeeId);
     const empName = emp ? `${emp.first_name} ${emp.last_name}` : 'You';
     const projectName = this.projects.find(p => p.id === task.project_id)?.name || '';
+    const taskUrl = `https://hrsuite.expertflow.com/tasks/${task.id}`;
 
+    // App notification
     this.api.postNotification({
       target_role:    'Employee',
       target_user_id: appUser?.id || undefined,
       type:           'info',
       title:          `New Task Assigned: ${task.title}`,
-      body:           `${empName} has been assigned to task "${task.title}"${projectName ? ` in project "${projectName}"` : ''}.`,
+      body:           `You have been assigned to task "${task.title}"${projectName ? ` in project "${projectName}"` : ''}.`,
     }).subscribe({ error: () => {} });
+
+    // Email (only if we have the assignee's email via appUser)
+    if (appUser?.email) {
+      this.api.sendEmail(
+        appUser.email,
+        `New Task Assigned: ${task.title}`,
+        `<h2>You have a new task assignment</h2>
+         <p>Hi ${empName},</p>
+         <p>You have been assigned to the following task:</p>
+         <table style="border-collapse:collapse;margin:12px 0;">
+           <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Task:</td><td>${task.title}</td></tr>
+           ${projectName ? `<tr><td style="padding:4px 12px 4px 0;font-weight:600;">Project:</td><td>${projectName}</td></tr>` : ''}
+           ${task.due_date ? `<tr><td style="padding:4px 12px 4px 0;font-weight:600;">Due Date:</td><td>${task.due_date.substring(0,10)}</td></tr>` : ''}
+           ${task.priority ? `<tr><td style="padding:4px 12px 4px 0;font-weight:600;">Priority:</td><td>${task.priority}</td></tr>` : ''}
+         </table>
+         <p><a href="${taskUrl}" style="background:#1878cc;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;">View Task</a></p>
+         <p style="color:#64748b;font-size:13px;">Best regards,<br>ExpertFlow HR Suite</p>`
+      ).subscribe({ error: () => {} });
+    }
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────

@@ -368,19 +368,41 @@ export class Subtasks implements OnInit {
     });
   }
 
-  // ── Notification helper ─────────────────────────────────────────────────────
+  // ── Notification + Email helper ─────────────────────────────────────────────
   private sendAssignmentNotification(subtask: Task, employeeId: string) {
     const appUser = this.appUsers.find(u => u.employee_id === employeeId);
     const emp = this.employees.find(e => e.id === employeeId);
     const empName = emp ? `${emp.first_name} ${emp.last_name}` : 'You';
+    const parentTitle = this.parentTask?.title || '';
+    const taskUrl = `https://hrsuite.expertflow.com/tasks/${this.taskId}`;
 
+    // App notification
     this.api.postNotification({
       target_role:    'Employee',
       target_user_id: appUser?.id || undefined,
       type:           'info',
       title:          `New Subtask Assigned: ${subtask.title}`,
-      body:           `${empName} has been assigned to subtask "${subtask.title}"${this.parentTask ? ` under task "${this.parentTask.title}"` : ''}.`,
+      body:           `You have been assigned to subtask "${subtask.title}"${parentTitle ? ` under task "${parentTitle}"` : ''}.`,
     }).subscribe({ error: () => {} });
+
+    // Email (only if we have the assignee's email via appUser)
+    if (appUser?.email) {
+      this.api.sendEmail(
+        appUser.email,
+        `New Subtask Assigned: ${subtask.title}`,
+        `<h2>You have a new subtask assignment</h2>
+         <p>Hi ${empName},</p>
+         <p>You have been assigned to the following subtask:</p>
+         <table style="border-collapse:collapse;margin:12px 0;">
+           <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Subtask:</td><td>${subtask.title}</td></tr>
+           ${parentTitle ? `<tr><td style="padding:4px 12px 4px 0;font-weight:600;">Parent Task:</td><td>${parentTitle}</td></tr>` : ''}
+           ${subtask.due_date ? `<tr><td style="padding:4px 12px 4px 0;font-weight:600;">Due Date:</td><td>${subtask.due_date.substring(0,10)}</td></tr>` : ''}
+           ${subtask.priority ? `<tr><td style="padding:4px 12px 4px 0;font-weight:600;">Priority:</td><td>${subtask.priority}</td></tr>` : ''}
+         </table>
+         <p><a href="${taskUrl}" style="background:#1878cc;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;">View Task</a></p>
+         <p style="color:#64748b;font-size:13px;">Best regards,<br>ExpertFlow HR Suite</p>`
+      ).subscribe({ error: () => {} });
+    }
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────

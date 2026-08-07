@@ -5,6 +5,9 @@ import { CommonModule } from '@angular/common';
 import { JobStoreService, JobApplication, ApplicationStatus } from '../../../services/job-store';
 import { CandidateNotificationService } from '../../../services/candidate-notification';
 import { ApiService } from '../../../services/api';
+import { AuthService } from '../../../services/auth';
+import { Employee } from '../../../models';
+import { AppUserRecord } from '../../../services/user-store';
 
 interface AiRequirementResult {
   name: string;
@@ -35,9 +38,16 @@ export class Pipeline implements OnInit {
   private jobStore   = inject(JobStoreService);
   private candNotif  = inject(CandidateNotificationService);
   private api        = inject(ApiService);
+  private auth       = inject(AuthService);
 
   readonly allApplications = this.jobStore.applications;
   readonly allJobs         = this.jobStore.jobs;
+
+  employees: Employee[]       = [];
+  appUsers:  AppUserRecord[]  = [];
+
+  // ── Interview: selected interviewer employee ──────────────────────────────
+  interviewerEmployeeId = '';
 
   selectedJobTitle = 'All Jobs';
 
@@ -70,6 +80,8 @@ export class Pipeline implements OnInit {
   ngOnInit(): void {
     this.jobStore.reloadAllApplications();
     this.jobStore.loadJobs();
+    this.api.getEmployees(undefined, true).subscribe({ next: e => this.employees = e, error: () => {} });
+    this.api.getAppUsers().subscribe({ next: u => this.appUsers = u, error: () => {} });
     setTimeout(() => {
       const apps = this.allApplications();
       if (apps.length > 0) this.selectedApp = apps[0];
@@ -105,6 +117,7 @@ export class Pipeline implements OnInit {
       location: 'Google Meet / Office',
       notes:    '',
     };
+    this.interviewerEmployeeId = '';
     this.showInterviewModal.set(true);
   }
 
@@ -174,7 +187,7 @@ export class Pipeline implements OnInit {
       time:  'Just now',
     });
 
-    // Send email
+    // Send email to candidate
     this.candNotif.sendEmail(
       app.candidateEmail,
       `Interview Scheduled — ${app.jobTitle}`,
@@ -189,6 +202,45 @@ export class Pipeline implements OnInit {
        <p>Please confirm your attendance by replying to this email.</p>
        <p>Best regards,<br>ExpertFlow HR Team</p>`
     );
+
+    // ── Notify interviewer employee (if selected) ─────────────────────────────
+    if (this.interviewerEmployeeId) {
+      const interviewerEmp  = this.employees.find(e => e.id === this.interviewerEmployeeId);
+      const interviewerUser = this.appUsers.find(u => u.employee_id === this.interviewerEmployeeId);
+      const interviewerName = interviewerEmp
+        ? `${interviewerEmp.first_name} ${interviewerEmp.last_name}`
+        : 'You';
+
+      // App notification (targeted to the interviewer's app user)
+      this.api.postNotification({
+        target_role:    'Employee',
+        target_user_id: interviewerUser?.id || undefined,
+        type:           'info',
+        title:          `Interview Assigned: ${app.jobTitle}`,
+        body:           `You have been assigned to interview ${app.candidateName} for "${app.jobTitle}".\n📅 ${dateStr}\n📍 ${f.location}`,
+      }).subscribe({ error: () => {} });
+
+      // Email to interviewer (only if we have their email)
+      if (interviewerUser?.email) {
+        this.api.sendEmail(
+          interviewerUser.email,
+          `Interview Assignment — ${app.jobTitle}`,
+          `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+            <h2 style="color:#1878cc;">Interview Assignment</h2>
+            <p>Hi ${interviewerName},</p>
+            <p>You have been assigned to conduct an interview for the <strong>${app.jobTitle}</strong> position.</p>
+            <table style="border-collapse:collapse;margin:12px 0;width:100%;">
+              <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Candidate:</td><td>${app.candidateName}</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Position:</td><td>${app.jobTitle}</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Date &amp; Time:</td><td>${dateStr}</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Location:</td><td>${f.location}</td></tr>
+              ${f.notes ? `<tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Notes:</td><td>${f.notes}</td></tr>` : ''}
+            </table>
+            <p style="color:#64748b;font-size:13px;">Best regards,<br>ExpertFlow HR Team</p>
+          </div>`
+        ).subscribe({ error: () => {} });
+      }
+    }
 
     this.closeInterviewModal();
     this.showToast(`✓ Interview scheduled for ${app.candidateName}`);

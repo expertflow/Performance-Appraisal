@@ -48,9 +48,12 @@
               <a routerLink="/recruitment/applications" routerLinkActive="active" class="nav-sub-item">
                 <span class="nav-sub-icon">👤</span>Applications
               </a>
-              <a routerLink="/recruitment/pipeline" routerLinkActive="active" class="nav-sub-item">
-                <span class="nav-sub-icon">🔀</span>Pipeline
-              </a>
+            }
+            <!-- Pipeline: AppAdmin, HR, and Manager (full access) -->
+            <a routerLink="/recruitment/pipeline" routerLinkActive="active" class="nav-sub-item">
+              <span class="nav-sub-icon">🔀</span>Pipeline
+            </a>
+            @if (!isManager) {
               <a routerLink="/recruitment/offer" routerLinkActive="active" class="nav-sub-item">
                 <span class="nav-sub-icon">💼</span>Offers
               </a>
