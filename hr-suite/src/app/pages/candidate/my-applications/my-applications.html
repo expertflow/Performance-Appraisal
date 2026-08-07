@@ -7,6 +7,122 @@
   <a routerLink="/candidate/jobs" class="btn-browse">💼 Browse More Jobs</a>
 </div>
 
+<!-- ── Offer Toast ────────────────────────────────────────────────────────────── -->
+@if (offerToast) {
+  <div style="margin-bottom:16px;padding:14px 18px;border-radius:10px;font-size:14px;font-weight:500;
+              display:flex;align-items:center;gap:10px;"
+       [style.background]="offerToast.ok ? '#f0fdf4' : '#fff7ed'"
+       [style.border]="offerToast.ok ? '1px solid #86efac' : '1px solid #fdba74'"
+       [style.color]="offerToast.ok ? '#166534' : '#9a3412'">
+    {{ offerToast.msg }}
+  </div>
+}
+
+<!-- ── Pending Offer Banners ──────────────────────────────────────────────────── -->
+@if (pendingOffers.length > 0) {
+  <div style="margin-bottom:24px;">
+    <h2 style="font-size:16px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+      <span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:20px;font-size:13px;">
+        🎁 {{ pendingOffers.length }} Pending Offer{{ pendingOffers.length > 1 ? 's' : '' }}
+      </span>
+    </h2>
+
+    @for (offer of pendingOffers; track offer.id) {
+      <div style="background:linear-gradient(135deg,#fffbeb,#fef9ee);border:1.5px solid #fcd34d;
+                  border-radius:14px;padding:20px 24px;margin-bottom:14px;
+                  box-shadow:0 2px 12px rgba(251,191,36,.15);">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+
+          <!-- Left: offer details -->
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+              <div style="width:42px;height:42px;border-radius:50%;background:#00A3A3;color:#fff;
+                          display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;">
+                🎁
+              </div>
+              <div>
+                <div style="font-weight:700;font-size:15px;color:#1e293b;">Job Offer — {{ offer.jobTitle }}</div>
+                <div style="font-size:12px;color:#78716c;margin-top:1px;">Sent on {{ offer.sentDate }}</div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+              <span style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:4px 10px;font-size:12px;color:#475569;">
+                💼 {{ offer.role }}
+              </span>
+              <span style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:4px 10px;font-size:12px;color:#475569;">
+                🏢 {{ offer.dept }}
+              </span>
+              <span style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;color:#0f766e;">
+                💰 {{ offer.salary }}
+              </span>
+            </div>
+
+            <div style="font-size:12px;color:#92400e;background:#fef3c7;display:inline-block;
+                        padding:3px 10px;border-radius:6px;">
+              ⏳ Expires: {{ offer.expiryDate }}
+            </div>
+          </div>
+
+          <!-- Right: action buttons -->
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;flex-shrink:0;">
+            <button
+              style="background:#059669;color:#fff;border:none;border-radius:8px;padding:10px 22px;
+                     font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;
+                     transition:opacity .15s;"
+              [disabled]="respondingOfferId === offer.id"
+              (click)="respondToOffer(offer.id, 'Accepted')">
+              @if (respondingOfferId === offer.id) {
+                <span style="width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;
+                             border-radius:50%;animation:spin .7s linear infinite;display:inline-block;"></span>
+              } @else {
+                ✅
+              }
+              Accept Offer
+            </button>
+            <button
+              style="background:#fff;color:#dc2626;border:1.5px solid #fca5a5;border-radius:8px;padding:10px 22px;
+                     font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;
+                     transition:opacity .15s;"
+              [disabled]="respondingOfferId === offer.id"
+              (click)="respondToOffer(offer.id, 'Rejected')">
+              ❌ Decline Offer
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<!-- ── Responded Offers (history) ─────────────────────────────────────────────── -->
+@if (offers.length > 0 && pendingOffers.length < offers.length) {
+  <div style="margin-bottom:24px;">
+    <h2 style="font-size:14px;font-weight:600;color:var(--color-text-secondary);margin-bottom:10px;">
+      Offer History
+    </h2>
+    @for (offer of offers; track offer.id) {
+      @if (offer.status !== 'Pending') {
+        <div style="background:var(--color-bg-card,#fff);border:1px solid var(--color-border,#e2e8f0);
+                    border-radius:10px;padding:14px 18px;margin-bottom:8px;
+                    display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:600;font-size:14px;">{{ offer.jobTitle }} — {{ offer.role }}</div>
+            <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">
+              {{ offer.salary }} · {{ offer.dept }} · Sent {{ offer.sentDate }}
+            </div>
+          </div>
+          <span style="padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;"
+                [style.background]="offer.status === 'Accepted' ? '#f0fdf4' : '#fef2f2'"
+                [style.color]="offer.status === 'Accepted' ? '#166534' : '#dc2626'">
+            {{ offer.status === 'Accepted' ? '✅ Accepted' : '❌ Declined' }}
+          </span>
+        </div>
+      }
+    }
+  </div>
+}
+
 <!-- ── Empty state ──────────────────────────────────────────────────────────── -->
 @if (myApps.length === 0) {
   <div class="empty-state">

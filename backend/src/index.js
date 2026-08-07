@@ -24,6 +24,7 @@ const sendEmailRouter         = require('./routes/send-email');
 const notificationsRouter        = require('./routes/notifications');
 const performanceAppraisalsRouter = require('./routes/performance-appraisals');
 const aiScreenRouter              = require('./routes/ai-screen');
+const jobOffersRouter             = require('./routes/job-offers');
 const { runSync }          = require('./services/sync');
 
 const app = express();
@@ -64,6 +65,7 @@ app.use('/api/v1/send-email',       sendEmailRouter);
 app.use('/api/v1/notifications',    notificationsRouter);
 app.use('/api/v1/appraisals',       performanceAppraisalsRouter);
 app.use('/api/v1/ai',               aiScreenRouter);
+app.use('/api/v1/job-offers',       jobOffersRouter);
 app.use('/api/v1/auth/google',      authGoogleRouter);
 
 // ── 404 handler ───────────────────────────────────────────────────────────

@@ -7,6 +7,22 @@ import { Project, Task, TimeEntry, Employee, ApiResponse, SyncStatus } from '../
 import { JobPosting, JobApplication, ApplicationStatus } from './job-store';
 import { AppUserRecord } from './user-store';
 
+// ── Job Offer shape ───────────────────────────────────────────────────────────
+export interface JobOffer {
+  id:             string;
+  candidateId:    string;
+  candidateName:  string;
+  candidateEmail: string;
+  jobTitle:       string;
+  role:           string;
+  dept:           string;
+  salary:         string;
+  sentDate:       string;
+  expiryDate:     string;
+  status:         'Pending' | 'Accepted' | 'Rejected';
+  respondedAt:    string | null;
+}
+
 // ── Auth-local shapes ─────────────────────────────────────────────────────────
 export interface LocalLoginRequest  { email: string; password: string; }
 export interface LocalRegisterRequest {
@@ -258,6 +274,24 @@ export class ApiService {
   // ── Email ─────────────────────────────────────────────────────────────────
   sendEmail(to: string, subject: string, html: string): Observable<{ sent: boolean }> {
     return this.http.post<{ sent: boolean }>(`${this.base}/send-email`, { to, subject, html });
+  }
+
+  // ── Job Offers ────────────────────────────────────────────────────────────
+  getJobOffers(candidateId?: string): Observable<JobOffer[]> {
+    let params = new HttpParams();
+    if (candidateId) params = params.set('candidate_id', candidateId);
+    return this.http.get<JobOffer[]>(`${this.base}/job-offers`, { params });
+  }
+
+  createJobOffer(payload: {
+    candidateId: string; candidateName: string; candidateEmail: string;
+    jobTitle?: string; role: string; dept?: string; salary: string; expiryDays?: number;
+  }): Observable<JobOffer> {
+    return this.http.post<JobOffer>(`${this.base}/job-offers`, payload);
+  }
+
+  respondToJobOffer(offerId: string, decision: 'Accepted' | 'Rejected'): Observable<JobOffer> {
+    return this.http.patch<JobOffer>(`${this.base}/job-offers/${offerId}/respond`, { decision });
   }
 
   // ── App Notifications (backend-persisted, cross-user) ─────────────────────

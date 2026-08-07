@@ -245,12 +245,32 @@ CREATE TABLE IF NOT EXISTS recruitment.job_requisition (
 
 `;
 
+const offerSchema = `
+CREATE TABLE IF NOT EXISTS recruitment.job_offer (
+  id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  candidate_id    TEXT        NOT NULL,
+  candidate_name  TEXT        NOT NULL,
+  candidate_email TEXT        NOT NULL,
+  job_title       TEXT        NOT NULL DEFAULT '',
+  role            TEXT        NOT NULL,
+  dept            TEXT        NOT NULL DEFAULT 'Engineering',
+  salary          TEXT        NOT NULL,
+  sent_date       DATE        NOT NULL DEFAULT CURRENT_DATE,
+  expiry_date     DATE,
+  status          TEXT        NOT NULL DEFAULT 'Pending',
+  responded_at    TIMESTAMPTZ,
+  created_at      TIMESTAMPTZ DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+`;
+
 async function migrate() {
   const client = await pool.connect();
   try {
     console.log('Running migrations…');
     await client.query(schema);
     await client.query(reqSchema);
+    await client.query(offerSchema);
     console.log('✅ Migrations complete.');
   } catch (err) {
     console.error('❌ Migration failed:', err.message);

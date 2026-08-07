@@ -40,8 +40,7 @@
         <option>All Statuses</option>
         <option>Pending</option>
         <option>Accepted</option>
-        <option>Negotiating</option>
-        <option>Declined</option>
+        <option>Rejected</option>
       </select>
     </div>
   </div>
@@ -60,15 +59,22 @@
         </tr>
       </thead>
       <tbody>
-        @for (offer of filteredOffers; track offer.id) {
+        @for (offer of filteredOffers; track offer.id; let i = $index) {
           <tr>
             <td>
-              <span style="font-family:monospace;font-size:12px;color:var(--color-text-secondary);">{{ offer.id }}</span>
+              <span style="font-family:monospace;font-size:12px;color:var(--color-text-secondary);">{{ offer.id.slice(0,8) }}…</span>
             </td>
             <td>
               <div class="td-candidate">
-                <div class="candidate-avatar-sm" [class]="'avatar-' + offer.color">{{ offer.initials }}</div>
-                <span style="font-weight:600;">{{ offer.candidate }}</span>
+                <div class="candidate-avatar-sm"
+                     [style.background]="avatarColor(i)"
+                     style="color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;width:32px;height:32px;border-radius:50%;flex-shrink:0;">
+                  {{ initials(offer.candidateName) }}
+                </div>
+                <div>
+                  <div style="font-weight:600;">{{ offer.candidateName }}</div>
+                  <div style="font-size:11px;color:var(--color-text-secondary);">{{ offer.candidateEmail }}</div>
+                </div>
               </div>
             </td>
             <td>
@@ -80,15 +86,18 @@
             </td>
             <td>{{ offer.sentDate }}</td>
             <td>
-              <span [class]="offer.status === 'Pending' ? 'text-orange' : ''">{{ offer.expiryDate }}</span>
+              <span [style.color]="offer.status === 'Pending' ? '#d97706' : 'inherit'">{{ offer.expiryDate }}</span>
             </td>
             <td>
-              <span class="badge" [class]="offer.statusClass">{{ offer.status }}</span>
+              <span class="badge" [class]="statusClass(offer.status)">{{ offer.status }}</span>
             </td>
             <td>
               <div style="display:flex;gap:6px;">
-                <button class="btn btn-secondary btn-sm" (click)="openEdit(offer)">✏️ Edit</button>
-                <button class="btn btn-danger btn-sm" (click)="deleteOffer(offer)">🗑️ Delete</button>
+                @if (offer.respondedAt) {
+                  <span style="font-size:11px;color:var(--color-text-muted);">Responded</span>
+                } @else {
+                  <span style="font-size:11px;color:var(--color-text-muted);">Awaiting</span>
+                }
               </div>
             </td>
           </tr>
@@ -104,58 +113,6 @@
     </table>
   </div>
 </div>
-
-<!-- Edit Offer Modal -->
-@if (showEditModal) {
-  <div class="modal-overlay" (click)="closeEdit()">
-    <div class="modal" style="max-width:480px;" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h2>✏️ Edit Offer</h2>
-        <button class="btn btn-icon" (click)="closeEdit()">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">Candidate Name *</label>
-          <input class="form-control" title="Candidate name" [(ngModel)]="editForm.candidate" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Role / Position *</label>
-          <input class="form-control" title="Role" [(ngModel)]="editForm.role" />
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div class="form-group">
-            <label class="form-label">Department</label>
-            <select class="form-control" title="Department" [(ngModel)]="editForm.dept">
-              <option>Engineering</option>
-              <option>Product</option>
-              <option>Design</option>
-              <option>Operations</option>
-              <option>Infrastructure</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Status</label>
-            <select class="form-control" title="Status" [(ngModel)]="editForm.status">
-              <option>Pending</option>
-              <option>Accepted</option>
-              <option>Negotiating</option>
-              <option>Declined</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Salary Package *</label>
-          <input class="form-control" title="Salary" [(ngModel)]="editForm.salary" />
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" (click)="closeEdit()">Cancel</button>
-        <button class="btn btn-primary" (click)="saveEdit()"
-          [disabled]="!editForm.candidate || !editForm.role || !editForm.salary">Save Changes</button>
-      </div>
-    </div>
-  </div>
-}
 
 <!-- Create Offer Modal -->
 @if (showModal) {
@@ -243,7 +200,9 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" (click)="closeModal()">Cancel</button>
         <button class="btn btn-primary" (click)="submitOffer()"
-          [disabled]="!newOffer.candidate || !newOffer.role || !newOffer.salary">Send Offer</button>
+          [disabled]="saving || !selectedApplication || !newOffer.role || !newOffer.salary">
+          @if (saving) { <span class="spinner-sm"></span> Sending… } @else { Send Offer }
+        </button>
       </div>
     </div>
   </div>
