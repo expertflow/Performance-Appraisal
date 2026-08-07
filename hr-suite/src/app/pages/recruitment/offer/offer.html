@@ -166,10 +166,54 @@
         <button class="btn btn-icon" (click)="closeModal()">✕</button>
       </div>
       <div class="modal-body">
-        <div class="form-group">
+
+        <!-- ── Searchable Candidate Picker ─────────────────────────────────── -->
+        <div class="form-group" style="position:relative;" (click)="$event.stopPropagation()">
           <label class="form-label">Candidate Name *</label>
-          <input class="form-control" placeholder="e.g. Ahmed Raza" [(ngModel)]="newOffer.candidate" />
+          <input class="form-control"
+                 placeholder="🔍 Search candidate by name, role or email…"
+                 [(ngModel)]="candidateSearch"
+                 (focus)="showCandidateDropdown = true"
+                 (input)="showCandidateDropdown = true; newOffer.candidate = ''"
+                 title="Search candidate" />
+
+          @if (showCandidateDropdown && filteredCandidates.length > 0) {
+            <div style="position:absolute;left:0;right:0;top:calc(100% + 2px);z-index:400;
+                        background:var(--color-bg-card,#fff);border:1px solid var(--color-border,#e2e8f0);
+                        border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:220px;overflow-y:auto;">
+              @for (app of filteredCandidates; track app.id) {
+                <div (click)="selectCandidate(app)"
+                     style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;
+                            border-bottom:1px solid var(--color-border,#f1f5f9);transition:background .1s;"
+                     [style.background]="selectedApplication?.id === app.id ? 'rgba(0,102,204,.06)' : 'transparent'">
+                  <div style="width:30px;height:30px;border-radius:50%;background:#00A3A3;color:#fff;
+                              display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">
+                    {{ app.candidateName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) }}
+                  </div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-weight:600;font-size:13px;">{{ app.candidateName }}</div>
+                    <div style="font-size:11px;color:var(--color-text-secondary);">{{ app.jobTitle }} · <span [style.color]="app.status === 'Shortlisted' ? '#059669' : app.status === 'Hired' ? '#0066cc' : '#64748b'">{{ app.status }}</span></div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          @if (showCandidateDropdown && filteredCandidates.length === 0 && candidateSearch) {
+            <div style="position:absolute;left:0;right:0;top:calc(100% + 2px);z-index:400;
+                        background:var(--color-bg-card,#fff);border:1px solid var(--color-border,#e2e8f0);
+                        border-radius:8px;padding:14px;text-align:center;font-size:13px;color:var(--color-text-muted);">
+              No matching candidates found
+            </div>
+          }
+
+          @if (selectedApplication) {
+            <div style="margin-top:6px;font-size:12px;color:#059669;">
+              ✓ Selected: <strong>{{ selectedApplication.candidateName }}</strong> — {{ selectedApplication.jobTitle }}
+            </div>
+          }
         </div>
+
         <div class="form-group">
           <label class="form-label">Role / Position *</label>
           <input class="form-control" placeholder="e.g. Senior Angular Developer" [(ngModel)]="newOffer.role" />

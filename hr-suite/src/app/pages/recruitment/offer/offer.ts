@@ -1,6 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { JobStoreService, JobApplication } from '../../../services/job-store';
 
 interface OfferItem {
   id: string;
@@ -18,11 +20,13 @@ interface OfferItem {
 
 @Component({
   selector: 'app-offer',
-  imports: [RouterLink, FormsModule],
+  imports: [RouterLink, FormsModule, CommonModule],
   templateUrl: './offer.html',
   styleUrl: './offer.scss'
 })
-export class Offer {
+export class Offer implements OnInit {
+  private jobStore = inject(JobStoreService);
+
   // Filter state
   searchText = '';
   filterStatus = 'All Statuses';
@@ -30,6 +34,41 @@ export class Offer {
   // Modal state
   showModal = false;
   exportToast = false;
+
+  // ── Candidate picker state ─────────────────────────────────────────────────
+  candidateSearch = '';
+  showCandidateDropdown = false;
+  selectedApplication: JobApplication | null = null;
+
+  get eligibleCandidates(): JobApplication[] {
+    const apps = this.jobStore.applications();
+    // Exclude Rejected; deduplicate by candidateId keeping latest
+    const seen = new Map<string, JobApplication>();
+    for (const a of apps) {
+      if (a.status === 'Rejected') continue;
+      const existing = seen.get(a.candidateId);
+      if (!existing || a.appliedDate > existing.appliedDate) seen.set(a.candidateId, a);
+    }
+    return Array.from(seen.values());
+  }
+
+  get filteredCandidates(): JobApplication[] {
+    const q = this.candidateSearch.toLowerCase();
+    if (!q) return this.eligibleCandidates;
+    return this.eligibleCandidates.filter(a =>
+      a.candidateName.toLowerCase().includes(q) ||
+      a.jobTitle.toLowerCase().includes(q) ||
+      a.candidateEmail.toLowerCase().includes(q)
+    );
+  }
+
+  selectCandidate(app: JobApplication): void {
+    this.selectedApplication = app;
+    this.newOffer.candidate = app.candidateName;
+    this.newOffer.role      = app.jobTitle;
+    this.candidateSearch    = app.candidateName;
+    this.showCandidateDropdown = false;
+  }
 
   newOffer = {
     candidate: '',
@@ -40,6 +79,10 @@ export class Offer {
   };
 
   offers: OfferItem[] = [];
+
+  ngOnInit(): void {
+    this.jobStore.reloadAllApplications();
+  }
 
   get stats() {
     const total       = this.offers.length;
@@ -72,6 +115,9 @@ export class Offer {
 
   resetForm() {
     this.newOffer = { candidate: '', role: '', dept: 'Engineering', salary: '', expiryDays: 7 };
+    this.candidateSearch       = '';
+    this.showCandidateDropdown = false;
+    this.selectedApplication   = null;
   }
 
   // ── Edit ──────────────────────────────────────────────────────────────────
