@@ -39,94 +39,22 @@ export class Offer {
     expiryDays: 7,
   };
 
-  offers: OfferItem[] = [
-    {
-      id: 'OFF-2025-018',
-      candidate: 'Ahmed Raza',
-      initials: 'AR',
-      color: 'teal',
-      role: 'Senior Angular Developer',
-      dept: 'Engineering',
-      salary: 'PKR 350,000 / month',
-      sentDate: 'Jul 28, 2025',
-      expiryDate: 'Aug 4, 2025',
-      status: 'Pending',
-      statusClass: 'badge-orange',
-    },
-    {
-      id: 'OFF-2025-017',
-      candidate: 'Fatima Malik',
-      initials: 'FM',
-      color: 'blue',
-      role: 'Product Manager',
-      dept: 'Product',
-      salary: 'PKR 280,000 / month',
-      sentDate: 'Jul 25, 2025',
-      expiryDate: 'Aug 1, 2025',
-      status: 'Accepted',
-      statusClass: 'badge-green',
-    },
-    {
-      id: 'OFF-2025-016',
-      candidate: 'Zara Hussain',
-      initials: 'ZH',
-      color: 'purple',
-      role: 'UX Designer',
-      dept: 'Design',
-      salary: 'PKR 220,000 / month',
-      sentDate: 'Jul 22, 2025',
-      expiryDate: 'Jul 29, 2025',
-      status: 'Negotiating',
-      statusClass: 'badge-blue',
-    },
-    {
-      id: 'OFF-2025-015',
-      candidate: 'Omar Sheikh',
-      initials: 'OS',
-      color: 'teal',
-      role: 'DevOps Engineer',
-      dept: 'Infrastructure',
-      salary: 'PKR 300,000 / month',
-      sentDate: 'Jul 18, 2025',
-      expiryDate: 'Jul 25, 2025',
-      status: 'Declined',
-      statusClass: 'badge-red',
-    },
-    {
-      id: 'OFF-2025-014',
-      candidate: 'Nadia Baig',
-      initials: 'NB',
-      color: 'orange',
-      role: 'Business Analyst',
-      dept: 'Operations',
-      salary: 'PKR 180,000 / month',
-      sentDate: 'Jul 15, 2025',
-      expiryDate: 'Jul 22, 2025',
-      status: 'Accepted',
-      statusClass: 'badge-green',
-    },
-    {
-      id: 'OFF-2025-013',
-      candidate: 'Khalid Mahmood',
-      initials: 'KM',
-      color: 'blue',
-      role: 'Senior Angular Developer',
-      dept: 'Engineering',
-      salary: 'PKR 320,000 / month',
-      sentDate: 'Jul 10, 2025',
-      expiryDate: 'Jul 17, 2025',
-      status: 'Accepted',
-      statusClass: 'badge-green',
-    },
-  ];
+  offers: OfferItem[] = [];
 
-  stats = [
-    { label: 'Total Offers', value: '6', sub: 'This month' },
-    { label: 'Pending', value: '1', sub: 'Awaiting response' },
-    { label: 'Accepted', value: '3', sub: '50% acceptance rate' },
-    { label: 'Declined', value: '1', sub: 'Requires re-pipeline' },
-    { label: 'Avg. Time to Accept', value: '3.2d', sub: 'Last 30 days' },
-  ];
+  get stats() {
+    const total       = this.offers.length;
+    const pending     = this.offers.filter(o => o.status === 'Pending').length;
+    const accepted    = this.offers.filter(o => o.status === 'Accepted').length;
+    const declined    = this.offers.filter(o => o.status === 'Declined').length;
+    const acceptRate  = total ? Math.round((accepted / total) * 100) : 0;
+    return [
+      { label: 'Total Offers',       value: String(total),    sub: 'All time' },
+      { label: 'Pending',            value: String(pending),  sub: 'Awaiting response' },
+      { label: 'Accepted',           value: String(accepted), sub: `${acceptRate}% acceptance rate` },
+      { label: 'Declined',           value: String(declined), sub: 'Requires re-pipeline' },
+      { label: 'Avg. Time to Accept', value: '—',             sub: 'Last 30 days' },
+    ];
+  }
 
   get filteredOffers(): OfferItem[] {
     return this.offers.filter(o => {
@@ -199,6 +127,8 @@ export class Offer {
     }
   }
 
+  private offerCounter = 1;
+
   submitOffer() {
     if (!this.newOffer.candidate || !this.newOffer.role || !this.newOffer.salary) return;
     const initials = this.newOffer.candidate.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
@@ -208,9 +138,10 @@ export class Offer {
     const expiry = new Date(today);
     expiry.setDate(expiry.getDate() + this.newOffer.expiryDays);
     const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    const nextNum = 19 + (this.offers.length - 6);
+    const year = today.getFullYear();
+    const seq  = String(this.offerCounter++).padStart(3, '0');
     this.offers.unshift({
-      id: `OFF-2025-0${nextNum}`,
+      id: `OFF-${year}-${seq}`,
       candidate: this.newOffer.candidate,
       initials,
       color,
