@@ -56,11 +56,26 @@ export class Login {
   otpResending    = signal(false);
   otpVerified     = signal(false); // show success screen before redirect
 
+  // ── Forgot password ─────────────────────────────────────────────────────────
+  showForgot        = signal(false);  // step 1: enter email
+  showForgotOtp     = signal(false);  // step 2: enter OTP
+  showForgotNewPw   = signal(false);  // step 3: set new password
+  forgotResetDone   = signal(false);  // success screen
+  forgotEmail       = '';
+  forgotOtpCode     = '';
+  forgotNewPw       = '';
+  forgotConfirmPw   = '';
+  forgotShowPw      = signal(false);
+  forgotError       = signal('');
+  forgotLoading     = signal(false);
+  forgotResendMsg   = signal('');
+  forgotResending   = signal(false);
+
   constructor() {
     if (this.auth.isLoggedIn()) {
       const role = this.auth.role();
       if (role === 'Candidate') {
-        this.router.navigate(['/candidate/jobs'], { replaceUrl: true });
+        this.router.navigate(['/candidate/home'], { replaceUrl: true });
       } else {
         this.router.navigate(['/dashboard'], { replaceUrl: true });
       }
@@ -83,7 +98,7 @@ export class Login {
         this.loading.set(false);
         this.auth.mockLoginWithUser(res.user, res.token);
         if (res.user.role === 'Candidate') {
-          this.router.navigate(['/candidate/jobs']);
+          this.router.navigate(['/candidate/home']);
         } else {
           this.router.navigate(['/dashboard']);
         }
@@ -128,6 +143,11 @@ export class Login {
     this.regError.set('');
     this.showRegister.set(false);
     this.showOtp.set(false);
+    this.showForgot.set(false);
+    this.showForgotOtp.set(false);
+    this.showForgotNewPw.set(false);
+    this.forgotResetDone.set(false);
+    this.forgotError.set('');
   }
 
   register() {
@@ -250,6 +270,119 @@ export class Login {
       error: err => {
         this.otpResending.set(false);
         this.otpError.set(err?.error?.error || 'Failed to resend code. Please try again.');
+      }
+    });
+  }
+
+  // ── Forgot password ──────────────────────────────────────────────────────────
+
+  /** Step 0: open forgot-password panel from sign-in view */
+  openForgotPassword() {
+    this.forgotEmail       = this.email; // pre-fill if user already typed email
+    this.forgotOtpCode     = '';
+    this.forgotNewPw       = '';
+    this.forgotConfirmPw   = '';
+    this.forgotError.set('');
+    this.forgotResendMsg.set('');
+    this.showForgot.set(true);
+    this.showForgotOtp.set(false);
+    this.showForgotNewPw.set(false);
+    this.forgotResetDone.set(false);
+  }
+
+  /** Step 1: submit email → request OTP */
+  submitForgotEmail() {
+    const email = this.forgotEmail.trim();
+    if (!email) {
+      this.forgotError.set('Please enter your email address.');
+      return;
+    }
+    this.forgotLoading.set(true);
+    this.forgotError.set('');
+
+    this.api.forgotPassword(email).subscribe({
+      next: () => {
+        this.forgotLoading.set(false);
+        this.showForgot.set(false);
+        this.showForgotOtp.set(true);
+      },
+      error: err => {
+        this.forgotLoading.set(false);
+        this.forgotError.set(err?.error?.error || 'Failed to send reset code. Please try again.');
+      }
+    });
+  }
+
+  /** Step 2: verify OTP → move to new-password step */
+  submitForgotOtp() {
+    const code = this.forgotOtpCode.trim();
+    if (!code || code.length !== 6) {
+      this.forgotError.set('Please enter the 6-digit code sent to your email.');
+      return;
+    }
+    // Just advance to step 3 — actual OTP verification happens with the password
+    this.forgotError.set('');
+    this.showForgotOtp.set(false);
+    this.showForgotNewPw.set(true);
+  }
+
+  /** Step 3: set new password → call reset-password endpoint */
+  submitForgotNewPw() {
+    if (!this.forgotNewPw) {
+      this.forgotError.set('Please enter a new password.');
+      return;
+    }
+    if (this.forgotNewPw.length < 6) {
+      this.forgotError.set('Password must be at least 6 characters.');
+      return;
+    }
+    if (this.forgotNewPw !== this.forgotConfirmPw) {
+      this.forgotError.set('Passwords do not match.');
+      return;
+    }
+
+    this.forgotLoading.set(true);
+    this.forgotError.set('');
+
+    this.api.resetPassword(this.forgotEmail.trim(), this.forgotOtpCode.trim(), this.forgotNewPw).subscribe({
+      next: () => {
+        this.forgotLoading.set(false);
+        this.showForgotNewPw.set(false);
+        this.forgotResetDone.set(true);
+        // After 3 seconds, return to sign-in with email pre-filled
+        setTimeout(() => {
+          this.email = this.forgotEmail.trim();
+          this.password = '';
+          this.forgotResetDone.set(false);
+          this.showForgot.set(false);
+          this.showForgotOtp.set(false);
+          this.showForgotNewPw.set(false);
+        }, 3000);
+      },
+      error: err => {
+        this.forgotLoading.set(false);
+        this.forgotError.set(err?.error?.error || 'Failed to reset password. Please try again.');
+      }
+    });
+  }
+
+  /** Resend forgot-password OTP */
+  resendForgotOtp() {
+    const email = this.forgotEmail.trim();
+    if (!email) return;
+
+    this.forgotResending.set(true);
+    this.forgotResendMsg.set('');
+    this.forgotError.set('');
+
+    this.api.forgotPassword(email).subscribe({
+      next: () => {
+        this.forgotResending.set(false);
+        this.forgotResendMsg.set('A new reset code has been sent to your email.');
+      },
+      error: err => {
+        this.forgotResending.set(false);
+        this.forgotError.set(err?.error?.error || 'Failed to resend code. Please try again.');
       }
     });
   }

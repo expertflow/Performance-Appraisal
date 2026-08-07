@@ -64,7 +64,7 @@ export class GoogleCallback implements OnInit {
       this.auth.mockLoginWithUser(user, token);
 
       if (user.role === 'Candidate') {
-        this.router.navigate(['/candidate/jobs'], { replaceUrl: true });
+        this.router.navigate(['/candidate/home'], { replaceUrl: true });
       } else {
         this.router.navigate(['/dashboard'], { replaceUrl: true });
       }

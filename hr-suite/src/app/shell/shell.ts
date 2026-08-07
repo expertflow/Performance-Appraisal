@@ -157,6 +157,7 @@ export class Shell {
     if (url.startsWith('/settings'))                return 'Settings';
     if (url.startsWith('/change-password'))         return 'Change Password';
     if (url.startsWith('/users'))                   return 'All Users';
+    if (url.startsWith('/about'))                   return 'About';
     return 'Dashboard';
   }
 

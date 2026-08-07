@@ -377,9 +377,112 @@ router.post('/change-password', async (req, res) => {
     );
 
     res.json({ message: 'Password changed successfully.' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-module.exports = router;
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // ── POST /api/v1/auth-local/forgot-password ───────────────────────────────────
+  // Step 1: Check account exists → send 6-digit OTP to email.
+  router.post('/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required.' });
+    const emailLc = email.trim().toLowerCase();
+  
+    try {
+      // Check if account exists and is Active
+      const { rows } = await pool.query(
+        `SELECT id, name, status FROM auth_local.account WHERE LOWER(email) = $1`,
+        [emailLc]
+      );
+  
+      if (!rows.length) {
+        return res.status(404).json({ error: 'Invalid account. Please create an account first.' });
+      }
+  
+      const account = rows[0];
+      if (account.status === 'Inactive') {
+        return res.status(403).json({ error: 'Your account is inactive. Please contact HR.' });
+      }
+  
+      // Generate 6-digit OTP, valid 10 minutes
+      const otp = String(Math.floor(100000 + Math.random() * 900000));
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      await pool.query(
+        `INSERT INTO auth_local.email_otp (email, otp, expires_at) VALUES ($1, $2, $3)`,
+        [emailLc, otp, expiresAt]
+      );
+  
+      // Send OTP email
+      await sendEmail(emailLc, 'Reset Your ExpertFlow HR Password', `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
+          <h2 style="color:#1a56db;">ExpertFlow HR Suite</h2>
+          <p>Hi ${account.name || emailLc},</p>
+          <p>We received a request to reset your password. Your password reset code is:</p>
+          <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#1a56db;padding:16px 0;">${otp}</div>
+          <p style="color:#666;">This code expires in <strong>10 minutes</strong>.</p>
+          <p style="color:#999;font-size:12px;">If you did not request a password reset, please ignore this email. Your password will not be changed.</p>
+        </div>
+      `);
+  
+      res.json({ sent: true, message: 'A password reset code has been sent to your email.' });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // ── POST /api/v1/auth-local/reset-password ────────────────────────────────────
+  // Step 2+3: Verify OTP → set new password.
+  router.post('/reset-password', async (req, res) => {
+    const { email, otp, new_password } = req.body;
+    if (!email || !otp || !new_password) {
+      return res.status(400).json({ error: 'Email, OTP, and new password are required.' });
+    }
+    if (new_password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    }
+    const emailLc = email.trim().toLowerCase();
+  
+    try {
+      // Find the latest unused, non-expired OTP for this email
+      const { rows: otpRows } = await pool.query(
+        `SELECT * FROM auth_local.email_otp
+         WHERE email = $1 AND used = FALSE AND expires_at > NOW()
+         ORDER BY created_at DESC LIMIT 1`,
+        [emailLc]
+      );
+  
+      if (!otpRows.length) {
+        return res.status(400).json({ error: 'Invalid or expired reset code. Please request a new one.' });
+      }
+  
+      if (otpRows[0].otp !== otp.trim()) {
+        return res.status(400).json({ error: 'Incorrect reset code. Please try again.' });
+      }
+  
+      // Mark OTP as used
+      await pool.query(
+        `UPDATE auth_local.email_otp SET used = TRUE WHERE id = $1`,
+        [otpRows[0].id]
+      );
+  
+      // Update password
+      const { rows: updated } = await pool.query(
+        `UPDATE auth_local.account
+         SET password = $1, updated_at = NOW()
+         WHERE LOWER(email) = $2
+         RETURNING id`,
+        [new_password, emailLc]
+      );
+  
+      if (!updated.length) {
+        return res.status(404).json({ error: 'Account not found.' });
+      }
+  
+      res.json({ message: 'Password reset successfully. You can now sign in with your new password.' });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  module.exports = router;

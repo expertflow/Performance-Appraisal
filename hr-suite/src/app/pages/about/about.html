@@ -1,0 +1,58 @@
+<!-- ── Hero ──────────────────────────────────────────────────────────────────── -->
+<div class="about-hero">
+  <div class="about-hero-badge">ExpertFlow HR Suite</div>
+  <h1 class="about-hero-title">About This Platform</h1>
+  <p class="about-hero-sub">
+    A unified internal HR platform built for ExpertFlow — covering the full employee lifecycle
+    from recruitment and onboarding to performance reviews, project delivery, and time tracking.
+  </p>
+</div>
+
+<!-- ── Module cards grid ─────────────────────────────────────────────────────── -->
+<div class="about-grid">
+  @for (mod of modules; track mod.title) {
+    <div class="about-card">
+      <div class="about-card-icon" [style.background]="mod.bg" [style.color]="mod.color">
+        {{ mod.icon }}
+      </div>
+      <div class="about-card-body">
+        <h3 class="about-card-title" [style.color]="mod.color">{{ mod.title }}</h3>
+        <p class="about-card-desc">{{ mod.desc }}</p>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- ── Tech stack strip ──────────────────────────────────────────────────────── -->
+<div class="about-tech">
+  <div class="about-tech-label">Built with</div>
+  <div class="about-tech-pills">
+    <span class="tech-pill">Angular 18</span>
+    <span class="tech-pill">Node.js</span>
+    <span class="tech-pill">PostgreSQL</span>
+    <span class="tech-pill">Directus CMS</span>
+    <span class="tech-pill">Google OAuth 2.0</span>
+    <span class="tech-pill">Claude AI</span>
+    <span class="tech-pill">nginx</span>
+    <span class="tech-pill">PM2</span>
+    <span class="tech-pill">Let's Encrypt SSL</span>
+  </div>
+</div>
+
+<!-- ── Footer ────────────────────────────────────────────────────────────────── -->
+<div class="about-footer">
+  <div class="about-footer-logo">
+    <div class="about-footer-icon">EF</div>
+    <div>
+      <div class="about-footer-name">ExpertFlow HR Suite</div>
+      <div class="about-footer-tagline">Internal Platform · All data is private and confidential</div>
+    </div>
+  </div>
+  <div class="about-footer-divider"></div>
+  <p class="about-footer-copy">
+    © {{ year }} ExpertFlow · HR Suite · All rights reserved
+  </p>
+  <p class="about-footer-dev">
+    Developed &amp; Managed By <strong>Zaeem Ahmad</strong>
+  </p>
+</div>

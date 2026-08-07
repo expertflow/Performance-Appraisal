@@ -61,7 +61,7 @@
       <!-- ════════════════════════════════════════════════════════════════
            SIGN-IN VIEW
       ════════════════════════════════════════════════════════════════ -->
-      @if (!showRegister() && !showOtp()) {
+      @if (!showRegister() && !showOtp() && !showForgot() && !showForgotOtp() && !showForgotNewPw() && !forgotResetDone()) {
 
         <div class="form-header">
           <h1>Welcome back</h1>
@@ -139,7 +139,7 @@
               <input type="checkbox" class="checkbox" [(ngModel)]="keepSignedIn" name="keepSignedIn">
               Keep me signed in
             </label>
-            <a href="#" class="forgot-link">Forgot password?</a>
+            <button type="button" class="forgot-link" (click)="openForgotPassword()">Forgot password?</button>
           </div>
 
           <button type="submit" class="btn-signin" [disabled]="loading()">
@@ -390,6 +390,196 @@
           </p>
         }
 
+      }
+
+      <!-- ════════════════════════════════════════════════════════════════
+           FORGOT PASSWORD — STEP 1: Enter Email
+      ════════════════════════════════════════════════════════════════ -->
+      @if (showForgot()) {
+
+        <div class="form-header">
+          <h1>Reset Password</h1>
+          <p>Enter your account email and we'll send you a reset code</p>
+        </div>
+
+        <div style="text-align:center;margin:16px 0 24px;">
+          <div style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#1a56db,#3b82f6);font-size:28px;">
+            🔑
+          </div>
+        </div>
+
+        @if (forgotError()) {
+          <div class="alert alert-error">{{ forgotError() }}</div>
+        }
+
+        <form (ngSubmit)="submitForgotEmail()" autocomplete="off">
+          <div class="form-group">
+            <label class="form-label" for="forgot-email">Email Address</label>
+            <input
+              id="forgot-email"
+              type="email"
+              class="form-control"
+              placeholder="you@example.com"
+              [(ngModel)]="forgotEmail"
+              name="forgot-email"
+              autocomplete="email"
+              required>
+          </div>
+
+          <button type="submit" class="btn-signin" [disabled]="forgotLoading()">
+            @if (forgotLoading()) {
+              <span class="spinner"></span>
+              Sending code…
+            } @else {
+              Send Reset Code
+            }
+          </button>
+        </form>
+
+        <p class="register-prompt" style="margin-top:16px;">
+          <button type="button" class="link-btn" (click)="switchToLogin()">← Back to sign in</button>
+        </p>
+
+      }
+
+      <!-- ════════════════════════════════════════════════════════════════
+           FORGOT PASSWORD — STEP 2: Enter OTP
+      ════════════════════════════════════════════════════════════════ -->
+      @if (showForgotOtp()) {
+
+        <div class="form-header">
+          <h1>Enter Reset Code</h1>
+          <p>We sent a 6-digit code to <strong>{{ forgotEmail }}</strong></p>
+        </div>
+
+        <div style="text-align:center;margin:16px 0 24px;">
+          <div style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#1a56db,#3b82f6);font-size:28px;">
+            📧
+          </div>
+        </div>
+
+        @if (forgotError()) {
+          <div class="alert alert-error">{{ forgotError() }}</div>
+        }
+
+        @if (forgotResendMsg()) {
+          <div class="alert alert-success">{{ forgotResendMsg() }}</div>
+        }
+
+        <form (ngSubmit)="submitForgotOtp()" autocomplete="off">
+          <div class="form-group">
+            <label class="form-label" for="forgot-otp">Reset Code</label>
+            <input
+              id="forgot-otp"
+              type="text"
+              class="form-control"
+              placeholder="Enter 6-digit code"
+              [(ngModel)]="forgotOtpCode"
+              name="forgot-otp"
+              maxlength="6"
+              autocomplete="one-time-code"
+              style="font-size:24px;letter-spacing:8px;text-align:center;font-weight:600;"
+              required>
+          </div>
+
+          <button type="submit" class="btn-signin">
+            Continue →
+          </button>
+        </form>
+
+        <p class="register-prompt" style="margin-top:16px;">
+          Didn't receive the code?
+          <button type="button" class="link-btn" (click)="resendForgotOtp()" [disabled]="forgotResending()">
+            {{ forgotResending() ? 'Sending…' : 'Resend code' }}
+          </button>
+        </p>
+
+        <p class="register-prompt">
+          <button type="button" class="link-btn" (click)="switchToLogin()">← Back to sign in</button>
+        </p>
+
+      }
+
+      <!-- ════════════════════════════════════════════════════════════════
+           FORGOT PASSWORD — STEP 3: Set New Password
+      ════════════════════════════════════════════════════════════════ -->
+      @if (showForgotNewPw()) {
+
+        <div class="form-header">
+          <h1>Set New Password</h1>
+          <p>Choose a strong password for your account</p>
+        </div>
+
+        <div style="text-align:center;margin:16px 0 24px;">
+          <div style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#1a56db,#3b82f6);font-size:28px;">
+            🔒
+          </div>
+        </div>
+
+        @if (forgotError()) {
+          <div class="alert alert-error">{{ forgotError() }}</div>
+        }
+
+        <form (ngSubmit)="submitForgotNewPw()" autocomplete="off">
+          <div class="form-group">
+            <label class="form-label" for="forgot-new-pw">New Password</label>
+            <div class="input-with-action">
+              <input
+                id="forgot-new-pw"
+                [type]="forgotShowPw() ? 'text' : 'password'"
+                class="form-control"
+                placeholder="Min. 6 characters"
+                [(ngModel)]="forgotNewPw"
+                name="forgot-new-pw"
+                autocomplete="new-password"
+                required>
+              <button type="button" class="toggle-pass" (click)="forgotShowPw.set(!forgotShowPw())" title="Toggle password visibility">
+                {{ forgotShowPw() ? '🙈' : '👁️' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="forgot-confirm-pw">Confirm New Password</label>
+            <input
+              id="forgot-confirm-pw"
+              [type]="forgotShowPw() ? 'text' : 'password'"
+              class="form-control"
+              placeholder="Re-enter new password"
+              [(ngModel)]="forgotConfirmPw"
+              name="forgot-confirm-pw"
+              autocomplete="new-password"
+              required>
+          </div>
+
+          <button type="submit" class="btn-signin" [disabled]="forgotLoading()">
+            @if (forgotLoading()) {
+              <span class="spinner"></span>
+              Resetting password…
+            } @else {
+              Reset Password
+            }
+          </button>
+        </form>
+
+        <p class="register-prompt" style="margin-top:16px;">
+          <button type="button" class="link-btn" (click)="switchToLogin()">← Back to sign in</button>
+        </p>
+
+      }
+
+      <!-- ════════════════════════════════════════════════════════════════
+           FORGOT PASSWORD — SUCCESS
+      ════════════════════════════════════════════════════════════════ -->
+      @if (forgotResetDone()) {
+        <div style="text-align:center;padding:32px 0;">
+          <div style="display:inline-flex;align-items:center;justify-content:center;width:72px;height:72px;border-radius:50%;background:#dcfce7;font-size:36px;margin-bottom:20px;">
+            ✅
+          </div>
+          <h1 style="color:#16a34a;margin-bottom:8px;">Password Reset!</h1>
+          <p style="color:#555;margin-bottom:4px;">Your password has been reset successfully.</p>
+          <p style="color:#888;font-size:13px;">Redirecting to sign in page…</p>
+        </div>
       }
 
     </div>

@@ -209,6 +209,14 @@ export class ApiService {
     return this.http.post<{ sent: boolean }>(`${this.base}/auth-local/resend-otp`, { email });
   }
 
+  forgotPassword(email: string): Observable<{ sent: boolean; message: string }> {
+    return this.http.post<{ sent: boolean; message: string }>(`${this.base}/auth-local/forgot-password`, { email });
+  }
+
+  resetPassword(email: string, otp: string, new_password: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.base}/auth-local/reset-password`, { email, otp, new_password });
+  }
+
   // ── App Users ─────────────────────────────────────────────────────────────
   getAppUsers(): Observable<AppUserRecord[]> {
     return this.http.get<AppUserRecord[]>(`${this.base}/app-users`);

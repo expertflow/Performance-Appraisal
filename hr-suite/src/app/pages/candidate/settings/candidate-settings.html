@@ -1,0 +1,103 @@
+<div class="cs-wrap">
+
+  <!-- Page Header -->
+  <div class="cs-header">
+    <div class="cs-avatar">{{ initials }}</div>
+    <div>
+      <h1>My Account</h1>
+      <p>Manage your profile and security settings</p>
+    </div>
+  </div>
+
+  <!-- Account Info Card -->
+  <div class="cs-card">
+    <div class="cs-card-title">👤 Account Information</div>
+    <div class="cs-info-grid">
+      <div class="cs-info-item">
+        <span class="cs-label">Full Name</span>
+        <span class="cs-value">{{ user()?.name || '—' }}</span>
+      </div>
+      <div class="cs-info-item">
+        <span class="cs-label">Email Address</span>
+        <span class="cs-value">{{ user()?.email || '—' }}</span>
+      </div>
+      <div class="cs-info-item">
+        <span class="cs-label">Account Role</span>
+        <span class="cs-value">
+          <span class="cs-badge">{{ user()?.role || '—' }}</span>
+        </span>
+      </div>
+      <div class="cs-info-item">
+        <span class="cs-label">Sign-in Method</span>
+        <span class="cs-value">
+          @if (isGoogleOnly()) {
+            <span class="cs-badge cs-badge-google">🔵 Google SSO</span>
+          } @else {
+            <span class="cs-badge cs-badge-local">🔑 Email & Password</span>
+          }
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Password Card -->
+  <div class="cs-card">
+    <div class="cs-card-title">
+      @if (isGoogleOnly()) {
+        🔐 Set a Local Password
+      } @else {
+        🔐 Change Password
+      }
+    </div>
+
+    @if (isGoogleOnly()) {
+      <p class="cs-hint">
+        You signed in with Google. You can optionally set a local password to also log in with email and password.
+      </p>
+    }
+
+    <form (ngSubmit)="submitPassword()" #pwForm="ngForm" autocomplete="off" style="max-width:420px;">
+
+      @if (!isGoogleOnly()) {
+        <div class="cs-form-group">
+          <label>Current Password</label>
+          <input type="password" class="cs-input" [(ngModel)]="currentPassword"
+                 name="currentPassword" required placeholder="Enter current password" />
+        </div>
+      }
+
+      <div class="cs-form-group">
+        <label>New Password</label>
+        <input type="password" class="cs-input" [(ngModel)]="newPassword"
+               name="newPassword" required minlength="8" placeholder="At least 8 characters" />
+      </div>
+
+      <div class="cs-form-group">
+        <label>Confirm New Password</label>
+        <input type="password" class="cs-input" [(ngModel)]="confirmPassword"
+               name="confirmPassword" required placeholder="Repeat new password" />
+      </div>
+
+      @if (pwMsg()) {
+        <div class="cs-msg" [class.cs-msg-success]="pwMsg()!.type === 'success'"
+                            [class.cs-msg-error]="pwMsg()!.type === 'error'">
+          {{ pwMsg()!.text }}
+        </div>
+      }
+
+      <button type="submit" class="cs-btn-primary" [disabled]="saving()">
+        @if (saving()) {
+          <span class="cs-spinner"></span> Saving…
+        } @else {
+          @if (isGoogleOnly()) { Set Password } @else { Update Password }
+        }
+      </button>
+    </form>
+  </div>
+
+  <!-- Back link -->
+  <div style="margin-top:8px;">
+    <a routerLink="/candidate/home" class="cs-back-link">← Back to Home</a>
+  </div>
+
+</div>

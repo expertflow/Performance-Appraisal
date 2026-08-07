@@ -21,7 +21,11 @@ export const routes: Routes = [
     component: CandidateShell,
     canActivate: [authGuard, roleGuard(['Candidate'])],
     children: [
-      { path: '', redirectTo: 'jobs', pathMatch: 'full' },
+      { path: '', redirectTo: 'home', pathMatch: 'full' },
+      {
+        path: 'home',
+        loadComponent: () => import('./pages/candidate/home/home').then(m => m.CandidateHome)
+      },
       {
         path: 'jobs',
         loadComponent: () => import('./pages/candidate/jobs/jobs').then(m => m.CandidateJobs)
@@ -29,6 +33,10 @@ export const routes: Routes = [
       {
         path: 'my-applications',
         loadComponent: () => import('./pages/candidate/my-applications/my-applications').then(m => m.MyApplications)
+      },
+      {
+        path: 'settings',
+        loadComponent: () => import('./pages/candidate/settings/candidate-settings').then(m => m.CandidateSettings)
       },
     ]
   },
@@ -57,6 +65,12 @@ export const routes: Routes = [
       {
         path: 'settings',
         loadComponent: () => import('./pages/settings/settings').then(m => m.Settings)
+      },
+
+      // ── About (all internal roles) ──
+      {
+        path: 'about',
+        loadComponent: () => import('./pages/about/about').then(m => m.About)
       },
 
       // ── All Users (AppAdmin, HR only) ──
