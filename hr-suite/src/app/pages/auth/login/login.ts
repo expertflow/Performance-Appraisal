@@ -24,7 +24,8 @@ export class Login {
   keepSignedIn = false;
   loading      = signal(false);
   error        = signal('');
-  showPass     = signal(false);
+  showPass        = signal(false);
+  showGoogleInfo  = signal(false);
 
   // ── View toggle ─────────────────────────────────────────────────────────────
   showRegister    = signal(false);

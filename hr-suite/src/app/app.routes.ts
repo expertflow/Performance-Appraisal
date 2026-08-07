@@ -89,11 +89,6 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/recruitment/pipeline/pipeline').then(m => m.Pipeline)
       },
       {
-        path: 'recruitment/agencies',
-        canActivate: [roleGuard(['AppAdmin', 'HR'])],
-        loadComponent: () => import('./pages/recruitment/agencies/agencies').then(m => m.Agencies)
-      },
-      {
         path: 'recruitment/applications',
         canActivate: [roleGuard(['AppAdmin', 'HR'])],
         loadComponent: () => import('./pages/recruitment/applications/applications').then(m => m.Applications)

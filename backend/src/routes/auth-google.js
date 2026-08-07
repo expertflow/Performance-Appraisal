@@ -23,11 +23,11 @@ const { v4: uuidv4 } = require('uuid');
 
 const router = express.Router();
 
-const CLIENT_ID     = process.env.GOOGLE_CLIENT_ID     || '';
-const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
-const APP_URL       = process.env.APP_URL               || 'https://hrsuite.expertflow.com';
-const ALLOWED_DOMAIN = process.env.ALLOWED_DOMAIN       || 'expertflow.com';
-const CALLBACK_URL  = `${APP_URL}/api/v1/auth/google/callback`;
+const CLIENT_ID      = process.env.GOOGLE_CLIENT_ID     || '';
+const CLIENT_SECRET  = process.env.GOOGLE_CLIENT_SECRET || '';
+const APP_URL        = process.env.APP_URL               || 'https://hrsuite.expertflow.com';
+const INTERNAL_DOMAIN = process.env.INTERNAL_DOMAIN     || 'expertflow.com';
+const CALLBACK_URL   = `${APP_URL}/api/v1/auth/google/callback`;
 
 // ── Helper: resolve role from Directus employee_snapshot ─────────────────────
 // Returns 'Manager' if the user's employee record is referenced as manager_id
@@ -67,34 +67,32 @@ if (CLIENT_ID && CLIENT_SECRET) {
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        const email = profile.emails?.[0]?.value?.toLowerCase() || '';
-        const name  = profile.displayName || email.split('@')[0];
+        const email  = profile.emails?.[0]?.value?.toLowerCase() || '';
+        const name   = profile.displayName || email.split('@')[0];
         const avatar = profile.photos?.[0]?.value || '';
 
-        // Domain restriction
-        if (ALLOWED_DOMAIN && !email.endsWith(`@${ALLOWED_DOMAIN}`)) {
-          return done(null, false, {
-            message: `Only @${ALLOWED_DOMAIN} accounts are permitted.`
-          });
-        }
+        // Determine if this is an internal (org) user or external (candidate)
+        const isInternal = email.endsWith(`@${INTERNAL_DOMAIN}`);
 
-        // Determine role from Directus employee_snapshot:
-        // If this user's employee record is referenced as manager_id by any other employee → Manager
-        // AppAdmin accounts are never downgraded by this logic.
-        const autoRole = await resolveRoleFromDirectus(email);
-
-        // Find existing account
+        // Find existing account by email (covers both local + previous Google logins)
         const { rows } = await pool.query(
           `SELECT * FROM auth_local.account WHERE email = $1`,
           [email]
         );
 
         if (rows.length > 0) {
+          // ── Existing account: merge / link ──────────────────────────────────
           const existing = rows[0];
-          // Upgrade role if Directus says Manager and current role is Employee
-          const newRole = existing.role === 'AppAdmin' ? 'AppAdmin'
-                        : (autoRole === 'Manager' ? 'Manager' : existing.role);
-          // Update last_login, avatar, and role
+
+          let newRole = existing.role;
+          if (isInternal) {
+            // Internal users: upgrade role from Directus if applicable
+            const autoRole = await resolveRoleFromDirectus(email);
+            newRole = existing.role === 'AppAdmin' ? 'AppAdmin'
+                    : (autoRole === 'Manager' ? 'Manager' : existing.role);
+          }
+          // External users keep their existing role (Candidate or whatever was set)
+
           await pool.query(
             `UPDATE auth_local.account SET last_login = NOW(), avatar_url = $1, role = $2 WHERE email = $3`,
             [avatar, newRole, email]
@@ -102,10 +100,19 @@ if (CLIENT_ID && CLIENT_SECRET) {
           return done(null, { ...existing, role: newRole, avatar_url: avatar });
         }
 
-        // Create new account for first-time Google login
+        // ── New account: create ────────────────────────────────────────────────
         const id    = `u-${uuidv4()}`;
         const token = `google-token-${uuidv4()}`;
-        const role  = autoRole || 'Employee';
+
+        let role;
+        if (isInternal) {
+          // Internal: resolve Manager vs Employee from Directus
+          role = await resolveRoleFromDirectus(email) || 'Employee';
+        } else {
+          // External Gmail: always Candidate
+          role = 'Candidate';
+        }
+
         const { rows: newRows } = await pool.query(
           `INSERT INTO auth_local.account
              (id, email, password, token, role, name, avatar_url, status, last_login)

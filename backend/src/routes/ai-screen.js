@@ -3,8 +3,8 @@ const express = require('express');
 const router  = express.Router();
 const https   = require('https');
 
-const KIMI_API_URL = 'https://api.moonshot.cn/v1/chat/completions';
-const KIMI_MODEL   = 'moonshot-v1-8k';
+const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
+const CLAUDE_MODEL   = 'claude-opus-4-5';
 
 /**
  * POST /api/v1/ai/screen-resume
@@ -21,13 +21,13 @@ router.post('/screen-resume', async (req, res) => {
     return res.status(400).json({ error: 'resumeText or coverLetter is required' });
   }
 
-  const apiKey = process.env.KIMI_API_KEY;
+  const apiKey = process.env.CLAUDE_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'KIMI_API_KEY not configured on server' });
+    return res.status(500).json({ error: 'CLAUDE_API_KEY not configured on server' });
   }
 
   const candidateContent = [
-    resumeText   ? `RESUME:\n${resumeText}`     : '',
+    resumeText   ? `RESUME:\n${resumeText}`        : '',
     coverLetter  ? `COVER LETTER:\n${coverLetter}` : '',
   ].filter(Boolean).join('\n\n');
 
@@ -58,17 +58,16 @@ ${candidateContent}
 Evaluate how well this candidate meets each requirement. Be objective and specific.`;
 
   const payload = JSON.stringify({
-    model: KIMI_MODEL,
+    model: CLAUDE_MODEL,
+    max_tokens: 1500,
+    system: systemPrompt,
     messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user',   content: userPrompt   },
+      { role: 'user', content: userPrompt },
     ],
-    temperature: 0.3,
-    max_tokens:  1500,
   });
 
   try {
-    const result = await callKimiApi(apiKey, payload);
+    const result = await callClaudeApi(apiKey, payload);
     res.json(result);
   } catch (err) {
     console.error('[ai-screen] Error:', err.message);
@@ -76,17 +75,17 @@ Evaluate how well this candidate meets each requirement. Be objective and specif
   }
 });
 
-function callKimiApi(apiKey, payload) {
+function callClaudeApi(apiKey, payload) {
   return new Promise((resolve, reject) => {
-    const url = new URL(KIMI_API_URL);
     const options = {
-      hostname: url.hostname,
-      path:     url.pathname,
+      hostname: 'api.anthropic.com',
+      path:     '/v1/messages',
       method:   'POST',
       headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Length': Buffer.byteLength(payload),
+        'Content-Type':      'application/json',
+        'x-api-key':         apiKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Length':    Buffer.byteLength(payload),
       },
     };
 
@@ -99,8 +98,8 @@ function callKimiApi(apiKey, payload) {
           if (parsed.error) {
             return reject(new Error(parsed.error.message || JSON.stringify(parsed.error)));
           }
-          const content = parsed.choices?.[0]?.message?.content;
-          if (!content) return reject(new Error('Empty response from Kimi API'));
+          const content = parsed.content?.[0]?.text;
+          if (!content) return reject(new Error('Empty response from Claude API'));
 
           // Extract JSON from the response (handle markdown code blocks)
           const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
@@ -108,7 +107,7 @@ function callKimiApi(apiKey, payload) {
           const aiResult = JSON.parse(jsonStr);
           resolve(aiResult);
         } catch (e) {
-          reject(new Error(`Failed to parse Kimi response: ${e.message}`));
+          reject(new Error(`Failed to parse Claude response: ${e.message}`));
         }
       });
     });
