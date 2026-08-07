@@ -59,6 +59,33 @@ function mapAccount(r) {
   };
 }
 
+// ── Helper: resolve role from Directus employee_snapshot ─────────────────────
+// Returns 'Manager' if this user's employee record is referenced as manager_id
+// by at least one other employee. Returns 'Employee' otherwise.
+// Never downgrades AppAdmin — callers must guard that themselves.
+async function resolveRoleFromDirectus(email) {
+  try {
+    // Step 1: find this user's employee_snapshot row by email
+    const { rows: empRows } = await pool.query(
+      `SELECT id FROM project.employee_snapshot WHERE LOWER(email) = LOWER($1) LIMIT 1`,
+      [email]
+    );
+    if (!empRows.length) return 'Employee';
+
+    const employeeId = empRows[0].id;
+
+    // Step 2: check if any employee has manager_id = this employee's id
+    const { rows: managerRows } = await pool.query(
+      `SELECT 1 FROM project.employee_snapshot WHERE manager_id = $1 LIMIT 1`,
+      [employeeId]
+    );
+    return managerRows.length > 0 ? 'Manager' : 'Employee';
+  } catch (err) {
+    console.warn('[auth] resolveRoleFromDirectus error:', err.message);
+    return 'Employee'; // fail-safe: default to Employee
+  }
+}
+
 // ── POST /api/v1/auth-local/login ─────────────────────────────────────────────
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
@@ -80,14 +107,23 @@ router.post('/login', async (req, res) => {
     if (account.status === 'Pending') {
       return res.status(403).json({ error: 'Your account is not verified yet. Please check your email for the OTP.' });
     }
-    // Update last_login
+
+    // Auto-assign Manager role based on Directus employee_snapshot
+    // AppAdmin is never downgraded; Employee may be promoted to Manager
+    let finalRole = account.role;
+    if (account.role !== 'AppAdmin') {
+      const autoRole = await resolveRoleFromDirectus(account.email);
+      if (autoRole === 'Manager') finalRole = 'Manager';
+    }
+
+    // Update last_login and role
     await pool.query(
-      `UPDATE auth_local.account SET last_login = NOW(), updated_at = NOW() WHERE id = $1`,
-      [account.id]
+      `UPDATE auth_local.account SET last_login = NOW(), updated_at = NOW(), role = $1 WHERE id = $2`,
+      [finalRole, account.id]
     );
     res.json({
       token: account.token,
-      user:  mapAccount(account),
+      user:  mapAccount({ ...account, role: finalRole }),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

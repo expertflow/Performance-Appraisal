@@ -29,6 +29,33 @@ const APP_URL       = process.env.APP_URL               || 'https://hrsuite.expe
 const ALLOWED_DOMAIN = process.env.ALLOWED_DOMAIN       || 'expertflow.com';
 const CALLBACK_URL  = `${APP_URL}/api/v1/auth/google/callback`;
 
+// ── Helper: resolve role from Directus employee_snapshot ─────────────────────
+// Returns 'Manager' if the user's employee record is referenced as manager_id
+// by at least one other employee. Returns 'Employee' otherwise.
+// Never downgrades AppAdmin — callers must guard that themselves.
+async function resolveRoleFromDirectus(email) {
+  try {
+    // Step 1: find this user's employee_snapshot row by email
+    const { rows: empRows } = await pool.query(
+      `SELECT id FROM project.employee_snapshot WHERE LOWER(email) = LOWER($1) LIMIT 1`,
+      [email]
+    );
+    if (!empRows.length) return 'Employee';
+
+    const employeeId = empRows[0].id;
+
+    // Step 2: check if any employee has manager_id = this employee's id
+    const { rows: managerRows } = await pool.query(
+      `SELECT 1 FROM project.employee_snapshot WHERE manager_id = $1 LIMIT 1`,
+      [employeeId]
+    );
+    return managerRows.length > 0 ? 'Manager' : 'Employee';
+  } catch (err) {
+    console.warn('[auth] resolveRoleFromDirectus error:', err.message);
+    return 'Employee'; // fail-safe: default to Employee
+  }
+}
+
 // ── Only register strategy if credentials are configured ─────────────────────
 if (CLIENT_ID && CLIENT_SECRET) {
   passport.use('google', new GoogleStrategy(
@@ -51,6 +78,11 @@ if (CLIENT_ID && CLIENT_SECRET) {
           });
         }
 
+        // Determine role from Directus employee_snapshot:
+        // If this user's employee record is referenced as manager_id by any other employee → Manager
+        // AppAdmin accounts are never downgraded by this logic.
+        const autoRole = await resolveRoleFromDirectus(email);
+
         // Find existing account
         const { rows } = await pool.query(
           `SELECT * FROM auth_local.account WHERE email = $1`,
@@ -58,23 +90,28 @@ if (CLIENT_ID && CLIENT_SECRET) {
         );
 
         if (rows.length > 0) {
-          // Update last_login and avatar
+          const existing = rows[0];
+          // Upgrade role if Directus says Manager and current role is Employee
+          const newRole = existing.role === 'AppAdmin' ? 'AppAdmin'
+                        : (autoRole === 'Manager' ? 'Manager' : existing.role);
+          // Update last_login, avatar, and role
           await pool.query(
-            `UPDATE auth_local.account SET last_login = NOW(), avatar_url = $1 WHERE email = $2`,
-            [avatar, email]
+            `UPDATE auth_local.account SET last_login = NOW(), avatar_url = $1, role = $2 WHERE email = $3`,
+            [avatar, newRole, email]
           );
-          return done(null, rows[0]);
+          return done(null, { ...existing, role: newRole, avatar_url: avatar });
         }
 
         // Create new account for first-time Google login
         const id    = `u-${uuidv4()}`;
         const token = `google-token-${uuidv4()}`;
+        const role  = autoRole || 'Employee';
         const { rows: newRows } = await pool.query(
           `INSERT INTO auth_local.account
              (id, email, password, token, role, name, avatar_url, status, last_login)
            VALUES ($1, $2, $3, $4, $5, $6, $7, 'Active', NOW())
            RETURNING *`,
-          [id, email, 'GOOGLE_SSO', token, 'Employee', name, avatar]
+          [id, email, 'GOOGLE_SSO', token, role, name, avatar]
         );
         return done(null, newRows[0]);
       } catch (err) {
