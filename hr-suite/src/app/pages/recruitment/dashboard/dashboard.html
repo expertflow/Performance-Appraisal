@@ -5,7 +5,9 @@
   </div>
   <div class="flex gap-2">
     <button class="btn btn-secondary btn-sm">Export</button>
-    <button class="btn btn-primary btn-sm" (click)="openPostJobModal()">+ Post Job</button>
+    @if (!isReadOnly()) {
+      <button class="btn btn-primary btn-sm" (click)="openPostJobModal()">+ Post Job</button>
+    }
   </div>
 </div>
 
@@ -65,7 +67,11 @@
 @if (filteredJobs.length === 0) {
   <div class="card" style="padding:32px;text-align:center;color:var(--color-text-muted);margin-bottom:24px;">
     <div style="font-size:32px;margin-bottom:8px;">📋</div>
-    <p>No job postings yet. Click <strong>+ Post Job</strong> to create one.</p>
+    @if (isReadOnly()) {
+      <p>No job postings available.</p>
+    } @else {
+      <p>No job postings yet. Click <strong>+ Post Job</strong> to create one.</p>
+    }
   </div>
 }
 
@@ -134,8 +140,10 @@
     </div>
     <div class="job-actions">
       <span class="badge" [class]="jobStatusClass(job.status)">{{ job.status }}</span>
-      <button class="btn btn-secondary btn-sm" (click)="openEditJobModal(job, $event)">✏️ Edit</button>
-      <button class="btn btn-danger btn-sm" (click)="deleteJob(job, $event)">🗑️ Delete</button>
+      @if (!isReadOnly()) {
+        <button class="btn btn-secondary btn-sm" (click)="openEditJobModal(job, $event)">✏️ Edit</button>
+        <button class="btn btn-danger btn-sm" (click)="deleteJob(job, $event)">🗑️ Delete</button>
+      }
     </div>
   </div>
 }

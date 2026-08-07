@@ -29,11 +29,7 @@ FRONTEND_DIST  = os.path.abspath(os.path.join(os.path.dirname(__file__), 'hr-sui
 DOMAIN   = 'hrsuite.expertflow.com'
 
 # -- VM .env for production ----------------------------------------------------
-# GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are injected at deploy time
-# from environment variables on the machine running deploy.py.
-# Set them before running:
-#   $env:GOOGLE_CLIENT_ID="your-id"
-#   $env:GOOGLE_CLIENT_SECRET="your-secret"
+# Google OAuth credentials (hardcoded — override via env vars if needed)
 GOOGLE_CLIENT_ID     = os.environ.get('GOOGLE_CLIENT_ID',     '')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
 

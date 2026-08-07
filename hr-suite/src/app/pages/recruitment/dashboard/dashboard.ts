@@ -1,8 +1,9 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JobStoreService, JobPosting, JobApplication, ApplicationStatus, JobType, JobStatus } from '../../../services/job-store';
+import { AuthService } from '../../../services/auth';
 
 @Component({
   selector: 'app-recruitment-dashboard',
@@ -12,6 +13,10 @@ import { JobStoreService, JobPosting, JobApplication, ApplicationStatus, JobType
 })
 export class RecruitmentDashboard implements OnInit {
   private jobStore = inject(JobStoreService);
+  private auth     = inject(AuthService);
+
+  /** Managers can view the recruitment dashboard but cannot create/edit/delete */
+  readonly isReadOnly = computed(() => this.auth.role() === 'Manager');
 
   jobTabs = ['All', 'Open', 'Draft', 'Closed'];
   activeJobTab = 'All';

@@ -1,0 +1,122 @@
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h1>Organogram</h1>
+    <p>Organisational hierarchy — {{ totalCount }} employees</p>
+  </div>
+  <div class="flex gap-2">
+    <button class="btn btn-secondary" (click)="expandAll()">Expand All</button>
+    <button class="btn btn-secondary" (click)="collapseAll()">Collapse All</button>
+    <button class="btn btn-secondary" (click)="exportCSV()">⬇ Export CSV</button>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="org-filters">
+  <div class="search-wrap">
+    <svg class="search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+      <circle cx="8.5" cy="8.5" r="5.5"/>
+      <path d="M15 15l-3-3" stroke-linecap="round"/>
+    </svg>
+    <input
+      type="text"
+      class="form-control search-input"
+      placeholder="Search by name, department or designation…"
+      [ngModel]="search()"
+      (ngModelChange)="search.set($event)"
+    />
+  </div>
+  <select
+    class="form-control dept-select"
+    [ngModel]="deptFilter()"
+    (ngModelChange)="deptFilter.set($event)"
+    title="Filter by department"
+  >
+    <option value="">All Departments</option>
+    @for (d of departments(); track d) {
+      <option [value]="d">{{ d }}</option>
+    }
+  </select>
+</div>
+
+<!-- Loading -->
+@if (loading()) {
+  <div class="org-loading">
+    <div class="spinner"></div>
+    <p>Loading employees…</p>
+  </div>
+}
+
+<!-- Empty state -->
+@if (!loading() && roots().length === 0) {
+  <div class="org-empty">
+    <div class="org-empty-icon">🌳</div>
+    <h3>No employees found</h3>
+    <p>Try adjusting your search or department filter.</p>
+  </div>
+}
+
+<!-- Tree -->
+@if (!loading() && roots().length > 0) {
+  <div class="org-tree-wrap">
+    <div class="org-tree">
+      @for (root of roots(); track root.emp.id) {
+        <ng-container *ngTemplateOutlet="nodeTemplate; context: { node: root, depth: 0 }"></ng-container>
+      }
+    </div>
+  </div>
+}
+
+<!-- Recursive node template -->
+<ng-template #nodeTemplate let-node="node" let-depth="depth">
+  <div class="org-node-group" [style.margin-left.px]="depth * 32">
+    <!-- Card -->
+    <div class="org-card" [class.has-children]="node.children.length > 0">
+      <!-- Toggle button -->
+      @if (node.children.length > 0) {
+        <button
+          class="org-toggle"
+          [class.collapsed]="node.collapsed"
+          (click)="toggle(node)"
+          [title]="node.collapsed ? 'Expand' : 'Collapse'"
+        >
+          <svg viewBox="0 0 12 12" fill="currentColor">
+            <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      }
+
+      <!-- Avatar -->
+      <div class="org-avatar" [style.background]="node.avatarColor">
+        {{ node.initials }}
+      </div>
+
+      <!-- Info -->
+      <div class="org-info">
+        <div class="org-name">{{ node.emp.first_name }} {{ node.emp.last_name }}</div>
+        @if (node.emp.designation) {
+          <div class="org-designation">{{ node.emp.designation }}</div>
+        }
+        @if (node.emp.department) {
+          <div class="org-dept">{{ node.emp.department }}</div>
+        }
+      </div>
+
+      <!-- Report count badge -->
+      @if (node.children.length > 0) {
+        <div class="org-badge" [title]="node.children.length + ' direct reports'">
+          {{ node.children.length }}
+        </div>
+      }
+    </div>
+
+    <!-- Children -->
+    @if (!node.collapsed && node.children.length > 0) {
+      <div class="org-children">
+        @for (child of node.children; track child.emp.id) {
+          <ng-container *ngTemplateOutlet="nodeTemplate; context: { node: child, depth: depth + 1 }"></ng-container>
+        }
+      </div>
+    }
+  </div>
+</ng-template>
