@@ -84,9 +84,12 @@ export class ApiService {
   }
 
   // ── Employees (from Directus via backend proxy) ───────────────────────────
-  getEmployees(search?: string): Observable<Employee[]> {
+  // activeOnly=true filters to status='Employed' only (for dropdowns/pickers)
+  // activeOnly=false/undefined returns all statuses (for the Employees directory page)
+  getEmployees(search?: string, activeOnly?: boolean): Observable<Employee[]> {
     let params = new HttpParams();
     if (search) params = params.set('search', search);
+    if (activeOnly) params = params.set('active_only', 'true');
     return this.http.get<Employee[]>(`${this.base}/employees`, { params });
   }
 

@@ -85,8 +85,12 @@ async function upsertEmployee(e) {
 }
 
 // GET /api/v1/employees — returns from local snapshot cache, refreshes from Directus if stale
+// Query params:
+//   search      — filter by name/email/dept/designation/region
+//   active_only — if 'true', only return employees with status = 'Employed'
 router.get('/', async (req, res) => {
-  const { search } = req.query;
+  const { search, active_only } = req.query;
+  const activeOnly = active_only === 'true';
   try {
     let query = `SELECT id, first_name, last_name, email, status, region_code,
                         default_project_id, mobile_number, phone_no, employ_start_date,
@@ -94,10 +98,18 @@ router.get('/', async (req, res) => {
                         legal_entity_id, synced_at
                  FROM project.employee_snapshot`;
     const values = [];
+    const conditions = [];
+
     if (search) {
-      query += ` WHERE first_name ILIKE $1 OR last_name ILIKE $1 OR email ILIKE $1
-                    OR department ILIKE $1 OR designation ILIKE $1 OR region_code ILIKE $1`;
+      conditions.push(`(first_name ILIKE $${values.length + 1} OR last_name ILIKE $${values.length + 1} OR email ILIKE $${values.length + 1}
+                    OR department ILIKE $${values.length + 1} OR designation ILIKE $${values.length + 1} OR region_code ILIKE $${values.length + 1})`);
       values.push(`%${search}%`);
+    }
+    if (activeOnly) {
+      conditions.push(`LOWER(status) = 'employed'`);
+    }
+    if (conditions.length > 0) {
+      query += ` WHERE ` + conditions.join(' AND ');
     }
     query += ` ORDER BY first_name, last_name`;
     const { rows } = await pool.query(query, values);

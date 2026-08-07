@@ -93,7 +93,7 @@ export class Requisitions implements OnInit {
 
   loadEmployees(): void {
     this.employeesLoading.set(true);
-    this.api.getEmployees().subscribe({
+    this.api.getEmployees(undefined, true).subscribe({
       next: list => {
         this.employees.set(list);
         this.employeesLoading.set(false);

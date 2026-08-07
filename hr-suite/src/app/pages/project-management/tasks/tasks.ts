@@ -107,7 +107,7 @@ export class Tasks implements OnInit {
       next: p => { this.projects = p; this.cdr.detectChanges(); },
       error: () => {}
     });
-    this.api.getEmployees().subscribe({
+    this.api.getEmployees(undefined, true).subscribe({
       next: e => { this.employees = e; this.cdr.detectChanges(); },
       error: () => {}
     });

@@ -51,7 +51,7 @@ export class Timesheet implements OnInit {
       next: p => { this.projects = p; },
       error: () => {}
     });
-    this.api.getEmployees().subscribe({
+    this.api.getEmployees(undefined, true).subscribe({
       next: e => { this.employees = e; },
       error: () => {}
     });

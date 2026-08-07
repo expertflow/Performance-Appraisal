@@ -101,7 +101,7 @@ export class Subtasks implements OnInit {
     this.taskId = this.route.snapshot.paramMap.get('id') || '';
     if (!this.taskId) { this.router.navigate(['/tasks']); return; }
 
-    this.api.getEmployees().subscribe({
+    this.api.getEmployees(undefined, true).subscribe({
       next: e => { this.employees = e; this.cdr.detectChanges(); },
       error: () => {}
     });
