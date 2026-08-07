@@ -162,6 +162,20 @@ export class ApiService {
     return this.http.delete<{ deleted: string }>(`${this.base}/job-postings/${id}`);
   }
 
+  // ── AI Resume Screening ───────────────────────────────────────────────────
+  screenResume(payload: {
+    resumeText?: string;
+    coverLetter?: string;
+    requirements: string[];
+    jobTitle?: string;
+  }): Observable<{
+    requirements: { name: string; score: number; reason: string }[];
+    overallScore: number;
+    summary: string;
+  }> {
+    return this.http.post<any>(`${this.base}/ai/screen-resume`, payload);
+  }
+
   // ── Job Applications ──────────────────────────────────────────────────────
   getJobApplications(filters?: { candidate_id?: string; job_id?: string }): Observable<JobApplication[]> {
     let params = new HttpParams();

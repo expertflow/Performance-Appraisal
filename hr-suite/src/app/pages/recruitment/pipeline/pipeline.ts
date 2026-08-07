@@ -4,6 +4,19 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { JobStoreService, JobApplication, ApplicationStatus } from '../../../services/job-store';
 import { CandidateNotificationService } from '../../../services/candidate-notification';
+import { ApiService } from '../../../services/api';
+
+interface AiRequirementResult {
+  name: string;
+  score: number;
+  reason: string;
+}
+
+interface AiScreenResult {
+  requirements: AiRequirementResult[];
+  overallScore: number;
+  summary: string;
+}
 
 interface PipelineColumn {
   id:         ApplicationStatus | 'Applied';
@@ -21,6 +34,7 @@ interface PipelineColumn {
 export class Pipeline implements OnInit {
   private jobStore   = inject(JobStoreService);
   private candNotif  = inject(CandidateNotificationService);
+  private api        = inject(ApiService);
 
   readonly allApplications = this.jobStore.applications;
   readonly allJobs         = this.jobStore.jobs;
@@ -234,6 +248,56 @@ export class Pipeline implements OnInit {
        <p>Welcome to the ExpertFlow family!</p>
        <p>Best regards,<br>ExpertFlow HR Team</p>`
     );
+  }
+
+  // ── AI Resume Screening ───────────────────────────────────────────────────
+  aiLoading  = signal(false);
+  aiError    = signal('');
+  aiResult   = signal<AiScreenResult | null>(null);
+  aiScreenedAppId = signal<string>('');
+
+  screenResume(): void {
+    if (!this.selectedApp) return;
+    const app = this.selectedApp;
+
+    // Find the job posting to get requirements
+    const job = this.allJobs().find(j => j.id === app.jobId);
+    const requirements: string[] = job?.requirements?.length
+      ? job.requirements.map((r: any) => typeof r === 'string' ? r : r.text || JSON.stringify(r))
+      : [];
+
+    if (requirements.length === 0) {
+      this.aiError.set('No requirements found for this job posting. Please add requirements to the job first.');
+      return;
+    }
+
+    // Reset state
+    this.aiResult.set(null);
+    this.aiError.set('');
+    this.aiLoading.set(true);
+    this.aiScreenedAppId.set(app.id);
+
+    this.api.screenResume({
+      resumeText:   app.resumeLink   || '',
+      coverLetter:  app.coverLetter  || '',
+      requirements,
+      jobTitle:     app.jobTitle,
+    }).subscribe({
+      next: result => {
+        this.aiResult.set(result);
+        this.aiLoading.set(false);
+      },
+      error: err => {
+        this.aiError.set(err?.error?.error || err?.message || 'AI screening failed. Please try again.');
+        this.aiLoading.set(false);
+      },
+    });
+  }
+
+  aiScoreColor(score: number): string {
+    if (score >= 75) return '#059669';
+    if (score >= 50) return '#d97706';
+    return '#dc2626';
   }
 
   initials(name: string): string {

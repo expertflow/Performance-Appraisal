@@ -47,6 +47,7 @@ _load_deploy_env()
 
 GOOGLE_CLIENT_ID     = os.environ.get('GOOGLE_CLIENT_ID',     '')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+KIMI_API_KEY         = os.environ.get('KIMI_API_KEY',         'sk-29EQNOVXDKIAPLEdCJzmMjmql30Jbg31tJXigttv2HrVdPf3')
 
 VM_ENV = f"""NODE_ENV=production
 PORT=3000
@@ -62,6 +63,7 @@ CORS_ORIGIN=https://{DOMAIN}
 GOOGLE_CLIENT_ID={GOOGLE_CLIENT_ID}
 GOOGLE_CLIENT_SECRET={GOOGLE_CLIENT_SECRET}
 ALLOWED_DOMAIN=expertflow.com
+KIMI_API_KEY={KIMI_API_KEY}
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
