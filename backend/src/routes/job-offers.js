@@ -37,6 +37,13 @@ async function pushNotification({ target_role = 'HR', target_user_id = null, typ
   }
 }
 
+/** Push the same notification to HR, AppAdmin, and Manager roles */
+async function notifyRecruitmentRoles({ type = 'info', title, body }) {
+  for (const role of ['HR', 'AppAdmin', 'Manager']) {
+    await pushNotification({ target_role: role, type, title, body });
+  }
+}
+
 async function sendEmail(to, subject, html) {
   if (!process.env.SMTP_HOST) {
     console.log(`\n📧 [EMAIL STUB] To: ${to}\n   Subject: ${subject}\n`);
@@ -57,6 +64,21 @@ async function sendEmail(to, subject, html) {
     console.log(`[email] Sent to ${to}: ${subject}`);
   } catch (e) {
     console.error('[sendEmail]', e.message);
+  }
+}
+
+/** Fetch all emails for HR, AppAdmin, and Manager roles and send each the given email */
+async function emailRecruitmentRoles(subject, html) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT DISTINCT email FROM auth_local.account
+       WHERE role IN ('HR', 'AppAdmin', 'Manager') AND email IS NOT NULL`
+    );
+    for (const r of rows) {
+      await sendEmail(r.email, subject, html);
+    }
+  } catch (e) {
+    console.error('[emailRecruitmentRoles]', e.message);
   }
 }
 
@@ -159,51 +181,43 @@ router.patch('/:id/respond', async (req, res) => {
     if (!rows.length) return res.status(404).json({ error: 'Offer not found' });
 
     const offer = rows[0];
-
-    // ── Notify HR: app notification ───────────────────────────────────────────
     const emoji = decision === 'Accepted' ? '🎉' : '❌';
-    await pushNotification({
-      target_role: 'HR',
-      type:        decision === 'Accepted' ? 'offer' : 'info',
-      title:       `${emoji} Offer ${decision}: ${offer.role}`,
-      body:        `${offer.candidate_name} has ${decision.toLowerCase()} the offer for "${offer.role}".`,
+
+    // ── App notification → HR + AppAdmin + Manager ────────────────────────────
+    await notifyRecruitmentRoles({
+      type:  decision === 'Accepted' ? 'offer' : 'info',
+      title: `${emoji} Offer ${decision}: ${offer.role}`,
+      body:  `${offer.candidate_name} has ${decision.toLowerCase()} the offer for "${offer.role}".`,
     });
 
-    // ── Email HR ──────────────────────────────────────────────────────────────
-    // Look up HR email(s) from auth_local.account
-    const { rows: hrRows } = await pool.query(
-      `SELECT email FROM auth_local.account WHERE role = 'HR' AND email IS NOT NULL LIMIT 5`
+    // ── Email HR + AppAdmin + Manager ─────────────────────────────────────────
+    await emailRecruitmentRoles(
+      `${emoji} Offer ${decision} — ${offer.role}`,
+      `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+        <h2 style="color:${decision === 'Accepted' ? '#059669' : '#dc2626'};">
+          ${emoji} Offer ${decision}
+        </h2>
+        <p>The following offer has been <strong>${decision.toLowerCase()}</strong> by the candidate:</p>
+        <div style="background:#f8fafc;border-left:4px solid ${decision === 'Accepted' ? '#059669' : '#dc2626'};
+                    padding:16px 20px;margin:16px 0;border-radius:4px;">
+          <table style="border-collapse:collapse;width:100%;">
+            <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Candidate:</td><td>${offer.candidate_name}</td></tr>
+            <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Email:</td><td>${offer.candidate_email}</td></tr>
+            <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Position:</td><td>${offer.role}</td></tr>
+            <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Salary:</td><td>${offer.salary}</td></tr>
+            <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Decision:</td><td><strong>${decision}</strong></td></tr>
+          </table>
+        </div>
+        <p>
+          <a href="${SITE_URL}/recruitment/offer"
+             style="background:#1878cc;color:#fff;padding:12px 24px;border-radius:6px;
+                    text-decoration:none;display:inline-block;">
+            View Offers Dashboard →
+          </a>
+        </p>
+        <p style="color:#64748b;font-size:13px;">Best regards,<br>ExpertFlow HR Suite</p>
+      </div>`
     );
-    for (const hr of hrRows) {
-      await sendEmail(
-        hr.email,
-        `${emoji} Offer ${decision} — ${offer.role}`,
-        `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-          <h2 style="color:${decision === 'Accepted' ? '#059669' : '#dc2626'};">
-            ${emoji} Offer ${decision}
-          </h2>
-          <p>The following offer has been <strong>${decision.toLowerCase()}</strong> by the candidate:</p>
-          <div style="background:#f8fafc;border-left:4px solid ${decision === 'Accepted' ? '#059669' : '#dc2626'};
-                      padding:16px 20px;margin:16px 0;border-radius:4px;">
-            <table style="border-collapse:collapse;width:100%;">
-              <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Candidate:</td><td>${offer.candidate_name}</td></tr>
-              <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Email:</td><td>${offer.candidate_email}</td></tr>
-              <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Position:</td><td>${offer.role}</td></tr>
-              <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Salary:</td><td>${offer.salary}</td></tr>
-              <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Decision:</td><td><strong>${decision}</strong></td></tr>
-            </table>
-          </div>
-          <p>
-            <a href="${SITE_URL}/recruitment/offer"
-               style="background:#1878cc;color:#fff;padding:12px 24px;border-radius:6px;
-                      text-decoration:none;display:inline-block;">
-              View Offers Dashboard →
-            </a>
-          </p>
-          <p style="color:#64748b;font-size:13px;">Best regards,<br>ExpertFlow HR Suite</p>
-        </div>`
-      );
-    }
 
     res.json(mapRow(offer));
   } catch (err) {

@@ -25,7 +25,7 @@ function mapRow(r) {
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
-/** Insert an app_notification row */
+/** Insert an app_notification row for a single role */
 async function pushNotification({ target_role = 'HR', target_user_id = null, type = 'info', title, body }) {
   try {
     await pool.query(
@@ -35,6 +35,16 @@ async function pushNotification({ target_role = 'HR', target_user_id = null, typ
     );
   } catch (e) {
     console.error('[pushNotification]', e.message);
+  }
+}
+
+/**
+ * Push the same notification to HR, AppAdmin, and Manager roles.
+ * target_user_id is ignored for role-broadcast notifications.
+ */
+async function notifyRecruitmentRoles({ type = 'info', title, body }) {
+  for (const role of ['HR', 'AppAdmin', 'Manager']) {
+    await pushNotification({ target_role: role, type, title, body });
   }
 }
 
@@ -62,7 +72,25 @@ async function sendEmail(to, subject, html) {
   }
 }
 
-const SITE_URL = process.env.SITE_URL || 'https://hrsuite.expertflow.com';
+/**
+ * Fetch all email addresses for HR, AppAdmin, and Manager roles,
+ * then send each of them the given email.
+ */
+async function emailRecruitmentRoles(subject, html) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT DISTINCT email FROM auth_local.account
+       WHERE role IN ('HR', 'AppAdmin', 'Manager') AND email IS NOT NULL`
+    );
+    for (const r of rows) {
+      await sendEmail(r.email, subject, html);
+    }
+  } catch (e) {
+    console.error('[emailRecruitmentRoles]', e.message);
+  }
+}
+
+const SITE_URL    = process.env.SITE_URL    || 'https://hrsuite.expertflow.com';
 const CAREERS_URL = process.env.CAREERS_URL || 'https://hrsuite.expertflow.com';
 
 // GET /api/v1/job-applications          — all (HR view)
@@ -144,13 +172,35 @@ router.post('/', async (req, res) => {
 
     const app = rows[0];
 
-    // ── Notify HR (app notification only) ────────────────────────────────────
-    await pushNotification({
-      target_role: 'HR',
-      type:        'application',
-      title:       `New Application: ${jobTitle}`,
-      body:        `${candidateName} has applied for "${jobTitle}".`,
+    // ── Notify HR + AppAdmin + Manager (app notification) ────────────────────
+    await notifyRecruitmentRoles({
+      type:  'application',
+      title: `New Application: ${jobTitle}`,
+      body:  `${candidateName} has applied for "${jobTitle}".`,
     });
+
+    // ── Email HR + AppAdmin + Manager ─────────────────────────────────────────
+    await emailRecruitmentRoles(
+      `New Application — ${jobTitle}`,
+      `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+        <h2 style="color:#1878cc;">📋 New Job Application</h2>
+        <p>A new application has been submitted:</p>
+        <div style="background:#f8fafc;border-left:4px solid #1878cc;padding:16px 20px;margin:16px 0;border-radius:4px;">
+          <table style="border-collapse:collapse;width:100%;">
+            <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Candidate:</td><td>${candidateName}</td></tr>
+            <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Email:</td><td>${candidateEmail}</td></tr>
+            <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Position:</td><td>${jobTitle}</td></tr>
+          </table>
+        </div>
+        <p>
+          <a href="${SITE_URL}/recruitment/pipeline"
+             style="background:#1878cc;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;">
+            View in Pipeline →
+          </a>
+        </p>
+        <p style="color:#64748b;font-size:13px;">Best regards,<br>ExpertFlow HR Suite</p>
+      </div>`
+    );
 
     res.status(201).json(mapRow(app));
   } catch (err) {
@@ -177,8 +227,7 @@ router.patch('/:id', async (req, res) => {
 
     const app = rows[0];
 
-    // ── Notify candidate: app notification (targeted by candidateId) ──────────
-    // Look up the candidate's app user id so the notification is targeted
+    // ── Notify candidate (targeted by candidateId) ────────────────────────────
     const { rows: userRows } = await pool.query(
       `SELECT id FROM auth_local.account WHERE id = $1 LIMIT 1`,
       [app.candidate_id]
@@ -191,6 +240,13 @@ router.patch('/:id', async (req, res) => {
       type:           'status',
       title:          `Application Status Updated: ${app.job_title}`,
       body:           `Your application for "${app.job_title}" has been updated to: ${status}. Visit the careers portal to check your application status.`,
+    });
+
+    // ── Notify HR + AppAdmin + Manager (app notification) ────────────────────
+    await notifyRecruitmentRoles({
+      type:  'status',
+      title: `Application Status Changed: ${app.job_title}`,
+      body:  `${app.candidate_name}'s application for "${app.job_title}" was moved to: ${status}.`,
     });
 
     // ── Email candidate ───────────────────────────────────────────────────────
@@ -221,6 +277,30 @@ router.patch('/:id', async (req, res) => {
           </a>
         </p>
         <p style="color:#64748b;font-size:13px;">Best regards,<br>ExpertFlow HR Team<br><a href="${CAREERS_URL}">${CAREERS_URL}</a></p>
+      </div>`
+    );
+
+    // ── Email HR + AppAdmin + Manager about the status change ─────────────────
+    await emailRecruitmentRoles(
+      `Application Status Changed — ${app.job_title}`,
+      `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+        <h2 style="color:#1878cc;">📋 Application Status Changed</h2>
+        <p>An application status has been updated:</p>
+        <div style="background:#f8fafc;border-left:4px solid #1878cc;padding:16px 20px;margin:16px 0;border-radius:4px;">
+          <table style="border-collapse:collapse;width:100%;">
+            <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Candidate:</td><td>${app.candidate_name}</td></tr>
+            <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Email:</td><td>${app.candidate_email}</td></tr>
+            <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Position:</td><td>${app.job_title}</td></tr>
+            <tr><td style="padding:4px 12px 4px 0;font-weight:600;">New Status:</td><td><strong>${status}</strong></td></tr>
+          </table>
+        </div>
+        <p>
+          <a href="${SITE_URL}/recruitment/pipeline"
+             style="background:#1878cc;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;">
+            View in Pipeline →
+          </a>
+        </p>
+        <p style="color:#64748b;font-size:13px;">Best regards,<br>ExpertFlow HR Suite</p>
       </div>`
     );
 
