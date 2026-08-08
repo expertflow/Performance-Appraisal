@@ -2,6 +2,8 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JobStoreService, JobApplication, ApplicationStatus } from '../../../services/job-store';
+import { AuthService } from '../../../services/auth';
+import { ApiService } from '../../../services/api';
 
 @Component({
   selector: 'app-applications',
@@ -11,6 +13,8 @@ import { JobStoreService, JobApplication, ApplicationStatus } from '../../../ser
 })
 export class Applications implements OnInit {
   private jobStore = inject(JobStoreService);
+  readonly auth    = inject(AuthService);
+  private api      = inject(ApiService);
 
   readonly allApplications = this.jobStore.applications;
 
@@ -73,6 +77,18 @@ export class Applications implements OnInit {
 
   initials(name: string): string {
     return name.split(' ').map(w => w[0] ?? '').join('').toUpperCase().slice(0, 2);
+  }
+
+  // ── Delete application (HR / AppAdmin only) ───────────────────────────────
+  deleteApplication(app: JobApplication): void {
+    if (!confirm(`Delete application from ${app.candidateName} for "${app.jobTitle}"? This cannot be undone.`)) return;
+    this.api.deleteJobApplication(app.id).subscribe({
+      next: () => {
+        this.jobStore.reloadAllApplications();
+        this.showToast(`Application from ${app.candidateName} deleted.`);
+      },
+      error: err => this.showToast('Delete failed: ' + (err?.error?.error || err.message)),
+    });
   }
 
   // ── Toast ─────────────────────────────────────────────────────────────────

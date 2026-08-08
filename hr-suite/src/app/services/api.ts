@@ -200,6 +200,10 @@ export class ApiService {
     return this.http.post<any>(`${this.base}/job-applications/${appId}/screen`, {});
   }
 
+  deleteJobApplication(appId: string): Observable<{ ok: boolean; id: string }> {
+    return this.http.delete<{ ok: boolean; id: string }>(`${this.base}/job-applications/${appId}`);
+  }
+
   // ── Job Applications ──────────────────────────────────────────────────────
   getJobApplications(filters?: { candidate_id?: string; job_id?: string }): Observable<JobApplication[]> {
     let params = new HttpParams();

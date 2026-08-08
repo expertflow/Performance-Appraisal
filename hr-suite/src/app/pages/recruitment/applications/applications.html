@@ -55,6 +55,9 @@
             <th>Links</th>
             <th>Applied</th>
             <th>Status</th>
+            @if (auth.isHR() || auth.isAppAdmin()) {
+              <th style="width:60px;"></th>
+            }
           </tr>
         </thead>
         <tbody>
@@ -122,6 +125,15 @@
                   }
                 </select>
               </td>
+
+              <!-- Delete (HR / AppAdmin only) -->
+              @if (auth.isHR() || auth.isAppAdmin()) {
+                <td style="text-align:center;vertical-align:middle;">
+                  <button class="btn btn-sm" title="Delete application"
+                    style="background:transparent;border:none;color:#dc2626;font-size:16px;cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1;"
+                    (click)="deleteApplication(app)">🗑️</button>
+                </td>
+              }
             </tr>
           }
         </tbody>
