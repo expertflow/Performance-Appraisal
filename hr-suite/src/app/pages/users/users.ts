@@ -110,6 +110,14 @@ export class Users {
     return map[role] ?? '';
   }
 
+  roleDisplayLabel(role: AppRole | string): string {
+    if (role === 'AppAdmin') return 'App Admin';
+    if (role === 'HR')       return 'Admin/HR/Finance';
+    if (role === 'Manager')  return 'Manager';
+    if (role === 'Employee') return 'Employee';
+    return role;
+  }
+
   initials(name: string): string {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   }

@@ -25,6 +25,15 @@ export class ChangePassword {
 
   get user() { return this.auth.currentUser(); }
 
+  get roleLabel(): string {
+    const r = this.user?.role;
+    if (r === 'AppAdmin') return 'App Administrator';
+    if (r === 'HR')       return 'Admin/HR/Finance';
+    if (r === 'Manager')  return 'Team Manager';
+    if (r === 'Employee') return 'Employee';
+    return r ?? '';
+  }
+
   get pageTitle(): string {
     return this.isGoogleOnly() ? 'Set a Password' : 'Change Password';
   }

@@ -44,7 +44,7 @@
   </div>
   <div class="stat-card">
     <div class="stat-value" style="color:#1D4ED8;">{{ stats.admins }}</div>
-    <div class="stat-label">Admins / HR</div>
+    <div class="stat-label">Admins / HR/Finance</div>
   </div>
 </div>
 
@@ -62,7 +62,7 @@
     <select class="form-control" title="Filter by role" [(ngModel)]="filterRole">
       <option value="">All Roles</option>
       <option value="AppAdmin">App Admin</option>
-      <option value="HR">HR</option>
+      <option value="HR">Admin/HR/Finance</option>
       <option value="Manager">Manager</option>
       <option value="Employee">Employee</option>
     </select>
@@ -111,7 +111,7 @@
               </div>
             </td>
             <td>
-              <span class="role-chip" [class]="roleClass(u.role)">{{ u.role }}</span>
+              <span class="role-chip" [class]="roleClass(u.role)">{{ roleDisplayLabel(u.role) }}</span>
             </td>
             <td>{{ u.department }}</td>
             <td>{{ u.designation }}</td>

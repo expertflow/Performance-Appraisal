@@ -219,7 +219,7 @@
               <div class="user-dropdown-header">
                 <div class="user-dropdown-name">{{ user?.name }}</div>
                 <div class="user-dropdown-email">{{ user?.email }}</div>
-                <span class="role-chip role-{{ user?.role?.toLowerCase() }}">{{ user?.role }}</span>
+                <span class="role-chip role-{{ user?.role?.toLowerCase() }}">{{ roleLabel }}</span>
               </div>
               <div class="user-dropdown-divider"></div>
               <a routerLink="/settings" class="user-dropdown-item">
