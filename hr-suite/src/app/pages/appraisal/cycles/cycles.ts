@@ -32,8 +32,8 @@ export class Cycles implements OnInit {
   readonly isHR       = computed(() => this.auth.isHR());
   readonly isManager  = computed(() => this.auth.isManager());
 
-  activeTab = 'Active';
-  tabs = ['Active', 'Upcoming', 'Completed', 'All'];
+  activeTab = 'All';
+  tabs = ['All', 'Upcoming', 'Active', 'Completed'];
 
   // Modal state
   showModal    = false;
