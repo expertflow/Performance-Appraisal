@@ -2,6 +2,21 @@
 const express = require('express');
 const router  = express.Router();
 const pool    = require('../db/pool');
+const https   = require('https');
+
+// ── Ensure ai_score / ai_summary columns exist ────────────────────────────────
+async function ensureAiColumns() {
+  try {
+    await pool.query(`
+      ALTER TABLE recruitment.job_application
+        ADD COLUMN IF NOT EXISTS ai_score   INTEGER,
+        ADD COLUMN IF NOT EXISTS ai_summary TEXT NOT NULL DEFAULT ''
+    `);
+  } catch (e) {
+    console.error('[job-applications] ensureAiColumns:', e.message);
+  }
+}
+ensureAiColumns();
 
 function mapRow(r) {
   return {
@@ -20,6 +35,8 @@ function mapRow(r) {
     githubUrl:        r.github_url        || '',
     status:           r.status,
     appliedDate:      r.applied_date ? r.applied_date.toISOString().slice(0, 10) : '',
+    aiScore:          r.ai_score    ?? null,
+    aiSummary:        r.ai_summary  || '',
   };
 }
 
@@ -87,6 +104,169 @@ async function emailRecruitmentRoles(subject, html) {
     }
   } catch (e) {
     console.error('[emailRecruitmentRoles]', e.message);
+  }
+}
+
+// ── Claude AI helper (same logic as ai-screen.js) ────────────────────────────
+
+const CLAUDE_MODEL = 'claude-opus-4-5';
+
+function callClaudeApi(apiKey, payload) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'api.anthropic.com',
+      path:     '/v1/messages',
+      method:   'POST',
+      headers: {
+        'Content-Type':      'application/json',
+        'x-api-key':         apiKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Length':    Buffer.byteLength(payload),
+      },
+    };
+
+    const req = https.request(options, (resp) => {
+      let data = '';
+      resp.on('data', chunk => { data += chunk; });
+      resp.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.error) {
+            return reject(new Error(parsed.error.message || JSON.stringify(parsed.error)));
+          }
+          const content = parsed.content?.[0]?.text;
+          if (!content) return reject(new Error('Empty response from Claude API'));
+
+          // Extract JSON from the response (handle markdown code blocks)
+          const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
+          const jsonStr = jsonMatch[1].trim();
+          const aiResult = JSON.parse(jsonStr);
+          resolve(aiResult);
+        } catch (e) {
+          reject(new Error(`Failed to parse Claude response: ${e.message}`));
+        }
+      });
+    });
+
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
+}
+
+/**
+ * Auto-screen a newly submitted application using Claude AI.
+ * Fetches the job posting requirements + threshold, calls Claude,
+ * stores ai_score + ai_summary, and auto-shortlists if score >= threshold.
+ */
+async function autoScreenApplication(appId, jobId, resumeLink, coverLetter, jobTitle) {
+  const apiKey = process.env.CLAUDE_API_KEY;
+  if (!apiKey) {
+    console.log('[auto-screen] CLAUDE_API_KEY not set — skipping AI screening');
+    return;
+  }
+
+  // Fetch job posting for requirements + threshold
+  let requirements = [];
+  let threshold = 0;
+  try {
+    const { rows: jobRows } = await pool.query(
+      `SELECT requirements, auto_shortlist_threshold FROM recruitment.job_posting WHERE id = $1`,
+      [jobId]
+    );
+    if (!jobRows.length) {
+      console.log(`[auto-screen] Job ${jobId} not found — skipping`);
+      return;
+    }
+    requirements = jobRows[0].requirements || [];
+    threshold    = jobRows[0].auto_shortlist_threshold ?? 0;
+  } catch (e) {
+    console.error('[auto-screen] Failed to fetch job posting:', e.message);
+    return;
+  }
+
+  if (!requirements.length) {
+    console.log(`[auto-screen] Job ${jobId} has no requirements — skipping`);
+    return;
+  }
+
+  const candidateContent = [
+    resumeLink   ? `RESUME (base64 PDF data — candidate uploaded CV):\n${resumeLink.slice(0, 2000)}` : '',
+    coverLetter  ? `COVER LETTER:\n${coverLetter}` : '',
+  ].filter(Boolean).join('\n\n');
+
+  if (!candidateContent.trim()) {
+    console.log(`[auto-screen] App ${appId} has no resume/cover letter — skipping`);
+    return;
+  }
+
+  const requirementsList = requirements
+    .map((r, i) => `${i + 1}. ${typeof r === 'string' ? r : r.text || JSON.stringify(r)}`)
+    .join('\n');
+
+  const systemPrompt = `You are an expert HR recruiter and resume screener. 
+Analyze the candidate's resume and cover letter against the job requirements.
+For each requirement, provide a match score from 0 to 100 and a brief reason.
+Respond ONLY with valid JSON in this exact format:
+{
+  "requirements": [
+    { "name": "requirement text", "score": 85, "reason": "brief explanation" }
+  ],
+  "overallScore": 78,
+  "summary": "2-3 sentence overall assessment"
+}`;
+
+  const userPrompt = `Job Title: ${jobTitle || 'Not specified'}
+
+JOB REQUIREMENTS:
+${requirementsList}
+
+CANDIDATE PROFILE:
+${candidateContent}
+
+Evaluate how well this candidate meets each requirement. Be objective and specific.`;
+
+  const payload = JSON.stringify({
+    model:      CLAUDE_MODEL,
+    max_tokens: 1500,
+    system:     systemPrompt,
+    messages:   [{ role: 'user', content: userPrompt }],
+  });
+
+  try {
+    console.log(`[auto-screen] Screening application ${appId} for job ${jobId}…`);
+    const result = await callClaudeApi(apiKey, payload);
+    const overallScore = result.overallScore ?? 0;
+    const summary      = result.summary      || '';
+
+    // Store ai_score + ai_summary
+    await pool.query(
+      `UPDATE recruitment.job_application
+       SET ai_score = $1, ai_summary = $2, updated_at = NOW()
+       WHERE id = $3`,
+      [overallScore, summary, appId]
+    );
+    console.log(`[auto-screen] App ${appId} scored ${overallScore}% (threshold: ${threshold}%)`);
+
+    // Auto-shortlist if score >= threshold and threshold > 0
+    if (threshold > 0 && overallScore >= threshold) {
+      await pool.query(
+        `UPDATE recruitment.job_application
+         SET status = 'Shortlisted', updated_at = NOW()
+         WHERE id = $1`,
+        [appId]
+      );
+      console.log(`[auto-screen] App ${appId} AUTO-SHORTLISTED (score ${overallScore} >= threshold ${threshold})`);
+
+      // Notify HR/AppAdmin/Manager about auto-shortlist
+      notifyRecruitmentRoles({
+        type:  'application',
+        title: `AI Auto-Shortlisted: ${jobTitle}`,
+        body:  `A candidate was automatically shortlisted for "${jobTitle}" with an AI score of ${overallScore}%.`,
+      }).catch(e => console.error('[auto-screen notify]', e.message));
+    }
+  } catch (e) {
+    console.error(`[auto-screen] Failed for app ${appId}:`, e.message);
   }
 }
 
@@ -172,8 +352,12 @@ router.post('/', async (req, res) => {
 
     const app = rows[0];
 
-    // ── Respond immediately — notifications/emails fire in background ─────────
+    // ── Respond immediately — notifications/emails/AI fire in background ──────
     res.status(201).json(mapRow(app));
+
+    // ── Auto-screen CV with AI (fire-and-forget) ──────────────────────────────
+    autoScreenApplication(app.id, jobId, resumeLink, coverLetter, jobTitle)
+      .catch(e => console.error('[auto-screen fire-and-forget]', e.message));
 
     // ── Notify HR + AppAdmin + Manager (fire-and-forget) ─────────────────────
     notifyRecruitmentRoles({

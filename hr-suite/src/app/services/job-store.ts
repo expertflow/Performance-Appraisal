@@ -19,6 +19,7 @@ export interface JobPosting {
   requirements: string[];
   postedDate: string;
   deadline: string;
+  autoShortlistThreshold: number;  // 0 = disabled, 1-100 = auto-shortlist threshold %
 }
 
 export type ApplicationStatus = 'Submitted' | 'Under Review' | 'Shortlisted' | 'Rejected' | 'Hired';
@@ -39,6 +40,8 @@ export interface JobApplication {
   githubUrl: string;         // optional
   appliedDate: string;
   status: ApplicationStatus;
+  aiScore?: number | null;   // AI screening score (0-100), null if not yet screened (server-set)
+  aiSummary?: string;        // AI screening summary text (server-set)
 }
 
 // ── Service ───────────────────────────────────────────────────────────────────

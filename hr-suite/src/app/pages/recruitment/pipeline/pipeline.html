@@ -51,6 +51,13 @@
                 @if (app.linkedinUrl) { <span class="tag">LinkedIn</span> }
                 @if (app.githubUrl)   { <span class="tag">GitHub</span> }
                 @if (app.resumeLink)  { <span class="tag">Resume</span> }
+                @if (app.aiScore != null) {
+                  <span class="tag" [style.background]="aiScoreColor(app.aiScore) + '20'"
+                        [style.color]="aiScoreColor(app.aiScore)"
+                        [style.border]="'1px solid ' + aiScoreColor(app.aiScore)">
+                    🤖 {{ app.aiScore }}%
+                  </span>
+                }
               </div>
               <div class="candidate-footer">
                 <span style="font-size:11px;color:var(--color-text-muted);">{{ app.appliedDate }}</span>
@@ -157,68 +164,31 @@
         <button class="btn btn-danger btn-sm" style="flex:1;" (click)="rejectCandidate()">Reject</button>
       </div>
 
-      <!-- AI Resume Screening -->
+      <!-- AI Resume Screening (auto-screened on application) -->
       <div style="margin-top:14px;border-top:1px solid var(--color-border,#e2e8f0);padding-top:14px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <div style="font-size:12px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em;">
-            🤖 AI Resume Screening
-          </div>
-          <button class="btn btn-primary btn-sm"
-                  (click)="screenResume()"
-                  [disabled]="aiLoading()"
-                  style="font-size:11px;padding:4px 10px;">
-            @if (aiLoading()) {
-              <span class="spinner-sm" style="width:10px;height:10px;margin-right:4px;"></span> Screening…
-            } @else {
-              🤖 AI Screen
-            }
-          </button>
+        <div style="font-size:12px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">
+          🤖 AI Resume Screening
         </div>
 
-        @if (aiError()) {
-          <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 12px;font-size:12px;color:#dc2626;">
-            ⚠️ {{ aiError() }}
-          </div>
-        }
-
-        @if (aiResult() && aiScreenedAppId() === selectedApp.id) {
+        @if (selectedApp.aiScore != null) {
           <!-- Overall Score -->
           <div style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1px solid #bae6fd;
                       border-radius:10px;padding:12px 14px;margin-bottom:12px;text-align:center;">
             <div style="font-size:11px;color:#0369a1;font-weight:600;margin-bottom:4px;">OVERALL MATCH SCORE</div>
-            <div style="font-size:28px;font-weight:800;" [style.color]="aiScoreColor(aiResult()!.overallScore)">
-              {{ aiResult()!.overallScore }}%
+            <div style="font-size:28px;font-weight:800;" [style.color]="aiScoreColor(selectedApp.aiScore)">
+              {{ selectedApp.aiScore }}%
             </div>
-            <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px;line-height:1.5;">
-              {{ aiResult()!.summary }}
-            </div>
-          </div>
-
-          <!-- Per-requirement bars -->
-          <div style="display:flex;flex-direction:column;gap:8px;">
-            @for (req of aiResult()!.requirements; track req.name) {
-              <div style="background:var(--color-bg-secondary,#f8fafc);border-radius:8px;padding:8px 10px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                  <div style="font-size:11px;font-weight:600;color:var(--color-text-primary);flex:1;margin-right:8px;line-height:1.3;">
-                    {{ req.name }}
-                  </div>
-                  <div style="font-size:12px;font-weight:700;min-width:36px;text-align:right;"
-                       [style.color]="aiScoreColor(req.score)">
-                    {{ req.score }}%
-                  </div>
-                </div>
-                <!-- Progress bar -->
-                <div style="height:5px;background:var(--color-border,#e2e8f0);border-radius:3px;overflow:hidden;margin-bottom:4px;">
-                  <div style="height:100%;border-radius:3px;transition:width .4s ease;"
-                       [style.width.%]="req.score"
-                       [style.background]="aiScoreColor(req.score)">
-                  </div>
-                </div>
-                <div style="font-size:10px;color:var(--color-text-muted,#94a3b8);line-height:1.4;">
-                  {{ req.reason }}
-                </div>
+            @if (selectedApp.aiSummary) {
+              <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px;line-height:1.5;">
+                {{ selectedApp.aiSummary }}
               </div>
             }
+          </div>
+        } @else {
+          <div style="background:#f8fafc;border:1px solid var(--color-border,#e2e8f0);border-radius:8px;
+                      padding:12px 14px;font-size:12px;color:var(--color-text-muted);text-align:center;">
+            <div style="font-size:20px;margin-bottom:4px;">⏳</div>
+            AI screening is in progress or not yet available for this candidate.
           </div>
         }
       </div>

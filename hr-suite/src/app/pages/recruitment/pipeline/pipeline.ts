@@ -9,18 +9,6 @@ import { AuthService } from '../../../services/auth';
 import { Employee } from '../../../models';
 import { AppUserRecord } from '../../../services/user-store';
 
-interface AiRequirementResult {
-  name: string;
-  score: number;
-  reason: string;
-}
-
-interface AiScreenResult {
-  requirements: AiRequirementResult[];
-  overallScore: number;
-  summary: string;
-}
-
 interface PipelineColumn {
   id:         ApplicationStatus | 'Applied';
   label:      string;
@@ -302,49 +290,7 @@ export class Pipeline implements OnInit {
     );
   }
 
-  // ── AI Resume Screening ───────────────────────────────────────────────────
-  aiLoading  = signal(false);
-  aiError    = signal('');
-  aiResult   = signal<AiScreenResult | null>(null);
-  aiScreenedAppId = signal<string>('');
-
-  screenResume(): void {
-    if (!this.selectedApp) return;
-    const app = this.selectedApp;
-
-    // Find the job posting to get requirements
-    const job = this.allJobs().find(j => j.id === app.jobId);
-    const requirements: string[] = job?.requirements?.length
-      ? job.requirements.map((r: any) => typeof r === 'string' ? r : r.text || JSON.stringify(r))
-      : [];
-
-    if (requirements.length === 0) {
-      this.aiError.set('No requirements found for this job posting. Please add requirements to the job first.');
-      return;
-    }
-
-    // Reset state
-    this.aiResult.set(null);
-    this.aiError.set('');
-    this.aiLoading.set(true);
-    this.aiScreenedAppId.set(app.id);
-
-    this.api.screenResume({
-      resumeText:   app.resumeLink   || '',
-      coverLetter:  app.coverLetter  || '',
-      requirements,
-      jobTitle:     app.jobTitle,
-    }).subscribe({
-      next: result => {
-        this.aiResult.set(result);
-        this.aiLoading.set(false);
-      },
-      error: err => {
-        this.aiError.set(err?.error?.error || err?.message || 'AI screening failed. Please try again.');
-        this.aiLoading.set(false);
-      },
-    });
-  }
+  // ── AI Score display helpers ──────────────────────────────────────────────
 
   aiScoreColor(score: number): string {
     if (score >= 75) return '#059669';

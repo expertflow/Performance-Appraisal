@@ -3,6 +3,35 @@ const express = require('express');
 const router  = express.Router();
 const pool    = require('../db/pool');
 
+// Ensure auto_shortlist_threshold column exists (idempotent)
+async function ensureThresholdColumn() {
+  try {
+    await pool.query(`
+      ALTER TABLE recruitment.job_posting
+        ADD COLUMN IF NOT EXISTS auto_shortlist_threshold INTEGER NOT NULL DEFAULT 0
+    `);
+  } catch (e) {
+    console.error('[job-postings] ensureThresholdColumn:', e.message);
+  }
+}
+ensureThresholdColumn();
+
+function mapRow(r) {
+  return {
+    id:                     r.id,
+    title:                  r.title,
+    department:             r.department,
+    location:               r.location,
+    type:                   r.type,
+    status:                 r.status,
+    description:            r.description,
+    requirements:           r.requirements || [],
+    postedDate:             r.posted_date   ? r.posted_date.toISOString().slice(0, 10) : '',
+    deadline:               r.deadline      ? r.deadline.toISOString().slice(0, 10)    : '',
+    autoShortlistThreshold: r.auto_shortlist_threshold ?? 0,
+  };
+}
+
 // GET /api/v1/job-postings?status=Open
 router.get('/', async (req, res) => {
   const { status } = req.query;
@@ -15,20 +44,7 @@ router.get('/', async (req, res) => {
     }
     query += ` ORDER BY posted_date DESC`;
     const { rows } = await pool.query(query, values);
-    // Normalise: map snake_case DB columns → camelCase for Angular
-    const mapped = rows.map(r => ({
-      id:           r.id,
-      title:        r.title,
-      department:   r.department,
-      location:     r.location,
-      type:         r.type,
-      status:       r.status,
-      description:  r.description,
-      requirements: r.requirements || [],
-      postedDate:   r.posted_date   ? r.posted_date.toISOString().slice(0, 10) : '',
-      deadline:     r.deadline      ? r.deadline.toISOString().slice(0, 10)    : '',
-    }));
-    res.json(mapped);
+    res.json(rows.map(mapRow));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -42,19 +58,7 @@ router.get('/:id', async (req, res) => {
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
-    const r = rows[0];
-    res.json({
-      id:           r.id,
-      title:        r.title,
-      department:   r.department,
-      location:     r.location,
-      type:         r.type,
-      status:       r.status,
-      description:  r.description,
-      requirements: r.requirements || [],
-      postedDate:   r.posted_date  ? r.posted_date.toISOString().slice(0, 10) : '',
-      deadline:     r.deadline     ? r.deadline.toISOString().slice(0, 10)    : '',
-    });
+    res.json(mapRow(rows[0]));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -62,15 +66,15 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/v1/job-postings
 router.post('/', async (req, res) => {
-  const { title, department, location, type, status, description, requirements, deadline } = req.body;
+  const { title, department, location, type, status, description, requirements, deadline, autoShortlistThreshold } = req.body;
   if (!title || !department || !location || !type) {
     return res.status(400).json({ error: 'Missing required fields: title, department, location, type' });
   }
   try {
     const { rows } = await pool.query(
       `INSERT INTO recruitment.job_posting
-         (title, department, location, type, status, description, requirements, deadline)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         (title, department, location, type, status, description, requirements, deadline, auto_shortlist_threshold)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
         title,
@@ -81,21 +85,10 @@ router.post('/', async (req, res) => {
         description || '',
         JSON.stringify(requirements || []),
         deadline || null,
+        autoShortlistThreshold ?? 0,
       ]
     );
-    const r = rows[0];
-    res.status(201).json({
-      id:           r.id,
-      title:        r.title,
-      department:   r.department,
-      location:     r.location,
-      type:         r.type,
-      status:       r.status,
-      description:  r.description,
-      requirements: r.requirements || [],
-      postedDate:   r.posted_date  ? r.posted_date.toISOString().slice(0, 10) : '',
-      deadline:     r.deadline     ? r.deadline.toISOString().slice(0, 10)    : '',
-    });
+    res.status(201).json(mapRow(rows[0]));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -103,13 +96,15 @@ router.post('/', async (req, res) => {
 
 // PATCH /api/v1/job-postings/:id
 router.patch('/:id', async (req, res) => {
-  const allowed = ['title', 'department', 'location', 'type', 'status', 'description', 'requirements', 'deadline'];
+  const allowed = ['title', 'department', 'location', 'type', 'status', 'description', 'requirements', 'deadline', 'autoShortlistThreshold'];
   const updates = [];
   const values  = [];
   let i = 1;
   for (const f of allowed) {
     if (req.body[f] !== undefined) {
-      const col = f === 'postedDate' ? 'posted_date' : f;
+      let col = f;
+      if (f === 'postedDate')             col = 'posted_date';
+      if (f === 'autoShortlistThreshold') col = 'auto_shortlist_threshold';
       const val = f === 'requirements' ? JSON.stringify(req.body[f]) : req.body[f];
       updates.push(`${col} = $${i++}`);
       values.push(val);
@@ -124,19 +119,7 @@ router.patch('/:id', async (req, res) => {
       values
     );
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
-    const r = rows[0];
-    res.json({
-      id:           r.id,
-      title:        r.title,
-      department:   r.department,
-      location:     r.location,
-      type:         r.type,
-      status:       r.status,
-      description:  r.description,
-      requirements: r.requirements || [],
-      postedDate:   r.posted_date  ? r.posted_date.toISOString().slice(0, 10) : '',
-      deadline:     r.deadline     ? r.deadline.toISOString().slice(0, 10)    : '',
-    });
+    res.json(mapRow(rows[0]));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

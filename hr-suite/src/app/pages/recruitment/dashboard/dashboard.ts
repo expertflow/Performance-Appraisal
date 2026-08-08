@@ -68,6 +68,7 @@ export class RecruitmentDashboard implements OnInit {
     description:  '',
     requirementsRaw: '',
     deadline:     '',
+    autoShortlistThreshold: 0,
   };
 
   openPostJobModal(): void {
@@ -75,6 +76,7 @@ export class RecruitmentDashboard implements OnInit {
       title: '', department: '', location: '',
       type: 'Full-time', status: 'Open',
       description: '', requirementsRaw: '', deadline: '',
+      autoShortlistThreshold: 0,
     };
     this.postJobError.set('');
     this.postJobSuccess.set(false);
@@ -108,6 +110,7 @@ export class RecruitmentDashboard implements OnInit {
       description:  f.description.trim(),
       requirements,
       deadline:     f.deadline || '',
+      autoShortlistThreshold: f.autoShortlistThreshold ?? 0,
     }).subscribe({
       next: () => {
         this.postJobSaving.set(false);
@@ -137,6 +140,7 @@ export class RecruitmentDashboard implements OnInit {
     description:     '',
     requirementsRaw: '',
     deadline:        '',
+    autoShortlistThreshold: 0,
   };
 
   openEditJobModal(job: JobPosting, event: Event): void {
@@ -151,6 +155,7 @@ export class RecruitmentDashboard implements OnInit {
       description:     job.description,
       requirementsRaw: job.requirements.join('\n'),
       deadline:        job.deadline || '',
+      autoShortlistThreshold: job.autoShortlistThreshold ?? 0,
     };
     this.editJobError.set('');
     this.editJobSuccess.set(false);
@@ -184,6 +189,7 @@ export class RecruitmentDashboard implements OnInit {
       description:  f.description.trim(),
       requirements,
       deadline:     f.deadline || '',
+      autoShortlistThreshold: f.autoShortlistThreshold ?? 0,
     }).subscribe({
       next: () => {
         this.editJobSaving.set(false);

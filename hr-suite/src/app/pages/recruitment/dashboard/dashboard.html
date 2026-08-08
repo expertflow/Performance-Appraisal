@@ -223,6 +223,27 @@
             <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">One requirement per line, or comma-separated.</div>
           </div>
 
+          <!-- AI Auto-Shortlist Threshold -->
+          <div class="form-group">
+            <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
+              <span>🤖 AI Auto-Shortlist Threshold</span>
+              <span style="font-weight:700;color:var(--color-primary);">
+                {{ postJobForm.autoShortlistThreshold === 0 ? 'Disabled' : postJobForm.autoShortlistThreshold + '%' }}
+              </span>
+            </label>
+            <input type="range" min="0" max="100" step="5"
+                   [(ngModel)]="postJobForm.autoShortlistThreshold"
+                   title="AI auto-shortlist threshold percentage"
+                   style="width:100%;accent-color:var(--color-primary);" />
+            <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">
+              @if (postJobForm.autoShortlistThreshold === 0) {
+                AI screening is disabled. Candidates will not be auto-shortlisted.
+              } @else {
+                Candidates scoring ≥ {{ postJobForm.autoShortlistThreshold }}% on AI screening will be automatically shortlisted.
+              }
+            </div>
+          </div>
+
         }
       </div>
       @if (!postJobSuccess()) {
@@ -314,6 +335,27 @@
             <label class="form-label">Requirements</label>
             <textarea class="form-control" rows="4" [(ngModel)]="editJobForm.requirementsRaw" placeholder="One requirement per line or comma-separated" style="resize:vertical;"></textarea>
             <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">One requirement per line, or comma-separated.</div>
+          </div>
+
+          <!-- AI Auto-Shortlist Threshold -->
+          <div class="form-group">
+            <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
+              <span>🤖 AI Auto-Shortlist Threshold</span>
+              <span style="font-weight:700;color:var(--color-primary);">
+                {{ editJobForm.autoShortlistThreshold === 0 ? 'Disabled' : editJobForm.autoShortlistThreshold + '%' }}
+              </span>
+            </label>
+            <input type="range" min="0" max="100" step="5"
+                   [(ngModel)]="editJobForm.autoShortlistThreshold"
+                   title="AI auto-shortlist threshold percentage"
+                   style="width:100%;accent-color:var(--color-primary);" />
+            <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">
+              @if (editJobForm.autoShortlistThreshold === 0) {
+                AI screening is disabled. Candidates will not be auto-shortlisted.
+              } @else {
+                Candidates scoring ≥ {{ editJobForm.autoShortlistThreshold }}% on AI screening will be automatically shortlisted.
+              }
+            </div>
           </div>
 
         }
