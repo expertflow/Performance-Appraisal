@@ -171,6 +171,18 @@
             </div>
           }
 
+          <!-- Job Requisition Dropdown -->
+          <div class="form-group">
+            <label class="form-label">Link to Job Requisition <span style="font-size:11px;color:var(--color-text-muted);">(optional — auto-fills fields below)</span></label>
+            <select class="form-control" [(ngModel)]="postJobForm.selectedRequisitionId"
+                    (change)="onRequisitionChange()" title="Select job requisition">
+              <option value="">— None (fill manually) —</option>
+              @for (req of allRequisitions(); track req.id) {
+                <option [value]="req.id">{{ req.reqNumber }} · {{ req.title }} ({{ req.department }})</option>
+              }
+            </select>
+          </div>
+
           <div class="form-group">
             <label class="form-label">Job Title <span style="color:red">*</span></label>
             <input class="form-control" type="text" [(ngModel)]="postJobForm.title" placeholder="e.g. Senior Angular Developer" />
@@ -242,9 +254,9 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Requirements</label>
+            <label class="form-label">Requirements <span style="color:red">*</span></label>
             <textarea class="form-control" rows="4" [(ngModel)]="postJobForm.requirementsRaw" placeholder="One requirement per line or comma-separated" style="resize:vertical;"></textarea>
-            <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">One requirement per line, or comma-separated.</div>
+            <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">One requirement per line, or comma-separated. At least one is required.</div>
           </div>
 
         }

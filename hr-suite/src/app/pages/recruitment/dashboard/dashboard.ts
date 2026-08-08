@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JobStoreService, JobPosting, JobApplication, ApplicationStatus, JobType, JobStatus } from '../../../services/job-store';
 import { AuthService } from '../../../services/auth';
+import { RequisitionStoreService, JobRequisition } from '../../../services/requisition-store';
 
 @Component({
   selector: 'app-recruitment-dashboard',
@@ -12,11 +13,15 @@ import { AuthService } from '../../../services/auth';
   styleUrl: './dashboard.scss'
 })
 export class RecruitmentDashboard implements OnInit {
-  private jobStore = inject(JobStoreService);
-  private auth     = inject(AuthService);
+  private jobStore  = inject(JobStoreService);
+  private auth      = inject(AuthService);
+  private reqStore  = inject(RequisitionStoreService);
 
   /** Managers can view the recruitment dashboard but cannot create/edit/delete */
   readonly isReadOnly = computed(() => this.auth.role() === 'Manager');
+
+  // ── Requisitions (for Post Job dropdown) ──────────────────────────────────
+  readonly allRequisitions = this.reqStore.requisitions;
 
   jobTabs = ['All', 'Open', 'Draft', 'Closed'];
   activeJobTab = 'All';
@@ -24,6 +29,7 @@ export class RecruitmentDashboard implements OnInit {
   ngOnInit(): void {
     this.jobStore.loadJobs();
     this.jobStore.reloadAllApplications();
+    this.reqStore.load(1, 100); // load up to 100 requisitions for the dropdown
   }
 
   // ── Real DB jobs ───────────────────────────────────────────────────────────
@@ -69,6 +75,7 @@ export class RecruitmentDashboard implements OnInit {
     requirementsRaw: '',
     deadline:     '',
     autoShortlistThreshold: 0,
+    selectedRequisitionId: '',
   };
 
   openPostJobModal(): void {
@@ -77,10 +84,23 @@ export class RecruitmentDashboard implements OnInit {
       type: 'Full-time', status: 'Open',
       description: '', requirementsRaw: '', deadline: '',
       autoShortlistThreshold: 0,
+      selectedRequisitionId: '',
     };
     this.postJobError.set('');
     this.postJobSuccess.set(false);
     this.showPostJobModal.set(true);
+  }
+
+  /** Auto-fill job fields when a requisition is selected */
+  onRequisitionChange(): void {
+    const id = this.postJobForm.selectedRequisitionId;
+    if (!id) return;
+    const req = this.allRequisitions().find(r => r.id === id);
+    if (!req) return;
+    this.postJobForm.title      = req.title;
+    this.postJobForm.department = req.department;
+    this.postJobForm.location   = req.location;
+    this.postJobForm.type       = req.type as JobType;
   }
 
   closePostJobModal(): void {
@@ -97,6 +117,10 @@ export class RecruitmentDashboard implements OnInit {
       .split(/[\n,]+/)
       .map(r => r.trim())
       .filter(r => r.length > 0);
+    if (requirements.length === 0) {
+      this.postJobError.set('At least one Requirement is required.');
+      return;
+    }
 
     this.postJobSaving.set(true);
     this.postJobError.set('');
