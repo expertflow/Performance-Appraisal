@@ -2,7 +2,8 @@ import { Component, inject, computed, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../../services/auth';
-import { AppraisalStoreService, AppraisalRecord } from '../../../services/appraisal-store';
+import { AppraisalStoreService, AppraisalRecord, AppraisalCycle, AppraisalGoal } from '../../../services/appraisal-store';
+import { ApiService } from '../../../services/api';
 
 @Component({
   selector: 'app-feedback',
@@ -12,6 +13,7 @@ import { AppraisalStoreService, AppraisalRecord } from '../../../services/apprai
 })
 export class Feedback implements OnInit {
   private auth  = inject(AuthService);
+  private api   = inject(ApiService);
   readonly store = inject(AppraisalStoreService);
 
   // ── Role helpers ───────────────────────────────────────────────────────────
@@ -31,10 +33,15 @@ export class Feedback implements OnInit {
   saving      = signal(false);
   selectedRecord: AppraisalRecord | null = null;
 
+  // Goal search for the modal
+  goalSearch = '';
+
   newForm = {
     employeeId:    '',
     employeeName:  '',
     department:    '',
+    cycleId:       '',
+    goalId:        '',
     selfReview:    '',
     managerReview: '',
     rating:        '' as string | number,
@@ -53,17 +60,41 @@ export class Feedback implements OnInit {
     if (!user) return;
 
     if (this.auth.isEmployee()) {
+      // Employee sees only their own records
       this.store.loadRecords({ employeeId: user.employee_id });
+      // Load goals assigned to this employee
+      this.store.loadGoals({ employeeId: user.employee_id });
+      // Load cycles (view only)
+      this.store.loadCycles();
     } else if (this.auth.isManager()) {
       this.store.loadRecords({ managerId: user.employee_id });
       this.store.loadTeam(user.employee_id!);
+      this.store.loadCycles();
+      this.store.loadGoals({ managerId: user.employee_id });
     } else {
+      // HR / AppAdmin — load all
       this.store.loadRecords();
+      this.store.loadAllEmployees();
+      this.store.loadCycles();
+      this.store.loadGoals();
     }
   }
 
   // ── Data ───────────────────────────────────────────────────────────────────
   get records(): AppraisalRecord[] { return this.store.records(); }
+  get teamMembers() { return this.store.team(); }
+  get allEmployees() { return this.store.employees(); }
+  get cycles(): AppraisalCycle[] { return this.store.cycles(); }
+
+  // Goals filtered by selected employee in the form
+  get filteredGoalsForForm(): AppraisalGoal[] {
+    const empId = this.newForm.employeeId;
+    const goals = this.store.goals();
+    const base = empId ? goals.filter(g => g.employeeId === empId) : goals;
+    if (!this.goalSearch) return base;
+    const q = this.goalSearch.toLowerCase();
+    return base.filter(g => g.title.toLowerCase().includes(q));
+  }
 
   get stats() {
     const all = this.records;
@@ -84,12 +115,10 @@ export class Feedback implements OnInit {
       const matchSearch = !this.searchText ||
         r.employeeName.toLowerCase().includes(this.searchText.toLowerCase()) ||
         r.department.toLowerCase().includes(this.searchText.toLowerCase()) ||
-        r.id.toLowerCase().includes(this.searchText.toLowerCase());
+        (r.cycleName ?? '').toLowerCase().includes(this.searchText.toLowerCase());
       return matchTab && matchSearch;
     });
   }
-
-  get teamMembers() { return this.store.team(); }
 
   setTab(tab: string) { this.activeTab = tab; }
 
@@ -102,7 +131,12 @@ export class Feedback implements OnInit {
   closeModal() { this.showModal = false; this.resetForm(); }
 
   resetForm() {
-    this.newForm = { employeeId: '', employeeName: '', department: '', selfReview: '', managerReview: '', rating: '', goalsMet: 0 };
+    this.newForm = {
+      employeeId: '', employeeName: '', department: '',
+      cycleId: '', goalId: '',
+      selfReview: '', managerReview: '', rating: '', goalsMet: 0
+    };
+    this.goalSearch = '';
   }
 
   onTeamMemberChange() {
@@ -111,6 +145,18 @@ export class Feedback implements OnInit {
       this.newForm.employeeName = member.fullName;
       this.newForm.department   = member.department;
     }
+    this.newForm.goalId = '';
+    this.goalSearch = '';
+  }
+
+  onEmployeeDropdownChange() {
+    const emp = this.allEmployees.find(e => e.id === this.newForm.employeeId);
+    if (emp) {
+      this.newForm.employeeName = emp.fullName;
+      this.newForm.department   = emp.department;
+    }
+    this.newForm.goalId = '';
+    this.goalSearch = '';
   }
 
   submitAppraisal() {
@@ -123,6 +169,7 @@ export class Feedback implements OnInit {
       employeeName:  this.newForm.employeeName,
       managerId:     user.employee_id!,
       department:    this.newForm.department,
+      cycleId:       this.newForm.cycleId || undefined,
       selfReview:    this.newForm.selfReview,
       managerReview: this.newForm.managerReview,
       rating:        this.newForm.rating ? Number(this.newForm.rating) : null,
@@ -151,13 +198,42 @@ export class Feedback implements OnInit {
   saveEdit() {
     if (!this.selectedRecord) return;
     this.saving.set(true);
+    const prevStatus = this.selectedRecord.status;
+    const newStatus  = this.editForm.status;
+
     this.store.updateRecord(this.selectedRecord.id, {
       managerReview: this.editForm.managerReview,
       rating:        this.editForm.rating ? Number(this.editForm.rating) : null,
       goalsMet:      this.editForm.goalsMet,
-      status:        this.editForm.status,
+      status:        newStatus,
     }).subscribe({
-      next: () => { this.saving.set(false); this.closeEdit(); },
+      next: () => {
+        this.saving.set(false);
+        // Send email notification to employee when feedback is submitted
+        if (prevStatus !== 'submitted' && newStatus === 'submitted' && this.selectedRecord) {
+          const rec = this.selectedRecord;
+          // Look up actual email address from employees or team list
+          const empEmail =
+            this.allEmployees.find(e => e.id === rec.employeeId)?.email ||
+            this.teamMembers.find(m => m.id === rec.employeeId)?.email ||
+            '';
+          if (empEmail) {
+            this.api.sendEmail(
+              empEmail,
+              `Performance Appraisal Feedback — ${rec.cycleName || 'Appraisal'}`,
+              `<p>Dear ${rec.employeeName},</p>
+               <p>Your manager has submitted a performance appraisal review for you.</p>
+               <ul>
+                 <li><strong>Rating:</strong> ${this.editForm.rating || 'Not rated'}/5</li>
+                 <li><strong>Goals Met:</strong> ${this.editForm.goalsMet}%</li>
+                 <li><strong>Comments:</strong> ${this.editForm.managerReview || '—'}</li>
+               </ul>
+               <p>Please log in to HR Suite to view and acknowledge your appraisal.</p>`
+            ).subscribe({ error: () => {} });
+          }
+        }
+        this.closeEdit();
+      },
       error: err => { console.error(err); this.saving.set(false); }
     });
   }

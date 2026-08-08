@@ -19,7 +19,7 @@ export interface AppraisalCycle {
 
 export interface AppraisalRecord {
   id:            string;
-  cycleId:       string;
+  cycleId:       string | null;
   cycleName:     string;
   employeeId:    string;
   employeeName:  string;
@@ -65,6 +65,7 @@ export interface TeamMember {
 export interface EmployeeItem {
   id:         string;
   fullName:   string;
+  email:      string;
   department: string;
   jobTitle:   string;
 }
@@ -208,7 +209,8 @@ export class AppraisalStoreService {
       next: data => this._employees.set(
         data.map(e => ({
           id:         String(e.id ?? ''),
-          fullName:   `${e.first_name ?? ''} ${e.last_name ?? ''}`.trim() || e.id,
+          fullName:   `${e.first_name ?? ''} ${e.last_name ?? ''}`.trim() || String(e.id ?? ''),
+          email:      e.email ?? '',
           department: e.department ?? '',
           jobTitle:   e.designation ?? '',
         }))

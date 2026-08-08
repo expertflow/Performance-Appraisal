@@ -147,7 +147,7 @@
 <!-- Add Appraisal Modal -->
 @if (showModal) {
   <div class="modal-overlay">
-    <div class="modal" style="max-width:560px;" (click)="$event.stopPropagation()">
+    <div class="modal" style="max-width:580px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>Add Performance Appraisal</h2>
         <button class="btn btn-icon" (click)="closeModal()">✕</button>
@@ -167,29 +167,52 @@
             </select>
             @if (teamMembers.length === 0) {
               <div style="font-size:11px;color:var(--color-orange);margin-top:4px;">
-                ⚠️ No team members found. Ensure employees have manager_id set in BS4/Directus.
+                ⚠️ No team members found. Ensure employees have manager_id set.
               </div>
             }
           </div>
         }
 
-        <!-- HR/Admin: free-text -->
+        <!-- HR/Admin: employee dropdown -->
         @if (isHROrAdmin()) {
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div class="form-group">
-              <label class="form-label">Employee ID *</label>
-              <input class="form-control" placeholder="e.g. emp-001" [(ngModel)]="newForm.employeeId" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Employee Name *</label>
-              <input class="form-control" placeholder="e.g. Fatima Malik" [(ngModel)]="newForm.employeeName" />
-            </div>
-          </div>
           <div class="form-group">
-            <label class="form-label">Department</label>
-            <input class="form-control" placeholder="e.g. Engineering" [(ngModel)]="newForm.department" />
+            <label class="form-label">Employee *</label>
+            <select class="form-control" title="Select employee"
+              [(ngModel)]="newForm.employeeId" (change)="onEmployeeDropdownChange()">
+              <option value="">— Select employee —</option>
+              @for (emp of allEmployees; track emp.id) {
+                <option [value]="emp.id">{{ emp.fullName }} ({{ emp.department }})</option>
+              }
+            </select>
           </div>
         }
+
+        <!-- Cycle dropdown (all non-employee roles) -->
+        <div class="form-group">
+          <label class="form-label">Appraisal Cycle</label>
+          <select class="form-control" title="Select appraisal cycle" [(ngModel)]="newForm.cycleId">
+            <option value="">— No cycle —</option>
+            @for (cycle of cycles; track cycle.id) {
+              <option [value]="cycle.id">{{ cycle.name }} ({{ cycle.type }})</option>
+            }
+          </select>
+        </div>
+
+        <!-- Goals dropdown (searchable) — always visible, filtered by selected employee -->
+        <div class="form-group">
+          <label class="form-label">Linked Goal</label>
+          <input class="form-control" style="margin-bottom:6px;" placeholder="🔍 Search goals…"
+            [(ngModel)]="goalSearch" />
+          <select class="form-control" title="Select goal" [(ngModel)]="newForm.goalId">
+            <option value="">— No specific goal —</option>
+            @for (goal of filteredGoalsForForm; track goal.id) {
+              <option [value]="goal.id">{{ goal.title }}</option>
+            }
+          </select>
+          @if (filteredGoalsForForm.length === 0 && goalSearch) {
+            <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">No goals match "{{ goalSearch }}"</div>
+          }
+        </div>
 
         <div class="form-group">
           <label class="form-label">Manager Review / Comments</label>
@@ -219,7 +242,7 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" (click)="closeModal()">Cancel</button>
         <button class="btn btn-primary" (click)="submitAppraisal()"
-          [disabled]="saving() || !newForm.employeeId || (!isManager() && !newForm.employeeName)">
+          [disabled]="saving() || !newForm.employeeId">
           @if (saving()) { <span class="spinner-sm"></span> Saving… } @else { Save Appraisal }
         </button>
       </div>
