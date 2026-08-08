@@ -116,7 +116,7 @@
 
 <!-- ══ New Task Modal ══════════════════════════════════════════════════════════ -->
 @if (showModal) {
-  <div class="modal-overlay" (click)="closeModal()">
+  <div class="modal-overlay">
     <div class="modal" style="max-width:520px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>New Task</h3>
@@ -186,7 +186,7 @@
 
 <!-- ══ Edit Task Modal ════════════════════════════════════════════════════════ -->
 @if (showEditModal) {
-  <div class="modal-overlay" (click)="closeEditModal()">
+  <div class="modal-overlay">
     <div class="modal" style="max-width:520px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>Edit Task</h3>
@@ -249,7 +249,7 @@
 
 <!-- ══ Delete Confirm Modal ═══════════════════════════════════════════════════ -->
 @if (showDeleteConfirm) {
-  <div class="modal-overlay" (click)="closeDeleteConfirm()">
+  <div class="modal-overlay">
     <div class="modal" style="max-width:420px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>Delete Task</h3>

@@ -124,7 +124,7 @@
 
 <!-- ── Edit Requisition Modal ─────────────────────────────────────────────── -->
 @if (showEditModal()) {
-  <div class="modal-overlay" (click)="closeEditReq()">
+  <div class="modal-overlay">
     <div class="modal" style="max-width:540px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>Edit Requisition</h3>
@@ -222,7 +222,7 @@
 
 <!-- ── New Requisition Modal ──────────────────────────────────────────────── -->
 @if (showNewModal()) {
-  <div class="modal-overlay" (click)="closeNewModal()">
+  <div class="modal-overlay">
     <div class="modal" style="max-width:540px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>New Internal Requisition</h3>

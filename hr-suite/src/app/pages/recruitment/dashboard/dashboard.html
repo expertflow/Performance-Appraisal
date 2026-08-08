@@ -150,7 +150,7 @@
 
 <!-- ── Post Job Modal ──────────────────────────────────────────────────────── -->
 @if (showPostJobModal()) {
-  <div class="modal-overlay" (click)="closePostJobModal()">
+  <div class="modal-overlay">
     <div class="modal" style="max-width:560px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>Post a New Job</h3>
@@ -243,7 +243,7 @@
 
 <!-- ── Edit Job Modal ──────────────────────────────────────────────────────── -->
 @if (showEditJobModal()) {
-  <div class="modal-overlay" (click)="closeEditJobModal()">
+  <div class="modal-overlay">
     <div class="modal" style="max-width:560px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>Edit Job Posting</h3>

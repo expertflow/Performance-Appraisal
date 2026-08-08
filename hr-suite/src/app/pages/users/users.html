@@ -7,7 +7,7 @@
 
 <!-- Delete confirmation modal -->
 @if (deletingUser) {
-  <div class="modal-overlay" (click)="cancelDelete()">
+  <div class="modal-overlay">
     <div class="modal" style="max-width:420px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>Delete User</h3>
@@ -148,7 +148,7 @@
 
 <!-- Edit modal -->
 @if (editingUser) {
-  <div class="modal-overlay" (click)="closeEdit()">
+  <div class="modal-overlay">
     <div class="modal" style="max-width:480px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>Edit User — {{ editingUser.name }}</h3>

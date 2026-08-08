@@ -114,7 +114,7 @@
 
 <!-- ══ New Subtask Modal ═══════════════════════════════════════════════════════ -->
 @if (showModal) {
-  <div class="modal-overlay" (click)="closeModal()">
+  <div class="modal-overlay">
     <div class="modal" style="max-width:520px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>New Subtask</h3>
@@ -182,7 +182,7 @@
 
 <!-- ══ Edit Subtask Modal ══════════════════════════════════════════════════════ -->
 @if (showEditModal) {
-  <div class="modal-overlay" (click)="closeEditModal()">
+  <div class="modal-overlay">
     <div class="modal" style="max-width:520px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>Edit Subtask</h3>
@@ -245,7 +245,7 @@
 
 <!-- ══ Delete Confirm Modal ════════════════════════════════════════════════════ -->
 @if (showDeleteConfirm) {
-  <div class="modal-overlay" (click)="closeDeleteConfirm()">
+  <div class="modal-overlay">
     <div class="modal" style="max-width:420px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>Delete Subtask</h3>

@@ -146,7 +146,7 @@
 
 <!-- Add Appraisal Modal -->
 @if (showModal) {
-  <div class="modal-overlay" (click)="closeModal()">
+  <div class="modal-overlay">
     <div class="modal" style="max-width:560px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>Add Performance Appraisal</h2>
@@ -229,7 +229,7 @@
 
 <!-- Edit / Review Modal -->
 @if (showEditModal && selectedRecord) {
-  <div class="modal-overlay" (click)="closeEdit()">
+  <div class="modal-overlay">
     <div class="modal" style="max-width:560px;" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>Review Appraisal — {{ selectedRecord.employeeName }}</h2>
