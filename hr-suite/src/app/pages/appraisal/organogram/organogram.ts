@@ -2,7 +2,8 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../services/api';
-import { Employee } from '../../../models';
+import { AuthService } from '../../../services/auth';
+import { Employee } from '../../../models/index';
 
 export interface OrgNode {
   emp: Employee & { designation?: string };
@@ -10,6 +11,8 @@ export interface OrgNode {
   collapsed: boolean;
   initials: string;
   avatarColor: string;
+  isCurrentUser?: boolean;
+  isManager?: boolean;
 }
 
 const AVATAR_COLORS = [
@@ -32,7 +35,8 @@ function colorFor(id: string): string {
   styleUrl: './organogram.scss',
 })
 export class Organogram implements OnInit {
-  private api = inject(ApiService);
+  private api  = inject(ApiService);
+  readonly auth = inject(AuthService);
 
   loading    = signal(true);
   search     = signal('');
@@ -47,6 +51,9 @@ export class Organogram implements OnInit {
   });
 
   readonly roots = computed(() => this.buildTree());
+
+  /** True when the logged-in user can see the full org (AppAdmin or HR) */
+  readonly isFullView = computed(() => this.auth.isAppAdmin() || this.auth.isHR());
 
   ngOnInit(): void {
     this.api.getEmployees().subscribe({
@@ -63,6 +70,28 @@ export class Organogram implements OnInit {
     const dept = this.deptFilter();
     let emps   = this.allEmployees();
 
+    // ── Role-based scoping ────────────────────────────────────────────────────
+    const currentEmpId = this.auth.employeeId;
+    const isFullView   = this.auth.isAppAdmin() || this.auth.isHR();
+    const isManager    = this.auth.isManager();
+
+    if (!isFullView && currentEmpId) {
+      if (isManager) {
+        // Manager: show themselves + all descendants
+        const subtreeIds = this.collectSubtreeIds(emps, currentEmpId);
+        emps = emps.filter(e => subtreeIds.has(e.id));
+      } else {
+        // Employee: show their manager (if any) + themselves + their own direct reports
+        const me = emps.find(e => e.id === currentEmpId);
+        const managerId = me?.manager_id;
+        const directReportIds = this.collectSubtreeIds(emps, currentEmpId);
+        const allowedIds = new Set<string>(directReportIds);
+        if (managerId) allowedIds.add(managerId);
+        emps = emps.filter(e => allowedIds.has(e.id));
+      }
+    }
+
+    // ── Search / dept filter ──────────────────────────────────────────────────
     if (q) {
       emps = emps.filter(e =>
         `${e.first_name} ${e.last_name}`.toLowerCase().includes(q) ||
@@ -74,6 +103,7 @@ export class Organogram implements OnInit {
       emps = emps.filter(e => e.department === dept);
     }
 
+    // ── Build node map ────────────────────────────────────────────────────────
     const nodeMap = new Map<string, OrgNode>();
     emps.forEach(e => {
       nodeMap.set(e.id, {
@@ -82,9 +112,12 @@ export class Organogram implements OnInit {
         collapsed: false,
         initials: `${e.first_name?.[0] ?? ''}${e.last_name?.[0] ?? ''}`.toUpperCase(),
         avatarColor: colorFor(e.id),
+        isCurrentUser: e.id === currentEmpId,
+        isManager: isManager && e.id === currentEmpId,
       });
     });
 
+    // ── Wire parent → child ───────────────────────────────────────────────────
     const roots: OrgNode[] = [];
     emps.forEach(e => {
       const node = nodeMap.get(e.id)!;
@@ -106,6 +139,25 @@ export class Organogram implements OnInit {
     return roots;
   }
 
+  /**
+   * Collect the IDs of an employee and all their descendants (recursive).
+   */
+  private collectSubtreeIds(
+    allEmps: (Employee & { designation?: string })[],
+    rootId: string
+  ): Set<string> {
+    const ids = new Set<string>();
+    const queue = [rootId];
+    while (queue.length) {
+      const id = queue.shift()!;
+      ids.add(id);
+      allEmps
+        .filter(e => e.manager_id === id)
+        .forEach(e => { if (!ids.has(e.id)) queue.push(e.id); });
+    }
+    return ids;
+  }
+
   toggle(node: OrgNode): void { node.collapsed = !node.collapsed; }
 
   expandAll():   void { this.setCollapsed(this.roots(), false); }
@@ -116,6 +168,12 @@ export class Organogram implements OnInit {
   }
 
   get totalCount(): number { return this.allEmployees().length; }
+
+  get visibleCount(): number {
+    const countNodes = (nodes: OrgNode[]): number =>
+      nodes.reduce((acc, n) => acc + 1 + countNodes(n.children), 0);
+    return countNodes(this.roots());
+  }
 
   exportCSV(): void {
     const rows = [['Name','Department','Designation','Manager ID','Employee ID']];

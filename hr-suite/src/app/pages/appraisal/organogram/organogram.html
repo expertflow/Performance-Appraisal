@@ -2,14 +2,38 @@
 <div class="page-header">
   <div>
     <h1>Organogram</h1>
-    <p>Organisational hierarchy — {{ totalCount }} employees</p>
+    <p>
+      @if (isFullView()) {
+        Full organisational hierarchy — {{ totalCount }} employees
+      } @else {
+        Your team — {{ visibleCount }} members shown
+      }
+    </p>
   </div>
   <div class="flex gap-2">
     <button class="btn btn-secondary" (click)="expandAll()">Expand All</button>
     <button class="btn btn-secondary" (click)="collapseAll()">Collapse All</button>
-    <button class="btn btn-secondary" (click)="exportCSV()">⬇ Export CSV</button>
+    @if (isFullView()) {
+      <button class="btn btn-secondary" (click)="exportCSV()">⬇ Export CSV</button>
+    }
   </div>
 </div>
+
+<!-- Role context banner for non-admin users -->
+@if (!isFullView()) {
+  <div class="org-scope-banner">
+    <span class="org-scope-icon">
+      @if (auth.isManager()) { 👥 } @else { 👤 }
+    </span>
+    <span>
+      @if (auth.isManager()) {
+        Showing your team — you and all your direct and indirect reports.
+      } @else {
+        Showing your position — your manager, yourself, and your direct reports.
+      }
+    </span>
+  </div>
+}
 
 <!-- Filters -->
 <div class="org-filters">
@@ -71,7 +95,9 @@
 <ng-template #nodeTemplate let-node="node" let-depth="depth">
   <div class="org-node-group" [style.margin-left.px]="depth * 32">
     <!-- Card -->
-    <div class="org-card" [class.has-children]="node.children.length > 0">
+    <div class="org-card"
+         [class.has-children]="node.children.length > 0"
+         [class.is-current-user]="node.isCurrentUser">
       <!-- Toggle button -->
       @if (node.children.length > 0) {
         <button
@@ -93,7 +119,12 @@
 
       <!-- Info -->
       <div class="org-info">
-        <div class="org-name">{{ node.emp.first_name }} {{ node.emp.last_name }}</div>
+        <div class="org-name">
+          {{ node.emp.first_name }} {{ node.emp.last_name }}
+          @if (node.isCurrentUser) {
+            <span class="org-you-badge">You</span>
+          }
+        </div>
         @if (node.emp.designation) {
           <div class="org-designation">{{ node.emp.designation }}</div>
         }
