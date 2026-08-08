@@ -72,7 +72,7 @@ async function emailRecruitmentRoles(subject, html) {
   try {
     const { rows } = await pool.query(
       `SELECT DISTINCT email FROM auth_local.account
-       WHERE role IN ('HR', 'AppAdmin', 'Manager') AND email IS NOT NULL`
+       WHERE role IN ('HR', 'AppAdmin', 'Manager') AND email IS NOT NULL AND status = 'Active'`
     );
     for (const r of rows) {
       await sendEmail(r.email, subject, html);
