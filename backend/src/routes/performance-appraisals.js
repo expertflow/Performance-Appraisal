@@ -3,6 +3,20 @@ const express = require('express');
 const router  = express.Router();
 const pool    = require('../db/pool');
 
+// ── Notification helper ───────────────────────────────────────────────────────
+
+async function notifyAllRoles({ type = 'info', title, body }) {
+  const roles = ['AppAdmin', 'HR', 'Manager', 'Employee'];
+  for (const role of roles) {
+    await pool.query(
+      `INSERT INTO auth_local.app_notifications
+         (target_role, target_user_id, type, title, body)
+       VALUES ($1, NULL, $2, $3, $4)`,
+      [role, type, title, body]
+    ).catch(() => {}); // never block the main response
+  }
+}
+
 // ── Auto-create tables on first use ──────────────────────────────────────────
 
 async function ensureTables() {
@@ -103,8 +117,37 @@ function mapGoal(g) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // GET /api/v1/appraisals/cycles
+// Auto-activates any Upcoming cycle whose review_start date has been reached,
+// then sends app notifications to all roles for each newly activated cycle.
 router.get('/cycles', async (req, res) => {
   try {
+    // Find cycles that need auto-activation
+    const { rows: toActivate } = await pool.query(
+      `SELECT id, name FROM project.appraisal_cycles
+       WHERE phase = 'Upcoming'
+         AND review_start IS NOT NULL
+         AND review_start::date <= CURRENT_DATE`
+    );
+
+    if (toActivate.length > 0) {
+      // Activate them
+      await pool.query(
+        `UPDATE project.appraisal_cycles
+         SET phase = 'Goal Setting'
+         WHERE phase = 'Upcoming'
+           AND review_start IS NOT NULL
+           AND review_start::date <= CURRENT_DATE`
+      );
+      // Notify all roles for each activated cycle (fire-and-forget)
+      for (const cycle of toActivate) {
+        notifyAllRoles({
+          type:  'info',
+          title: `Appraisal Cycle Started: ${cycle.name}`,
+          body:  `The appraisal cycle "${cycle.name}" has started. Goal Setting phase is now open.`,
+        }).catch(() => {});
+      }
+    }
+
     const { rows } = await pool.query(
       `SELECT * FROM project.appraisal_cycles ORDER BY created_at DESC`
     );

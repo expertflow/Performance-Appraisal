@@ -104,12 +104,22 @@
                 }
               </td>
               <td>
-                <div style="display:flex;gap:6px;align-items:center;">
-                  <button class="btn btn-secondary btn-sm">View</button>
-                  @if (cycle.phase !== 'Signed' && cycle.phase !== 'Finalized') {
-                    <button class="btn btn-secondary btn-sm">Edit</button>
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                  @if (cycle.phase === 'Upcoming') {
+                    <button class="btn btn-primary btn-sm"
+                      [disabled]="advancingId === cycle.id"
+                      (click)="activateCycle(cycle.id)">
+                      {{ advancingId === cycle.id ? 'Activating…' : '▶ Activate' }}
+                    </button>
                   }
-                  @if (isAppAdmin()) {
+                  @if (cycle.phase !== 'Upcoming' && cycle.phase !== 'Finalized' && cycle.phase !== 'Signed') {
+                    <button class="btn btn-secondary btn-sm"
+                      [disabled]="advancingId === cycle.id"
+                      (click)="advancePhase(cycle.id, cycle.phase)">
+                      {{ advancingId === cycle.id ? 'Advancing…' : '⏭ Next Phase' }}
+                    </button>
+                  }
+                  @if (isAppAdmin() || isHR() || isManager()) {
                     @if (deleteConfirmId === cycle.id) {
                       <button class="btn btn-danger btn-sm" (click)="doDelete(cycle.id)" [disabled]="deleting()">
                         {{ deleting() ? 'Deleting…' : 'Confirm' }}

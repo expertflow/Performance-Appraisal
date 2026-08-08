@@ -29,6 +29,8 @@ export class Cycles implements OnInit {
   private auth = inject(AuthService);
 
   readonly isAppAdmin = computed(() => this.auth.isAppAdmin());
+  readonly isHR       = computed(() => this.auth.isHR());
+  readonly isManager  = computed(() => this.auth.isManager());
 
   activeTab = 'Active';
   tabs = ['Active', 'Upcoming', 'Completed', 'All'];
@@ -38,6 +40,7 @@ export class Cycles implements OnInit {
   exportToast  = false;
   deleteConfirmId: string | null = null;
   deleting     = signal(false);
+  advancingId: string | null = null;
 
   newCycle = {
     name: '',
@@ -155,6 +158,31 @@ export class Cycles implements OnInit {
     }).subscribe({
       next: () => { this.closeModal(); this.loadCycles(); },
       error: () => { this.closeModal(); this.loadCycles(); }
+    });
+  }
+
+  // Phase order for advancing
+  private readonly phaseOrder = [
+    'Goal Setting', 'Self Review', 'Manager Review',
+    'Peer Review', 'Calibration', 'Finalized'
+  ];
+
+  activateCycle(id: string) {
+    this.advancingId = id;
+    this.api.patchAppraisalCycle(id, { phase: 'Goal Setting' }).subscribe({
+      next: () => { this.advancingId = null; this.loadCycles(); },
+      error: () => { this.advancingId = null; }
+    });
+  }
+
+  advancePhase(id: string, currentPhase: string) {
+    const idx = this.phaseOrder.indexOf(currentPhase);
+    if (idx < 0 || idx >= this.phaseOrder.length - 1) return;
+    const nextPhase = this.phaseOrder[idx + 1];
+    this.advancingId = id;
+    this.api.patchAppraisalCycle(id, { phase: nextPhase }).subscribe({
+      next: () => { this.advancingId = null; this.loadCycles(); },
+      error: () => { this.advancingId = null; }
     });
   }
 

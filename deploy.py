@@ -170,7 +170,8 @@ def main():
     print('-- Step 1: Checking VM state --')
     out, _, _ = run(client, 'node --version 2>/dev/null || echo NOT_INSTALLED')
     node_ok = 'NOT_INSTALLED' not in out
-    out2, _, _ = run(client, 'nginx -v 2>&1 || echo NOT_INSTALLED')
+    # nginx -v writes to stderr which causes paramiko timeout; use which instead
+    out2, _, _ = run(client, 'which nginx 2>/dev/null || echo NOT_INSTALLED')
     nginx_ok = 'NOT_INSTALLED' not in out2
     out3, _, _ = run(client, 'pm2 --version 2>/dev/null || echo NOT_INSTALLED')
     pm2_ok = 'NOT_INSTALLED' not in out3

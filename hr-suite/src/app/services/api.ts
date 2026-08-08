@@ -259,6 +259,10 @@ export class ApiService {
     return this.http.post<any>(`${this.base}/appraisals/cycles`, payload);
   }
 
+  patchAppraisalCycle(id: string, patch: { phase?: string; name?: string; type?: string }): Observable<any> {
+    return this.http.patch<any>(`${this.base}/appraisals/cycles/${id}`, patch);
+  }
+
   deleteAppraisalCycle(id: string): Observable<{ deleted: string }> {
     return this.http.delete<{ deleted: string }>(`${this.base}/appraisals/cycles/${id}`);
   }
