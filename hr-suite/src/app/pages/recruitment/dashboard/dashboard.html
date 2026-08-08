@@ -212,6 +212,30 @@
             <input class="form-control" type="date" [(ngModel)]="postJobForm.deadline" title="Application deadline" />
           </div>
 
+          <!-- AI Auto-Shortlist Threshold -->
+          <div style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1px solid #bae6fd;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <label class="form-label" style="margin:0;font-weight:700;color:#0369a1;">🤖 AI Auto-Shortlist Threshold</label>
+              <span style="font-size:18px;font-weight:800;color:var(--color-primary);">
+                {{ postJobForm.autoShortlistThreshold === 0 ? 'OFF' : postJobForm.autoShortlistThreshold + '%' }}
+              </span>
+            </div>
+            <input type="range" min="0" max="100" step="5"
+                   [(ngModel)]="postJobForm.autoShortlistThreshold"
+                   title="AI auto-shortlist threshold percentage"
+                   style="width:100%;accent-color:#0369a1;height:6px;" />
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-top:2px;">
+              <span>0% (Disabled)</span><span>50%</span><span>100%</span>
+            </div>
+            <div style="font-size:12px;color:#0369a1;margin-top:8px;font-weight:500;">
+              @if (postJobForm.autoShortlistThreshold === 0) {
+                AI will screen CVs automatically but candidates won't be auto-shortlisted.
+              } @else {
+                ✅ Candidates scoring ≥ <strong>{{ postJobForm.autoShortlistThreshold }}%</strong> will be automatically shortlisted when they apply.
+              }
+            </div>
+          </div>
+
           <div class="form-group">
             <label class="form-label">Job Description</label>
             <textarea class="form-control" rows="3" [(ngModel)]="postJobForm.description" placeholder="Describe the role…" style="resize:vertical;"></textarea>
@@ -221,27 +245,6 @@
             <label class="form-label">Requirements</label>
             <textarea class="form-control" rows="4" [(ngModel)]="postJobForm.requirementsRaw" placeholder="One requirement per line or comma-separated" style="resize:vertical;"></textarea>
             <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">One requirement per line, or comma-separated.</div>
-          </div>
-
-          <!-- AI Auto-Shortlist Threshold -->
-          <div class="form-group">
-            <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
-              <span>🤖 AI Auto-Shortlist Threshold</span>
-              <span style="font-weight:700;color:var(--color-primary);">
-                {{ postJobForm.autoShortlistThreshold === 0 ? 'Disabled' : postJobForm.autoShortlistThreshold + '%' }}
-              </span>
-            </label>
-            <input type="range" min="0" max="100" step="5"
-                   [(ngModel)]="postJobForm.autoShortlistThreshold"
-                   title="AI auto-shortlist threshold percentage"
-                   style="width:100%;accent-color:var(--color-primary);" />
-            <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">
-              @if (postJobForm.autoShortlistThreshold === 0) {
-                AI screening is disabled. Candidates will not be auto-shortlisted.
-              } @else {
-                Candidates scoring ≥ {{ postJobForm.autoShortlistThreshold }}% on AI screening will be automatically shortlisted.
-              }
-            </div>
           </div>
 
         }
@@ -338,22 +341,25 @@
           </div>
 
           <!-- AI Auto-Shortlist Threshold -->
-          <div class="form-group">
-            <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
-              <span>🤖 AI Auto-Shortlist Threshold</span>
-              <span style="font-weight:700;color:var(--color-primary);">
-                {{ editJobForm.autoShortlistThreshold === 0 ? 'Disabled' : editJobForm.autoShortlistThreshold + '%' }}
+          <div style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1px solid #bae6fd;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <label class="form-label" style="margin:0;font-weight:700;color:#0369a1;">🤖 AI Auto-Shortlist Threshold</label>
+              <span style="font-size:18px;font-weight:800;color:var(--color-primary);">
+                {{ editJobForm.autoShortlistThreshold === 0 ? 'OFF' : editJobForm.autoShortlistThreshold + '%' }}
               </span>
-            </label>
+            </div>
             <input type="range" min="0" max="100" step="5"
                    [(ngModel)]="editJobForm.autoShortlistThreshold"
                    title="AI auto-shortlist threshold percentage"
-                   style="width:100%;accent-color:var(--color-primary);" />
-            <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">
+                   style="width:100%;accent-color:#0369a1;height:6px;" />
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-top:2px;">
+              <span>0% (Disabled)</span><span>50%</span><span>100%</span>
+            </div>
+            <div style="font-size:12px;color:#0369a1;margin-top:8px;font-weight:500;">
               @if (editJobForm.autoShortlistThreshold === 0) {
-                AI screening is disabled. Candidates will not be auto-shortlisted.
+                AI will screen CVs automatically but candidates won't be auto-shortlisted.
               } @else {
-                Candidates scoring ≥ {{ editJobForm.autoShortlistThreshold }}% on AI screening will be automatically shortlisted.
+                ✅ Candidates scoring ≥ <strong>{{ editJobForm.autoShortlistThreshold }}%</strong> will be automatically shortlisted when they apply.
               }
             </div>
           </div>

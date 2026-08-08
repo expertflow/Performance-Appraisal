@@ -192,6 +192,14 @@ export class ApiService {
     return this.http.post<any>(`${this.base}/ai/screen-resume`, payload);
   }
 
+  /** Trigger AI screening for an existing application by ID */
+  screenApplication(appId: string): Observable<{
+    application: JobApplication;
+    aiResult: { requirements: { name: string; score: number; reason: string }[]; overallScore: number; summary: string };
+  }> {
+    return this.http.post<any>(`${this.base}/job-applications/${appId}/screen`, {});
+  }
+
   // ── Job Applications ──────────────────────────────────────────────────────
   getJobApplications(filters?: { candidate_id?: string; job_id?: string }): Observable<JobApplication[]> {
     let params = new HttpParams();

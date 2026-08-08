@@ -273,6 +273,112 @@ Evaluate how well this candidate meets each requirement. Be objective and specif
 const SITE_URL    = process.env.SITE_URL    || 'https://hrsuite.expertflow.com';
 const CAREERS_URL = process.env.CAREERS_URL || 'https://hrsuite.expertflow.com';
 
+// POST /api/v1/job-applications/:id/screen  — manually trigger AI screening for an existing application
+router.post('/:id/screen', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM recruitment.job_application WHERE id = $1`,
+      [req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    const app = rows[0];
+
+    const apiKey = process.env.CLAUDE_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'CLAUDE_API_KEY not configured on server' });
+    }
+
+    // Fetch job posting for requirements + threshold
+    const { rows: jobRows } = await pool.query(
+      `SELECT requirements, auto_shortlist_threshold FROM recruitment.job_posting WHERE id = $1`,
+      [app.job_id]
+    );
+    if (!jobRows.length) {
+      return res.status(400).json({ error: 'Job posting not found' });
+    }
+    const requirements = jobRows[0].requirements || [];
+    const threshold    = jobRows[0].auto_shortlist_threshold ?? 0;
+
+    if (!requirements.length) {
+      return res.status(400).json({ error: 'No requirements found for this job posting. Please add requirements to the job first.' });
+    }
+
+    const candidateContent = [
+      app.resume_link  ? `RESUME (base64 PDF data — candidate uploaded CV):\n${app.resume_link.slice(0, 2000)}` : '',
+      app.cover_letter ? `COVER LETTER:\n${app.cover_letter}` : '',
+    ].filter(Boolean).join('\n\n');
+
+    if (!candidateContent.trim()) {
+      return res.status(400).json({ error: 'No resume or cover letter available for screening' });
+    }
+
+    const requirementsList = requirements
+      .map((r, i) => `${i + 1}. ${typeof r === 'string' ? r : r.text || JSON.stringify(r)}`)
+      .join('\n');
+
+    const systemPrompt = `You are an expert HR recruiter and resume screener.
+Analyze the candidate's resume and cover letter against the job requirements.
+For each requirement, provide a match score from 0 to 100 and a brief reason.
+Respond ONLY with valid JSON in this exact format:
+{
+  "requirements": [
+    { "name": "requirement text", "score": 85, "reason": "brief explanation" }
+  ],
+  "overallScore": 78,
+  "summary": "2-3 sentence overall assessment"
+}`;
+
+    const userPrompt = `Job Title: ${app.job_title || 'Not specified'}
+
+JOB REQUIREMENTS:
+${requirementsList}
+
+CANDIDATE PROFILE:
+${candidateContent}
+
+Evaluate how well this candidate meets each requirement. Be objective and specific.`;
+
+    const payload = JSON.stringify({
+      model:      CLAUDE_MODEL,
+      max_tokens: 1500,
+      system:     systemPrompt,
+      messages:   [{ role: 'user', content: userPrompt }],
+    });
+
+    const result = await callClaudeApi(apiKey, payload);
+    const overallScore = result.overallScore ?? 0;
+    const summary      = result.summary      || '';
+
+    // Store ai_score + ai_summary
+    await pool.query(
+      `UPDATE recruitment.job_application
+       SET ai_score = $1, ai_summary = $2, updated_at = NOW()
+       WHERE id = $3`,
+      [overallScore, summary, app.id]
+    );
+
+    // Auto-shortlist if score >= threshold and threshold > 0
+    if (threshold > 0 && overallScore >= threshold) {
+      await pool.query(
+        `UPDATE recruitment.job_application
+         SET status = 'Shortlisted', updated_at = NOW()
+         WHERE id = $1`,
+        [app.id]
+      );
+    }
+
+    // Return updated application + full AI result
+    const { rows: updated } = await pool.query(
+      `SELECT * FROM recruitment.job_application WHERE id = $1`,
+      [app.id]
+    );
+    res.json({ application: mapRow(updated[0]), aiResult: result });
+  } catch (err) {
+    console.error('[screen]', err.message);
+    res.status(500).json({ error: err.message || 'AI screening failed' });
+  }
+});
+
 // GET /api/v1/job-applications          — all (HR view)
 // GET /api/v1/job-applications?candidate_id=xxx  — filtered by candidate
 // GET /api/v1/job-applications?job_id=xxx        — filtered by job

@@ -290,6 +290,32 @@ export class Pipeline implements OnInit {
     );
   }
 
+  // ── AI Resume Screening ───────────────────────────────────────────────────
+  aiLoading  = signal(false);
+  aiError    = signal('');
+
+  screenResume(): void {
+    if (!this.selectedApp) return;
+    const app = this.selectedApp;
+
+    this.aiError.set('');
+    this.aiLoading.set(true);
+
+    this.api.screenApplication(app.id).subscribe({
+      next: result => {
+        // Reload all applications to pick up the updated ai_score
+        this.jobStore.reloadAllApplications();
+        // Update selectedApp immediately with the returned data
+        this.selectedApp = result.application;
+        this.aiLoading.set(false);
+      },
+      error: err => {
+        this.aiError.set(err?.error?.error || err?.message || 'AI screening failed. Please try again.');
+        this.aiLoading.set(false);
+      },
+    });
+  }
+
   // ── AI Score display helpers ──────────────────────────────────────────────
 
   aiScoreColor(score: number): string {
