@@ -140,7 +140,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/v1/employees/sync — force refresh from Directus
+// POST /api/v1/employees/sync — force refresh from Directus (only Employed employees)
 router.post('/sync', async (req, res) => {
   if (!process.env.DIRECTUS_TOKEN) {
     return res.status(400).json({ error: 'DIRECTUS_TOKEN not configured' });
@@ -149,8 +149,9 @@ router.post('/sync', async (req, res) => {
     const token = (process.env.DIRECTUS_TOKEN || '').trim();
     const url = (process.env.DIRECTUS_URL || 'https://bs4.expertflow.com').trim();
     console.log('[sync] Using token:', token ? token.substring(0, 10) + '...' : 'EMPTY');
+    // Only sync employees with status = 'Employed' from Directus
     const resp = await axios.get(
-      `${url}/items/Employee?fields=${DIRECTUS_FIELDS}&limit=500`,
+      `${url}/items/Employee?fields=${DIRECTUS_FIELDS}&limit=500&filter[status][_eq]=Employed`,
       { headers: { Authorization: `Bearer ${token}` }, httpsAgent, timeout: 10000 }
     );
     const raw = resp.data?.data ?? [];
@@ -158,7 +159,15 @@ router.post('/sync', async (req, res) => {
     for (const e of employees) {
       await upsertEmployee(e);
     }
-    res.json({ message: `Synced ${employees.length} employees from Directus.`, count: employees.length });
+    // Remove any previously synced employees who are no longer Employed
+    if (employees.length > 0) {
+      const employedIds = employees.map(e => e.id);
+      await pool.query(
+        `DELETE FROM project.employee_snapshot WHERE LOWER(status) != 'employed' OR id != ALL($1::text[])`,
+        [employedIds]
+      );
+    }
+    res.json({ message: `Synced ${employees.length} employed employees from Directus.`, count: employees.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

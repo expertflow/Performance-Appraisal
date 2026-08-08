@@ -45,7 +45,7 @@ export class Employees implements OnInit {
   loading = true;
   syncing = false;
   syncMessage = '';
-  filterStatus = '';
+  filterStatus = 'Employed';
 
   // Detail modal
   showDetail = false;
