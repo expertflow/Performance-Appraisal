@@ -56,6 +56,7 @@ async function ensureTables() {
     CREATE TABLE IF NOT EXISTS project.appraisal_goals (
       id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
       record_id   TEXT REFERENCES project.appraisal_records(id) ON DELETE CASCADE,
+      cycle_id    TEXT REFERENCES project.appraisal_cycles(id) ON DELETE SET NULL,
       employee_id TEXT NOT NULL,
       manager_id  TEXT NOT NULL,
       title       TEXT NOT NULL,
@@ -69,6 +70,11 @@ async function ensureTables() {
       updated_at  TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  // Add cycle_id column if it doesn't exist (for existing tables)
+  await pool.query(`
+    ALTER TABLE project.appraisal_goals
+    ADD COLUMN IF NOT EXISTS cycle_id TEXT REFERENCES project.appraisal_cycles(id) ON DELETE SET NULL
+  `).catch(() => {});
 }
 
 ensureTables().catch(e => console.error('[Appraisal] table init error:', e.message));
@@ -98,6 +104,7 @@ function mapGoal(g) {
   return {
     id:          g.id,
     recordId:    g.record_id,
+    cycleId:     g.cycle_id ?? null,
     employeeId:  g.employee_id,
     managerId:   g.manager_id,
     title:       g.title,
@@ -317,18 +324,32 @@ router.get('/goals', async (req, res) => {
 
 // POST /api/v1/appraisals/goals
 router.post('/goals', async (req, res) => {
-  const { recordId, employeeId, managerId, title, description, department, category, dueDate } = req.body;
+  const { recordId, cycleId, employeeId, managerId, title, description, department, category, dueDate } = req.body;
   if (!employeeId || !managerId || !title) {
     return res.status(400).json({ error: 'employeeId, managerId, title are required' });
   }
   try {
     const { rows } = await pool.query(
       `INSERT INTO project.appraisal_goals
-         (record_id, employee_id, manager_id, title, description, department, category, due_date)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [recordId || null, employeeId, managerId, title, description || '', department || '', category || 'Technical', dueDate || null]
+         (record_id, cycle_id, employee_id, manager_id, title, description, department, category, due_date)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [recordId || null, cycleId || null, employeeId, managerId, title, description || '', department || '', category || 'Technical', dueDate || null]
     );
-    res.status(201).json(mapGoal(rows[0]));
+    const goal = mapGoal(rows[0]);
+
+    // Notify the assigned employee
+    pool.query(
+      `INSERT INTO auth_local.app_notifications
+         (target_role, target_user_id, type, title, body)
+       VALUES ('Employee', $1, 'info', $2, $3)`,
+      [
+        employeeId,
+        `New Goal Assigned: ${title}`,
+        `A new goal has been assigned to you${cycleId ? ' for this appraisal cycle' : ''}. Please review it in the Goals section.`
+      ]
+    ).catch(() => {});
+
+    res.status(201).json(goal);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

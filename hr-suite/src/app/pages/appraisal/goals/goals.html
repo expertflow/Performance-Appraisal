@@ -150,13 +150,34 @@
             }
           </div>
         }
-        <!-- HR/Admin: free-text employee name -->
+        <!-- HR/Admin: employee dropdown -->
         @if (isHROrAdmin()) {
           <div class="form-group">
-            <label class="form-label">Employee ID / Name *</label>
-            <input class="form-control" placeholder="e.g. emp-001 or Fatima Malik" [(ngModel)]="newGoal.employeeId" />
+            <label class="form-label">Employee *</label>
+            <select class="form-control" title="Select employee" [(ngModel)]="newGoal.employeeId">
+              <option value="">— Select employee —</option>
+              @for (emp of allEmployees; track emp.id) {
+                <option [value]="emp.id">{{ emp.fullName }}{{ emp.department ? ' (' + emp.department + ')' : '' }}</option>
+              }
+            </select>
+            @if (allEmployees.length === 0) {
+              <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">
+                Loading employees…
+              </div>
+            }
           </div>
         }
+
+        <!-- Cycle dropdown (Manager + HR/Admin) -->
+        <div class="form-group">
+          <label class="form-label">Appraisal Cycle</label>
+          <select class="form-control" title="Select cycle" [(ngModel)]="newGoal.cycleId">
+            <option value="">— No specific cycle —</option>
+            @for (cycle of cycles; track cycle.id) {
+              <option [value]="cycle.id">{{ cycle.name }} ({{ cycle.phase }})</option>
+            }
+          </select>
+        </div>
 
         <div class="form-group">
           <label class="form-label">Goal Title *</label>

@@ -37,6 +37,7 @@ export interface AppraisalRecord {
 export interface AppraisalGoal {
   id:          string;
   recordId:    string | null;
+  cycleId:     string | null;
   employeeId:  string;
   managerId:   string;
   title:       string;
@@ -61,6 +62,13 @@ export interface TeamMember {
   managerId:  string;
 }
 
+export interface EmployeeItem {
+  id:         string;
+  fullName:   string;
+  department: string;
+  jobTitle:   string;
+}
+
 // ── Service ───────────────────────────────────────────────────────────────────
 
 @Injectable({ providedIn: 'root' })
@@ -69,17 +77,19 @@ export class AppraisalStoreService {
   private base = `${environment.apiUrl}/appraisals`;
 
   // ── Signals ───────────────────────────────────────────────────────────────
-  private _cycles    = signal<AppraisalCycle[]>([]);
-  private _records   = signal<AppraisalRecord[]>([]);
-  private _goals     = signal<AppraisalGoal[]>([]);
-  private _team      = signal<TeamMember[]>([]);
-  private _loading   = signal(false);
+  private _cycles      = signal<AppraisalCycle[]>([]);
+  private _records     = signal<AppraisalRecord[]>([]);
+  private _goals       = signal<AppraisalGoal[]>([]);
+  private _team        = signal<TeamMember[]>([]);
+  private _employees   = signal<EmployeeItem[]>([]);
+  private _loading     = signal(false);
 
-  readonly cycles  = computed(() => this._cycles());
-  readonly records = computed(() => this._records());
-  readonly goals   = computed(() => this._goals());
-  readonly team    = computed(() => this._team());
-  readonly loading = computed(() => this._loading());
+  readonly cycles    = computed(() => this._cycles());
+  readonly records   = computed(() => this._records());
+  readonly goals     = computed(() => this._goals());
+  readonly team      = computed(() => this._team());
+  readonly employees = computed(() => this._employees());
+  readonly loading   = computed(() => this._loading());
 
   // ── Cycles ────────────────────────────────────────────────────────────────
 
@@ -187,6 +197,23 @@ export class AppraisalStoreService {
     this.http.get<TeamMember[]>(`${this.base}/team`, { params: { managerId } }).subscribe({
       next: data => this._team.set(data),
       error: err => console.error('[AppraisalStore] loadTeam:', err.message)
+    });
+  }
+
+  // ── All employees (for HR/Admin dropdown) ────────────────────────────────
+
+  loadAllEmployees(): void {
+    const base = environment.apiUrl;
+    this.http.get<any[]>(`${base}/employees`, { params: { active_only: 'true' } }).subscribe({
+      next: data => this._employees.set(
+        data.map(e => ({
+          id:         String(e.id ?? ''),
+          fullName:   `${e.first_name ?? ''} ${e.last_name ?? ''}`.trim() || e.id,
+          department: e.department ?? '',
+          jobTitle:   e.designation ?? '',
+        }))
+      ),
+      error: err => console.error('[AppraisalStore] loadAllEmployees:', err.message)
     });
   }
 

@@ -2,7 +2,7 @@ import { Component, inject, computed, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../../services/auth';
-import { AppraisalStoreService, AppraisalGoal } from '../../../services/appraisal-store';
+import { AppraisalStoreService, AppraisalGoal, AppraisalCycle } from '../../../services/appraisal-store';
 
 @Component({
   selector: 'app-goals',
@@ -35,6 +35,7 @@ export class Goals implements OnInit {
 
   newGoal = {
     employeeId:  '',
+    cycleId:     '',
     title:       '',
     dept:        'Engineering',
     category:    'Technical',
@@ -51,9 +52,12 @@ export class Goals implements OnInit {
     } else if (this.auth.isManager()) {
       this.store.loadGoals({ managerId: user.employee_id });
       this.store.loadTeam(user.employee_id!);
+      this.store.loadCycles();
     } else {
       // HR / AppAdmin — load all
       this.store.loadGoals();
+      this.store.loadAllEmployees();
+      this.store.loadCycles();
     }
   }
 
@@ -80,6 +84,12 @@ export class Goals implements OnInit {
   // ── Team members for Manager dropdown ─────────────────────────────────────
   get teamMembers() { return this.store.team(); }
 
+  // ── All employees for HR/Admin dropdown ───────────────────────────────────
+  get allEmployees() { return this.store.employees(); }
+
+  // ── Cycles for cycle dropdown ─────────────────────────────────────────────
+  get cycles(): AppraisalCycle[] { return this.store.cycles(); }
+
   // ── Helpers ────────────────────────────────────────────────────────────────
   initials(name: string): string { return this.store.initials(name); }
   avatarColor(name: string): string { return this.store.avatarColor(name); }
@@ -100,7 +110,7 @@ export class Goals implements OnInit {
   closeModal() { this.showModal = false; this.resetForm(); }
 
   resetForm() {
-    this.newGoal = { employeeId: '', title: '', dept: 'Engineering', category: 'Technical', dueDate: '', description: '' };
+    this.newGoal = { employeeId: '', cycleId: '', title: '', dept: 'Engineering', category: 'Technical', dueDate: '', description: '' };
   }
 
   submitGoal() {
@@ -108,11 +118,8 @@ export class Goals implements OnInit {
     if (!user) return;
 
     // For Manager: employeeId is selected from team dropdown
-    // For HR/Admin: employeeId is typed or selected
-    const empId   = this.isManager() ? this.newGoal.employeeId : (this.newGoal.employeeId || user.employee_id!);
-    const empName = this.isManager()
-      ? (this.teamMembers.find(m => m.id === empId)?.fullName ?? empId)
-      : this.newGoal.employeeId;
+    // For HR/Admin: employeeId is selected from all-employees dropdown
+    const empId = this.newGoal.employeeId;
 
     if (!this.newGoal.title || !empId) return;
     this.saving.set(true);
@@ -120,6 +127,7 @@ export class Goals implements OnInit {
     this.store.createGoal({
       employeeId:  empId,
       managerId:   user.employee_id!,
+      cycleId:     this.newGoal.cycleId || null,
       title:       this.newGoal.title,
       description: this.newGoal.description,
       department:  this.newGoal.dept,
