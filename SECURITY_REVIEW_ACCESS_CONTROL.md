@@ -12,7 +12,7 @@ This document answers three questions:
 2. How are CV attachments handled in the recruitment stage?
 3. Does any of it integrate with Gmail?
 
-§2 reconciles these findings with the development team's account of the module, which describes role-based access as already applied. §9 cross-references two sibling repositories, so that work already done there is reused rather than rebuilt. A short description of what the Project Management module covers is included at §6, since it shares the same data-access pattern.
+§2 reconciles these findings with the development team's account of the module, which describes role-based access as already applied. §10 cross-references two sibling repositories, so that work already done there is reused rather than rebuilt. A short description of what the Project Management module covers is included at §6, since it shares the same data-access pattern.
 
 ---
 
@@ -30,6 +30,7 @@ This document answers three questions:
 | F-8 | Session tokens are static, non-expiring opaque strings | High | Open |
 | F-9 | Notification feed trusts caller-supplied `role` and `userId` | Medium | Open |
 | F-10 | `backend/.env` is tracked in git despite the `.gitignore` rule | Low | Open |
+| F-11 | Appraisal tables live in the `project` schema, sharing one DB role with project management | High | Open |
 
 Role-based scoping **is** implemented for the appraisal module, in the Angular components — it is real, and it matches the model the team describes. Every finding above concerns the API beneath it, which enforces none of that scoping. See §2.
 
@@ -278,13 +279,27 @@ Included briefly for context, since it shares the access-control pattern above.
 
 ---
 
-## 7. Note on repository hygiene
+## 7. Module isolation — appraisal data shares the project-management schema
+
+**F-11.** `HR_SUITE_REQUIREMENTS.md:66` and `:1370` specify a dedicated **`appraisal`** schema alongside `auth`, `common`, `recruitment`, `project`, and `notification`. The isolation rule at `:126` requires that "each service connects with a DB role granting access **only** to its own schema", with cross-schema joins prohibited; `:127` states the purpose — "a blast-radius and access-control boundary."
+
+In the implementation, appraisal tables are created inside the **`project`** schema: `project.appraisal_cycles` (`performance-appraisals.js:24`), `project.appraisal_records` (`:38`), `project.appraisal_goals` (`:56`) — beside `project.task`, `project.time_entry`, and `project.project`. No `appraisal` schema exists. `backend/src/db/pool.js` opens one pool with a single DB role and no `search_path` restriction, so every route reaches every table with identical privileges.
+
+This matters because the two modules have opposite sensitivity profiles. Project management is collaborative by design — the board, the Gantt, and logged hours are meant to be widely visible. Appraisal content is need-to-know. Sharing a schema and a role means the most-exposed code paths hold the same credentials as the most-sensitive data: a defect anywhere in the timesheet or Kanban handlers reaches `project.appraisal_records`, and the database has no basis to object. It also removes the structural barrier to accidental cross-module joins, since the spec's prohibition cannot apply within a single schema.
+
+**Corroborating symptom.** The schema confusion has already produced a functional defect. Appraisal notifications insert into `auth_local.app_notifications` (`performance-appraisals.js:12`, `:342`), while the notification feed reads from an unqualified `app_notifications` (`notifications.js:9,34`), as do recruitment and offers (`job-applications.js:49`, `job-offers.js:31`). These resolve to different tables, so goal-assignment and cycle-start notifications are likely never surfacing — and both inserts are wrapped in `.catch(() => {})`, so the failure is silent. Worth confirming against the live database.
+
+**Remediation.** Moving the three tables into their own schema and giving appraisal routes a separate DB role — one with no grant on `project` — restores the boundary cheaply. Two pools in a single process still yields a real barrier: the project-management path becomes structurally unable to read appraisal rows. `employee_snapshot` can stay in `project` with a read-only grant to the appraisal role, since both modules legitimately consume it. A full service split, per the spec's "cross-module data flows through service APIs", is the longer-term shape but captures much less additional risk reduction per unit of effort.
+
+---
+
+## 8. Note on repository hygiene
 
 **F-10.** `backend/.env` is tracked in git (first added in commit `c839189e`), even though `.gitignore` lists `.env` — `.gitignore` does not apply to files already tracked. As committed, `DB_PASSWORD` is the placeholder `changeme` and `DIRECTUS_TOKEN` is empty, so no live credential is currently exposed; `DB_HOST` and `DB_USER` hold real-looking internal values. The risk is prospective: any real value written to that file gets committed by default. Recommended fix is `git rm --cached backend/.env`, then rotate anything that has ever been committed there.
 
 ---
 
-## 8. Suggested sequencing
+## 9. Suggested sequencing
 
 **Immediately** — F-1, F-2, F-6. Authentication middleware plus server-derived scoping across `appraisals`, `job-applications`, `projects`, `tasks`, `time-entries`. This is one shared middleware and a scoping helper; the per-route change is small once those exist. Also lock down `POST /api/v1/send-email`.
 
@@ -294,9 +309,11 @@ Included briefly for context, since it shares the access-control pattern above.
 
 **Housekeeping** — F-4 (dashboard aggregate endpoint), F-9 (server-derived notification scope), F-10 (untrack `.env`), and `SMTP_*` documentation in both `.env.example` files.
 
+**In parallel** — F-11 (move appraisal tables to their own schema with a dedicated DB role). Independent of the auth work, so it can proceed alongside rather than queue behind it.
+
 ---
 
-## 9. Cross-repository findings — work already solved elsewhere
+## 10. Cross-repository findings — work already solved elsewhere
 
 Reviewed against `expertflow/BS4-ERP-CRM-Finance` (commit `0834e70e`) and `expertflow/EFITAssets` (commit `cf7b0da4`), to avoid rebuilding what exists. Every claim below was read directly in those repositories.
 
