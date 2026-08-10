@@ -2,8 +2,9 @@
 
 **Date:** 2026-08-10
 **Scope:** `backend/` (Express API), `hr-suite/` (Angular app)
-**Reviewed at:** commit `5adc3388` (tip of `main`)
-**Method:** static read of route handlers, guards, services, and the Angular data-loading paths. No live system was probed and no exploit was executed — every finding below is traced to a file and line in this repository.
+**Reviewed at:** commit `c1f7a7a6` (tip of `main`)
+**Also reviewed:** `expertflow/BS4-ERP-CRM-Finance` (`0834e70e`) and `expertflow/EFITAssets` (`cf7b0da4`), for §9
+**Method:** static read of route handlers, guards, services, and the Angular data-loading paths. No live system was probed and no exploit was executed — every finding below is traced to a file and line in the relevant repository.
 
 This document answers three questions:
 
@@ -11,7 +12,7 @@ This document answers three questions:
 2. How are CV attachments handled in the recruitment stage?
 3. Does any of it integrate with Gmail?
 
-§2 reconciles these findings with the development team's account of the module, which describes role-based access as already applied. A short description of what the Project Management module covers is included at the end, since it shares the same data-access pattern.
+§2 reconciles these findings with the development team's account of the module, which describes role-based access as already applied. §9 cross-references two sibling repositories, so that work already done there is reused rather than rebuilt. A short description of what the Project Management module covers is included at §6, since it shares the same data-access pattern.
 
 ---
 
@@ -85,6 +86,16 @@ The gap is also measured against this project's own documents, not an external s
 | `HR_SUITE_REQUIREMENTS.md:298` | Mandatory scoping predicate; no scope returns empty, never all rows | No |
 
 `APP_GOALS.md:45-54` ("Goal 3 — Enforce Role-Based Data Access") states the target model in the same terms the developer used. The model is agreed. What remains is to move its enforcement from the browser to the server — the findings in §3 below are the specific work that requires, and the scoping rules to implement are exactly the ones the developer articulated.
+
+### `ROLE_ACCESS_MATRIX.md` corroborates this
+
+`ROLE_ACCESS_MATRIX.md` (added in `c1f7a7a6`, after this review began) documents the access model in detail and is accurate. Its own provenance line states:
+
+> **Source of truth:** Derived directly from `app.routes.ts`, `auth.ts`, and all page component files.
+
+Its enforcement vocabulary throughout is "route is blocked by `roleGuard`", and its appendix is a route-guard table. It contains no API endpoint, no server-side rule, and no reference to the backend — because it documents the Angular app, which is where the model lives. It is independent confirmation of the point above rather than a counter-argument to it.
+
+It is also the most useful artifact for the remediation: §10.1's quick-reference table is exactly the rule set to implement server-side. The rules have already been decided and written down; only their enforcement location has to change.
 
 **Net:** treat the frontend scoping as complete and correct at the presentation layer, and the backend enforcement as not yet started. The remediation in §8 does not replace the developer's work; it puts a server-side twin behind it.
 
@@ -282,3 +293,60 @@ Included briefly for context, since it shares the access-control pattern above.
 **Then** — the CV storage rework (multipart → magic-byte validation → ClamAV → object storage → pre-signed download), which also unblocks correct AI screening via server-side PDF text extraction.
 
 **Housekeeping** — F-4 (dashboard aggregate endpoint), F-9 (server-derived notification scope), F-10 (untrack `.env`), and `SMTP_*` documentation in both `.env.example` files.
+
+---
+
+## 9. Cross-repository findings — work already solved elsewhere
+
+Reviewed against `expertflow/BS4-ERP-CRM-Finance` (commit `0834e70e`) and `expertflow/EFITAssets` (commit `cf7b0da4`), to avoid rebuilding what exists. Every claim below was read directly in those repositories.
+
+**Neither repo is referenced anywhere in this one.** The HR Suite's only external system is `bs4.expertflow.com`. There is no code path to EFITAssets.
+
+### 9.1 File attachments — solved twice already
+
+BS4 has the pattern this repo's §4 recommends, in production:
+
+| Concern | BS4 implementation |
+|---|---|
+| Multipart upload → object storage | `projects/erp/directus/extensions/journal-gcs-upload/index.js:22-80` — `busboy` streamed into a GCS write stream, no base64 |
+| Authorized download | `projects/erp/directus/extensions/gcs-access-proxy/index.js:47,102,235-266` — `verifyRlsAccess()` checks Directus permissions **and** Postgres RLS, returns 401/403 otherwise |
+| Document metadata | `Journal` table + junction tables (`Invoice_Journal`, `Employee_Journal`, …) — the `common.document` model `HR_SUITE_REQUIREMENTS.md:1092` specifies |
+
+The `gcs-access-proxy` is precisely the "authorize, then serve" step §4 notes the current base64-in-JSON design has no place to insert. EFITAssets has an independent second implementation (`efgateway/registry/storage.py`, `efgateway/api/ingest.py:131,161` — FastAPI `UploadFile` → content-addressed GCS with a `gateway.object` registry).
+
+**Not solved anywhere:** ClamAV. No virus scanning exists in either repo, so `HR_SUITE_REQUIREMENTS.md:1102` is unbuilt org-wide. That part is genuinely new work.
+
+### 9.2 Email — reuse BS4's sender, not EFITAssets' reader
+
+EFITAssets has a real Gmail integration, but in the **opposite direction** to what this repo needs: `efgateway/api/connectors/gmail_oauth.py:39` requests `gmail.readonly` — read only, for extracting invoice attachments on a scheduler. It cannot send.
+
+For outbound mail (OTPs, candidate notifications), the reusable precedent is BS4: `services/chat-timebot/src/index.js:266-313` — nodemailer against `smtp.gmail.com:465`, app password sourced from Secret Manager (`service.yaml:44-52`). That covers both the transport and the secret-handling pattern §5 notes is missing here.
+
+One trap: BS4's `projects/erp/directus/extensions/crm-gmail-sync/` contains **only a `package.json`** — no `index.js`. It declares `googleapis` but fails to load at runtime. It is not prior art.
+
+### 9.3 Central IAM — identity is centralized; authorization is deliberately not
+
+`EFITAssets/CENTRAL_IDP_RBAC_RECOMMENDATION.md` records an IAM architecture **decided 2026-07-10**, superseding an earlier Entra/Keycloak proposal. `Expertflow IT assets.md` §4.1/§4.2/§4.6 is named as the authoritative source.
+
+The decided model:
+
+- **Google Workspace is the identity master.** Roles are defined as Google Groups — `docs/iam/design-google-group-schema.md:29` already defines `ef-hr-finance@expertflow.com` (→ `hr-finance`, vault path `bs4-read/*`).
+- **OpenBao issues credentials** scoped to group-derived policies.
+- **"Group membership is the single control point"** — but for *access to systems*, not for in-application permissions.
+
+What is centralized is **identity**. What is not centralized is **authorization**: there is no `/me`, no `/authz`, no token introspection endpoint. Each application verifies Google OIDC tokens itself and enforces its own rules — `efgateway/api/auth.py:19-50` (signature verification via `id_token.verify_oauth2_token`, audience check, `email_verified` check, domain check, injected as a FastAPI dependency), and BS4 separately maintains `UserToRole` / `RolePermissions` tables.
+
+**Implication for this repo:**
+
+- A **separate permission model for HR tooling is architecturally correct** — it matches the decided model and what BS4 already does. `ROLE_ACCESS_MATRIX.md` is not redundant with the IAM work; it describes a different layer.
+- A **separate identity model is not.** Local plaintext passwords (F-7), static non-expiring tokens (F-8), and a role read from `localStorage` (F-3) conflict with the decided standard on all three points. Google SSO is already wired here (`auth-google.js`), but the API validates nothing afterwards.
+- `efgateway/api/auth.py:19-50` is roughly thirty lines and is a directly transferable template for the authentication middleware §8 calls for — same IdP, same domain restriction, same per-request verification.
+- The **role vocabulary is duplicated**: `AppAdmin`/`HR`/`Manager`/`Employee` live in `auth_local.account.role`, while `ef-hr-finance` and its siblings live in Google Groups. Two registries, manually kept in sync. Deriving app roles from group membership at login would collapse them, and would make offboarding a single Workspace action rather than a second manual step.
+
+### 9.4 Note on BS4 coupling
+
+This repo already integrates with BS4, which has a full Directus permission system (`directus_roles`, `directus_policies`, `directus_permissions`) plus Postgres row-level security (`projects/erp/directus/extensions/migrations/20260514A_open_insert_rls.sql`, `20260513D_legalentity_rls_reinstate.sql`).
+
+It connects using a **static `DIRECTUS_TOKEN`** (`backend/src/services/sync.js:24`, `routes/employees.js:125`) — one privileged service identity for all users. Every HR Suite user is the same caller to Directus, so that RBAC and RLS are bypassed by construction, and this repo then reimplements a weaker, unenforced version in the browser.
+
+Worth an explicit architectural decision: whether appraisal data belongs behind Directus policies like the rest of the ERP, or stays in its own schema with its own enforced middleware. Both are defensible. The current state — own schema, no enforcement — is not.
