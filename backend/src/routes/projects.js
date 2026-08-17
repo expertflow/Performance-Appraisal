@@ -9,8 +9,8 @@ const DIRECTUS_TOKEN = () => process.env.DIRECTUS_TOKEN || '';
 
 /**
  * Map a Directus Project record to our local project schema.
- * Directus fields: id (int), Name, Status, Description
- * Local fields:    name, type, status, health_status, bs4_project_id
+ * Directus fields: id (int), Name, Status, Description, ProfitCenter (scalar id)
+ * Local fields:    name, type, status, health_status, bs4_project_id, profit_center
  */
 function mapDirectusProject(p) {
   // Map Directus Status → local status
@@ -23,6 +23,13 @@ function mapDirectusProject(p) {
   };
   const localStatus = statusMap[p.Status] || 'active';
 
+  // Resolve profit center name from the static lookup map; fall back to raw ID string
+  let profitCenterValue = null;
+  if (p.ProfitCenter != null) {
+    const pcId = String(p.ProfitCenter);
+    profitCenterValue = PROFIT_CENTER_MAP.get(pcId) || pcId;
+  }
+
   return {
     bs4_project_id: String(p.id),
     name:           (p.Name || '').trim() || `Project ${p.id}`,
@@ -30,8 +37,29 @@ function mapDirectusProject(p) {
     status:         localStatus,
     health_status:  null,
     description:    p.Description || null,
+    profit_center:  profitCenterValue,
   };
 }
+
+/**
+ * Static Profit Center lookup map (ID → Name).
+ * Source: Directus ProfitCenter collection (read from admin UI).
+ * The API token does not have read access to this collection, so we hardcode it here.
+ * Update this map if new profit centers are added in Directus.
+ */
+const PROFIT_CENTER_MAP = new Map([
+  ['1',  'CentralCost'],
+  ['2',  'ME'],
+  ['3',  'Maghreb'],
+  ['4',  'Pk-KSA'],
+  ['5',  'India'],
+  ['6',  'Americas'],
+  ['7',  'IntlSales'],
+  ['8',  'SouthernAfrica'],
+  ['9',  'EastAfrica'],
+  ['10', 'WestAfrica'],
+  ['11', 'HR'],
+]);
 
 // GET /api/v1/projects
 router.get('/', async (req, res) => {
@@ -136,7 +164,7 @@ router.post('/sync', async (req, res) => {
 
     while (true) {
       // Fetch ALL projects — no status filter — sorted by id descending (newest first)
-      const url = `${DIRECTUS_URL()}/items/Project?fields=id,Name,Status,Description&limit=${limit}&page=${page}&sort=-id`;
+      const url = `${DIRECTUS_URL()}/items/Project?fields=id,Name,Status,Description,ProfitCenter&limit=${limit}&page=${page}&sort=-id`;
       const resp = await axios.get(url, {
         headers: { Authorization: `Bearer ${DIRECTUS_TOKEN()}` },
         timeout: 20000
@@ -148,15 +176,16 @@ router.post('/sync', async (req, res) => {
         const mapped = mapDirectusProject(p);
         await pool.query(
           `INSERT INTO project.project
-             (name, type, status, health_status, description, bs4_project_id, created_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+             (name, type, status, health_status, description, profit_center, bs4_project_id, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
            ON CONFLICT (bs4_project_id) DO UPDATE SET
              name          = EXCLUDED.name,
              status        = EXCLUDED.status,
              health_status = EXCLUDED.health_status,
              description   = EXCLUDED.description,
+             profit_center = EXCLUDED.profit_center,
              updated_at    = NOW()`,
-          [mapped.name, mapped.type, mapped.status, mapped.health_status, mapped.description, mapped.bs4_project_id]
+          [mapped.name, mapped.type, mapped.status, mapped.health_status, mapped.description, mapped.profit_center, mapped.bs4_project_id]
         );
         synced++;
       }

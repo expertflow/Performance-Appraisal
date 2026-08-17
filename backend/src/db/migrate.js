@@ -68,6 +68,8 @@ CREATE TABLE IF NOT EXISTS project.project (
 ALTER TABLE project.project ADD COLUMN IF NOT EXISTS bs4_project_id TEXT;
 -- Add description column for existing deployments (idempotent)
 ALTER TABLE project.project ADD COLUMN IF NOT EXISTS description TEXT;
+-- Add profit_center column for existing deployments (idempotent)
+ALTER TABLE project.project ADD COLUMN IF NOT EXISTS profit_center TEXT;
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint

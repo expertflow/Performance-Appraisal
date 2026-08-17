@@ -51,6 +51,7 @@ export interface Project {
   budget_hours?: number;
   budget_amount?: number;
   bs4_project_id?: string;
+  profit_center?: string;
   created_at: string;
   updated_at: string;
 }
